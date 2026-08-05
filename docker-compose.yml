@@ -45,5 +45,26 @@ services:
     volumes:
       - ./apps/api:/srv
 
+  web:
+    build:
+      # El contexto es la raíz del monorepo porque pnpm necesita ver
+      # pnpm-workspace.yaml, package.json raíz y packages/contracts.
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      # En el celular, el front apunta al api por la IP del host. En este
+      # compose el api vive en otro contenedor, asi que usamos el nombre de
+      # servicio. Para el navegador del dev en :3000, la URL es la del host.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_PORT:-8000}/api/v1}
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+    volumes:
+      # Bind mount para hot reload en dev. El node_modules queda dentro del
+      # contenedor (no se monta) porque depende del OS y la version de pnpm.
+      - ./apps/web:/srv/apps/web
+
 volumes:
   datos_db:
