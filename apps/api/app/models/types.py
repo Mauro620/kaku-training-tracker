@@ -10,7 +10,15 @@ import uuid
 from decimal import Decimal
 from typing import Annotated
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, Numeric, SmallInteger, Uuid, text
+from sqlalchemy import (
+    BigInteger,
+    ForeignKey,
+    Integer,
+    Numeric,
+    SmallInteger,
+    Uuid,
+    text,
+)
 from sqlalchemy.orm import mapped_column
 
 # ---------- Claves primarias ----------
