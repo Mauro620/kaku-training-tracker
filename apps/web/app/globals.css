@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tokens del docs/DESIGN.md §1.2. No se exponen otros colores: si algo
+       no está acá, no existe en la paleta del proyecto. */
+    --canvas: #09090B;
+    --surface-primary: #18181B;
+    --surface-secondary: #27272A;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1AA;
+    --state-positive: #22C55E;
+    --state-warning: #EAB308;
+    --state-danger: #EF4444;
+    --state-focus: #A855F7;
+
+    /* Geometría del §1.4. */
+    --radius-bento: 24px;
+    --radius-pill: 9999px;
+    --radius-modal: 20px;
+  }
+
+  html,
+  body {
+    background-color: var(--canvas);
+    color: var(--text-primary);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* El registro del despertar se hace en la cama: tipografía líquida
+       rompe con la presión del tiempo. Tamaños fijos. */
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbar oculto: el doc §2.1 pide scroll vertical sin barra visible. */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

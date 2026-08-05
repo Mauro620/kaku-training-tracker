@@ -1,0 +1,11 @@
+{
+  "name": "Rendimiento",
+  "short_name": "Rendimiento",
+  "description": "Registro diario de entrenamiento, sueño, hábitos y nutrición.",
+  "start_url": "/hoy",
+  "display": "standalone",
+  "background_color": "#09090B",
+  "theme_color": "#09090B",
+  "orientation": "portrait",
+  "icons": []
+}
