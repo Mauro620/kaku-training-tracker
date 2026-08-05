@@ -87,14 +87,19 @@ Cumplido — ver `apps/api/tests/test_auth.py`.
 
 ---
 
-## Fase 3 — Rebanada vertical: cierre del día
+## Fase 3 — Rebanada vertical: cierre del día 🟡
 
 Primera funcionalidad completa de punta a punta. Es la que sostiene la
 filosofía de los 2 minutos.
 
 **Entregables**
-- Backend: repositorios, servicios y endpoints para `registro_sueno`,
-  `registro_bienestar` y `habito_registro`. Upsert por `(usuario_id, fecha)`.
+- Backend ✅: router → service → repository para `registro_sueno`,
+  `registro_bienestar` y `habito_registro`. Upsert por `(usuario_id, fecha)`
+  en sueño y bienestar, por `(habito_id, fecha)` en hábitos. Excepciones
+  de dominio (`InvarianteDeNegocioError` → 422, `RecursoNoEncontradoError`
+  → 404) con manejador central en `main.py`: los services no importan
+  `HTTPException`. El invariante de fecha del despertar (PENDIENTES.md)
+  se valida en `services/bienestar/sueno.py` con `zoneinfo`.
 - Frontend: andamiaje de Next.js con las cuatro pestañas, PWA instalable, y
   la pantalla **Hoy** con el formulario de cierre del día.
 - Cliente de API generado desde el OpenAPI.
