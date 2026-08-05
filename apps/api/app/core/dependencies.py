@@ -4,8 +4,6 @@
 asociado. Cualquier endpoint protegido la usa como Depends.
 """
 
-import uuid
-
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -55,7 +53,7 @@ async def get_usuario_actual(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    usuario = await sesion.get(Usuario, uuid.UUID(str(auth.usuario_id)))
+    usuario = await sesion.get(Usuario, auth.usuario_id)
     if usuario is None:
         # Idem: la FK a usuario deberia garantizar consistencia, pero si por
         # algo se rompe, no se filtra informacion al cliente.

@@ -2,7 +2,9 @@
 
 HS256 alcanza para Fase 3: emisor y verificador son el mismo proceso. Cuando
 entre un segundo issuer se migra a RS256 tocando solo este modulo y el
-setting `jwt_secret_key`.
+setting `jwt_secret_key`. El algoritmo y los TTL salen de `Settings`, nunca
+como literal: son exactamente el tipo de umbral que AGENTS.md prohibe
+hardcodear.
 """
 
 import hashlib
@@ -12,32 +14,35 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 from app.core.config import get_settings
-
-# ---------- Constantes ----------
-
-ACCESS_TOKEN_TTL_MINUTOS = 15
-REFRESH_TOKEN_TTL_DIAS = 30
-ALGORITMO_JWT = "HS256"
 
 # ---------- Passwords (argon2id) ----------
 
 _hasher = PasswordHasher()
+
+# Hash valido de una contrasena que nadie va a adivinar. Se usa como senuelo
+# cuando el email no existe, para que argon2 corra igual y el tiempo de
+# respuesta no filtre si la cuenta existe (timing oracle).
+_HASH_SENUELO = _hasher.hash(secrets.token_urlsafe(32))
 
 
 def hashear_password(plain: str) -> str:
     return _hasher.hash(plain)
 
 
-def verificar_password(plain: str, hash: str) -> bool:
+def verificar_password(plain: str, hash: str | None) -> bool:
+    """`hash=None` verifica igual contra un senuelo: mantiene el costo de
+    CPU constante entre "email no existe" y "email existe, password mala",
+    para que el tiempo de respuesta no distinga los dos casos."""
     try:
-        return _hasher.verify(hash, plain)
+        return _hasher.verify(hash or _HASH_SENUELO, plain) and hash is not None
     except VerifyMismatchError:
         return False
-    except Exception:
-        # Hash corrupto o version incompatible: login falla, no explota.
+    except InvalidHashError:
+        # Hash corrupto o de una version de argon2 incompatible: el login
+        # falla, no explota con un 500.
         return False
 
 
@@ -55,20 +60,20 @@ def hashear_refresh_token(token: str) -> str:
 
 
 def refresh_expira_en() -> datetime:
-    return datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_TTL_DIAS)
+    return datetime.now(UTC) + timedelta(days=get_settings().refresh_token_expire_days)
 
 
 # ---------- Access tokens (JWT) ----------
 
 
 def _claves() -> tuple[str, str]:
-    clave = get_settings().jwt_secret_key
-    if not clave:
+    settings = get_settings()
+    if not settings.jwt_secret_key:
         raise RuntimeError(
             "JWT_SECRET_KEY no configurado. "
             "Definilo en .env.local o como variable de entorno."
         )
-    return clave, ALGORITMO_JWT
+    return settings.jwt_secret_key, settings.jwt_algorithm
 
 
 def crear_access_token(usuario_id: uuid.UUID) -> str:
@@ -78,7 +83,7 @@ def crear_access_token(usuario_id: uuid.UUID) -> str:
         "sub": str(usuario_id),
         "type": "access",
         "iat": ahora,
-        "exp": ahora + timedelta(minutes=ACCESS_TOKEN_TTL_MINUTOS),
+        "exp": ahora + timedelta(minutes=get_settings().access_token_expire_minutes),
     }
     return jwt.encode(payload, clave, algorithm=algoritmo)
 

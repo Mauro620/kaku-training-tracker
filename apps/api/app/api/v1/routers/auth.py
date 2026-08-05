@@ -12,9 +12,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.dependencies import get_usuario_actual
 from app.core.seguridad import (
-    ACCESS_TOKEN_TTL_MINUTOS,
     crear_access_token,
     generar_refresh_token,
     hashear_refresh_token,
@@ -56,8 +56,10 @@ async def login(
     sesion: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     auth = await _cargar_auth_por_email(sesion, payload.email)
-    # Mensaje generico: no filtrar si el email existe o si la password esta mal.
-    if auth is None or not verificar_password(payload.password, auth.password_hash):
+    # verificar_password corre siempre, incluso si auth es None (contra un
+    # hash senuelo): asi el tiempo de respuesta no delata si el email existe.
+    password_hash = auth.password_hash if auth is not None else None
+    if auth is None or not verificar_password(payload.password, password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="credenciales invalidas",
@@ -72,7 +74,7 @@ async def login(
     return TokenResponse(
         access_token=crear_access_token(auth.usuario_id),
         refresh_token=refresh,
-        expires_in=ACCESS_TOKEN_TTL_MINUTOS * 60,
+        expires_in=get_settings().access_token_expire_minutes * 60,
     )
 
 
@@ -112,7 +114,7 @@ async def refresh(
     return TokenResponse(
         access_token=crear_access_token(auth.usuario_id),
         refresh_token=nuevo_refresh,
-        expires_in=ACCESS_TOKEN_TTL_MINUTOS * 60,
+        expires_in=get_settings().access_token_expire_minutes * 60,
     )
 
 

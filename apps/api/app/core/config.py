@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     # `core/seguridad.py` aborta al usarlo si el codigo llega a importarlo
     # en un entorno sin clave (ej. tests sin auth).
     jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    # Access corto + refresh rotativo: el refresh existe justamente para que
+    # el access pueda ser de vida corta sin friccionar al usuario.
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
 
     def dsn(self, database: str) -> str:
         """URL de conexión a una base arbitraria del mismo servidor."""
