@@ -28,7 +28,10 @@ class AuthUsuario(Base):
     # argon2id: ~95 caracteres para el hash completo con sal y parametros.
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     # SHA-256 hex de un token de 48 bytes random. 64 caracteres alcanzan.
-    refresh_token_hash: Mapped[str | None] = mapped_column(String(255))
+    # unique=True: dos usuarios no pueden terminar con el mismo hash de
+    # refresh activo. Postgres permite múltiples NULL en una columna unique,
+    # así que no molesta a las cuentas sin sesión activa (logout).
+    refresh_token_hash: Mapped[str | None] = mapped_column(String(255), unique=True)
     refresh_token_expira_en: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
