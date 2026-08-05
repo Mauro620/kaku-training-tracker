@@ -9,6 +9,14 @@ from decimal import Decimal
 PARAMETROS: tuple[tuple[str, Decimal, str | None, str], ...] = (
     # ---------- Sueño ----------
     ("sueno_objetivo_horas", Decimal("7.0"), "h", "Objetivo diario de sueño"),
+    (
+        "dia_registro_hora_corte",
+        Decimal("4"),
+        "h",
+        "Antes de esta hora el registro del día sigue siendo el de ayer "
+        "(alguien que se acuesta después de medianoche no debería ver la "
+        "pantalla Hoy en blanco antes de dormir)",
+    ),
     # ---------- ACWR (REGLAS_NEGOCIO §3) ----------
     ("acwr_min_seguro", Decimal("0.8"), None, "Piso de la zona segura de ACWR"),
     ("acwr_max_seguro", Decimal("1.3"), None, "Techo de la zona segura de ACWR"),

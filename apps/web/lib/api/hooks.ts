@@ -39,6 +39,13 @@ export type HabitoRegistro = {
   valor: boolean;
 };
 
+export type Parametro = {
+  clave: string;
+  valor: string;
+  unidad: string | null;
+  descripcion: string;
+};
+
 // ---------- Queries ----------
 
 export const QUERY_HOY = ["cierre-del-dia", "hoy"] as const;
@@ -63,6 +70,14 @@ export function useBienestarDeHoy(fecha: string) {
       if (error instanceof ApiError && error.status === 404) return false;
       return failureCount < 1;
     },
+  });
+}
+
+export function useParametro(clave: string) {
+  return useQuery({
+    queryKey: ["parametro", clave],
+    queryFn: () => api.get<Parametro>(`/parametros/${clave}`),
+    staleTime: Infinity, // un umbral de negocio no cambia en medio de una sesión
   });
 }
 

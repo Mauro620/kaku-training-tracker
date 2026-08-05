@@ -4,7 +4,7 @@ from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1.routers import auth, bienestar, habitos, health, sueno
+from app.api.v1.routers import auth, bienestar, habitos, health, parametros, sueno
 from app.core.config import get_settings
 from app.core.exceptions import InvarianteDeNegocioError, RecursoNoEncontradoError
 
@@ -47,6 +47,7 @@ def create_app() -> FastAPI:
     v1.include_router(sueno.router)
     v1.include_router(bienestar.router)
     v1.include_router(habitos.router)
+    v1.include_router(parametros.router)
     app.include_router(v1)
 
     return app
