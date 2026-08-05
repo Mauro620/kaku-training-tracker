@@ -12,7 +12,7 @@ import uuid
 from datetime import date
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -191,6 +191,15 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
             ["usuario_id", "nombre"],
         ),
     }
+
+    # El upsert nunca borra: un hábito que salió de HABITOS (ej. "hidratacion",
+    # migrado a registro_hidratacion) queda huérfano si no se desactiva acá.
+    await session.execute(
+        update(Habito)
+        .where(Habito.usuario_id == usuario_id, Habito.nombre.notin_(HABITOS))
+        .values(activo=False)
+    )
+
     return conteo
 
 

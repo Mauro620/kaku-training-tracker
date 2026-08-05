@@ -24,6 +24,7 @@ from app.core.seguridad import (
 from app.db.session import get_session
 from app.models import AuthUsuario, Usuario
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
+from app.schemas.catalogo.catalogo import UsuarioRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -143,12 +144,10 @@ async def logout(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# Endpoint protegido de prueba, para verificar end-to-end que el JWT cierra
-# el circulo. Se saca en el siguiente commit cuando arranque Fase 3 con los
-# endpoints de sueno, que ya dependen de get_usuario_actual.
 @router.get(
     "/me",
-    summary="Devuelve el usuario autenticado. Solo para smoke-test del token.",
+    response_model=UsuarioRead,
+    summary="Devuelve el perfil del usuario autenticado.",
 )
-async def me(usuario: Usuario = Depends(get_usuario_actual)) -> dict[str, str]:
-    return {"id": str(usuario.id), "nombre": usuario.nombre}
+async def me(usuario: Usuario = Depends(get_usuario_actual)) -> Usuario:
+    return usuario

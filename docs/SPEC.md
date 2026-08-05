@@ -67,11 +67,17 @@ habito           (id, nombre, activo, orden)
 habito_registro  (fecha, habito_id, valor)
 ```
 
-Semilla: creatina, magnesio, estiramiento, hidratación.
+Semilla: creatina, magnesio, estiramiento.
 
 "Celular fuera" **no** es un hábito: es `registro_sueno.celular_fuera`, que se
 llena en el mismo formulario del despertar. Tenerlo en los dos lados es el
 mismo hecho en dos filas que van a divergir.
+
+"Hidratación" tampoco es un hábito booleano: se registra en litros, no como
+check. Ver `registro_hidratacion` — cada tap suma al total del día, no lo
+reemplaza. La meta diaria (ej. 2.5–3 L) es personal y vive en
+`usuario.agua_objetivo_ml_min/max`, no en `parametro`: no es una constante de
+fórmula compartida, es una meta que cada quien fija para sí mismo.
 
 ### 2.5 Nutrición
 

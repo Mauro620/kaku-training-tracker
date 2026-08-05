@@ -16,6 +16,8 @@ class UsuarioRead(ReadBase):
     id: uuid.UUID
     nombre: str
     peso_objetivo_kg: Decimal | None
+    agua_objetivo_ml_min: int | None
+    agua_objetivo_ml_max: int | None
 
 
 class TipoSesionRead(ReadBase):

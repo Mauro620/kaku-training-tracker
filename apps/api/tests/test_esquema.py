@@ -30,7 +30,7 @@ from app.models import (
     ZonaCorporal,
 )
 from app.seeds.__main__ import sembrar
-from app.seeds.catalogos import TIPOS_SESION, ZONAS_CORPORALES
+from app.seeds.catalogos import HABITOS, TIPOS_SESION, ZONAS_CORPORALES
 from app.seeds.parametros import PARAMETROS
 
 # `sesion` y `url_base_de_prueba` viven en conftest.py: las comparte con
@@ -57,7 +57,7 @@ async def test_el_seed_deja_los_catalogos_completos(sesion: AsyncSession) -> Non
         ZonaCorporal: len(ZONAS_CORPORALES),
         Ejercicio: 29,
         Alimento: 24,
-        Habito: 4,
+        Habito: len(HABITOS),
         Usuario: 1,
     }
     for modelo, cantidad in esperado.items():

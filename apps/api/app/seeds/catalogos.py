@@ -42,11 +42,11 @@ TIPOS_TEST: tuple[tuple[str, str, str, bool], ...] = (
 )
 
 # "Celular fuera" NO está acá: vive en registro_sueno.celular_fuera y se llena
-# en el mismo formulario del despertar. Tenerlo en los dos lados sería el mismo
-# hecho en dos filas que van a divergir.
+# en el mismo formulario del despertar. "Hidratación" tampoco: se registra en
+# litros en registro_hidratacion, no como check booleano. Tenerlos acá sería
+# el mismo hecho en dos filas que van a divergir.
 HABITOS: tuple[str, ...] = (
     "creatina",
     "magnesio",
     "estiramiento",
-    "hidratacion",
 )

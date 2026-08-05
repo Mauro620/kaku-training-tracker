@@ -57,9 +57,11 @@ Table usuario [headercolor: #175e7a] {
 	id uuid [ pk ]
 	nombre varchar(80) [ not null ]
 	peso_objetivo_kg numeric(5,2)
+	agua_objetivo_ml_min integer
+	agua_objetivo_ml_max integer
 	creado_en timestamptz [ not null, default: `now()` ]
 
-	Note: 'App de un solo usuario hoy. La FK existe para no migrar 20 tablas si mañana entra un compañero o un preparador. Los umbrales calibrables (objetivo de sueño, proteina_g_por_kg) NO viven aquí: viven en parametro, que es el unico lugar calibrable.'
+	Note: 'App de un solo usuario hoy. La FK existe para no migrar 20 tablas si mañana entra un compañero o un preparador. Los umbrales calibrables (objetivo de sueño, proteina_g_por_kg) NO viven aquí: viven en parametro, que es el unico lugar calibrable. agua_objetivo_ml_* SÍ vive acá, no en parametro: es una meta personal directa (como peso_objetivo_kg), no una constante de fórmula compartida.'
 }
 
 Table tipo_sesion [headercolor: #175e7a] {
@@ -260,6 +262,19 @@ Table registro_bienestar [headercolor: #53177a] {
 	}
 
 	Note: 'Cuatro ítems 1-5. hooper = suma de los cuatro, columna generada. CHECK entre 1 y 5 en cada uno. Direccion: 1 es bueno, 5 es malo en los cuatro. El campo se llama sueno_pobre y no sueno_calidad para que el nombre apunte en la misma direccion que el valor.'
+}
+
+Table registro_hidratacion [headercolor: #53177a] {
+	id bigint [ pk, increment ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	ml_totales integer [ not null, default: 0 ]
+
+	indexes {
+		(usuario_id, fecha) [ unique ]
+	}
+
+	Note: 'A diferencia de registro_sueno/registro_bienestar, cada registro SUMA a ml_totales en vez de reemplazarlo (un termo de 750ml es un tap, no la cantidad total del día). CHECK ml_totales >= 0.'
 }
 
 Table habito_registro [headercolor: #34eb7a] {
@@ -472,6 +487,10 @@ Ref fk_registro_sueno_usuario_id_usuario {
 
 Ref fk_registro_bienestar_usuario_id_usuario {
 	registro_bienestar.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_registro_hidratacion_usuario_id_usuario {
+	registro_hidratacion.usuario_id > usuario.id [ delete: no action, update: no action ]
 }
 
 Ref fk_habito_registro_habito_id_habito {

@@ -12,6 +12,7 @@ from app.models.bienestar import (
     MedidaCorporal,
     Molestia,
     RegistroBienestar,
+    RegistroHidratacion,
     RegistroSueno,
 )
 from app.models.catalogo import (
@@ -61,6 +62,7 @@ __all__ = [
     "Receta",
     "RecetaItem",
     "RegistroBienestar",
+    "RegistroHidratacion",
     "RegistroSueno",
     "Serie",
     "SeriePlan",

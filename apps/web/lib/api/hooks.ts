@@ -46,6 +46,20 @@ export type Parametro = {
   descripcion: string;
 };
 
+export type RegistroHidratacion = {
+  id: number;
+  fecha: string;
+  ml_totales: number;
+};
+
+export type UsuarioPerfil = {
+  id: string;
+  nombre: string;
+  peso_objetivo_kg: string | null;
+  agua_objetivo_ml_min: number | null;
+  agua_objetivo_ml_max: number | null;
+};
+
 // ---------- Queries ----------
 
 export const QUERY_HOY = ["cierre-del-dia", "hoy"] as const;
@@ -95,6 +109,25 @@ export function useHabitosDeHoy(fecha: string) {
   });
 }
 
+export function useUsuarioActual() {
+  return useQuery({
+    queryKey: ["usuario", "me"],
+    queryFn: () => api.get<UsuarioPerfil>("/auth/me"),
+    staleTime: Infinity,
+  });
+}
+
+export function useHidratacionDeHoy(fecha: string) {
+  return useQuery({
+    queryKey: ["hidratacion", fecha],
+    queryFn: () => api.get<RegistroHidratacion>(`/hidratacion/${fecha}`),
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && error.status === 404) return false;
+      return failureCount < 1;
+    },
+  });
+}
+
 // ---------- Mutations ----------
 
 export function useUpsertSueno(fecha: string) {
@@ -130,6 +163,19 @@ export function useMarcarHabito(fecha: string) {
       api.post<HabitoRegistro>("/habitos/registro", { fecha, ...cuerpo }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["habitos", "registro", fecha] });
+    },
+  });
+}
+
+export function useSumarHidratacion(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: { cantidad_ml: number }) =>
+      api.post<RegistroHidratacion>("/hidratacion", { fecha, ...cuerpo }),
+    // El endpoint ya devuelve el total nuevo: no hace falta invalidar y
+    // esperar un segundo round-trip para ver el número actualizado.
+    onSuccess: (data) => {
+      qc.setQueryData(["hidratacion", fecha], data);
     },
   });
 }

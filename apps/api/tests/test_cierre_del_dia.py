@@ -1,4 +1,5 @@
-"""Tests de integración de la rebanada de Fase 3: sueño, bienestar, hábitos.
+"""Tests de integración de la rebanada de Fase 3: sueño, bienestar, hábitos,
+hidratación.
 
 Camino feliz + los errores declarados por cada servicio (AGENTS.md §3.5), sin
 repetir lo que ya cubre test_esquema.py (rangos, CHECK) ni test_auth.py
@@ -133,4 +134,34 @@ async def test_registrar_habito_inexistente_devuelve_404(
         "/api/v1/habitos/registro",
         json={"habito_id": 999999, "fecha": "2026-08-04", "valor": True},
     )
+    assert respuesta.status_code == 404
+
+
+async def test_hidratacion_no_aparece_en_habitos(cliente: AsyncClient) -> None:
+    respuesta = await cliente.get("/api/v1/habitos")
+    nombres = {h["nombre"] for h in respuesta.json()}
+    assert "hidratacion" not in nombres
+
+
+# ----------------------------------------------------------- hidratación ----
+
+
+async def test_cada_registro_de_hidratacion_suma_al_total(
+    cliente: AsyncClient,
+) -> None:
+    for _ in range(3):
+        respuesta = await cliente.post(
+            "/api/v1/hidratacion", json={"fecha": "2026-08-04", "cantidad_ml": 750}
+        )
+    assert respuesta.status_code == 200
+    assert respuesta.json()["ml_totales"] == 2250
+
+    leido = await cliente.get("/api/v1/hidratacion/2026-08-04")
+    assert leido.json()["ml_totales"] == 2250
+
+
+async def test_leer_hidratacion_de_fecha_sin_registro_devuelve_404(
+    cliente: AsyncClient,
+) -> None:
+    respuesta = await cliente.get("/api/v1/hidratacion/2020-01-01")
     assert respuesta.status_code == 404
