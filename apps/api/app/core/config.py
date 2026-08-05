@@ -6,15 +6,21 @@ arrancar.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Los .env viven en la raíz del monorepo, pero los comandos se corren desde
+# apps/api. Resolvemos la ruta desde __file__ y no desde el cwd: si no, migrar
+# desde apps/api no encuentra la configuración y falla por la razón equivocada.
+RAIZ_MONOREPO = Path(__file__).resolve().parents[4]
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.local"),
+        env_file=(RAIZ_MONOREPO / ".env", RAIZ_MONOREPO / ".env.local"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
