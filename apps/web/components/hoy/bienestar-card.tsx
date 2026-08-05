@@ -11,6 +11,8 @@ import {
 
 type Props = { fecha: string };
 
+const DEBOUNCE_MS = 800;
+
 const ITEMS_HOOPER: Array<{
   clave: keyof Pick<
     RegistroBienestar,
@@ -30,11 +32,11 @@ const ESCALA = [1, 2, 3, 4, 5] as const;
 /**
  * Bienestar del día (DESIGN.md §2.1, SPEC.md §2.1, REGLAS_NEGOCIO §5).
  * Cuatro sliders de Hooper (1-5). El cálculo del hooper lo hace la base.
- * Sin modal: edición inline con pills.
+ * Autoguardado con debounce, sin botón.
  */
 export function BienestarCard({ fecha }: Props) {
   const { data, isLoading } = useBienestarDeHoy(fecha);
-  const mutacion = useUpsertBienestar(fecha);
+  const { mutate, isPending, isSuccess } = useUpsertBienestar(fecha);
 
   const [borrador, setBorrador] = useState<{
     sueno_pobre: number;
@@ -42,10 +44,10 @@ export function BienestarCard({ fecha }: Props) {
     dolor_muscular: number;
     estres: number;
   } | null>(null);
-  const [editando, setEditando] = useState(false);
+  const [tocado, setTocado] = useState(false);
 
   useEffect(() => {
-    if (data && !editando && borrador === null) {
+    if (data && !tocado && borrador === null) {
       setBorrador({
         sueno_pobre: data.sueno_pobre,
         fatiga: data.fatiga,
@@ -53,16 +55,13 @@ export function BienestarCard({ fecha }: Props) {
         estres: data.estres,
       });
     }
-  }, [data, editando, borrador]);
+  }, [data, tocado, borrador]);
 
-  const pendiente =
-    editando &&
-    borrador !== null &&
-    data !== undefined &&
-    (borrador.sueno_pobre !== data.sueno_pobre ||
-      borrador.fatiga !== data.fatiga ||
-      borrador.dolor_muscular !== data.dolor_muscular ||
-      borrador.estres !== data.estres);
+  useEffect(() => {
+    if (!tocado || borrador === null) return;
+    const id = setTimeout(() => mutate(borrador), DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [borrador, tocado, mutate]);
 
   const hooper = borrador
     ? borrador.sueno_pobre + borrador.fatiga + borrador.dolor_muscular + borrador.estres
@@ -74,11 +73,16 @@ export function BienestarCard({ fecha }: Props) {
         <p className="text-[11px] font-normal tracking-widest uppercase text-text-secondary">
           Bienestar
         </p>
-        {hooper !== null && (
-          <span className="text-[11px] uppercase tracking-widest text-text-secondary">
-            Hooper {hooper}
+        <div className="flex items-center gap-2">
+          {hooper !== null && (
+            <span className="text-[11px] uppercase tracking-widest text-text-secondary">
+              Hooper {hooper}
+            </span>
+          )}
+          <span className="text-[11px] text-text-secondary">
+            {isPending ? "Guardando…" : isSuccess || data ? "Guardado" : ""}
           </span>
-        )}
+        </div>
       </header>
 
       {isLoading || borrador === null ? (
@@ -94,25 +98,11 @@ export function BienestarCard({ fecha }: Props) {
                 valor={borrador[clave]}
                 onChange={(siguiente) => {
                   setBorrador({ ...borrador, [clave]: siguiente });
-                  setEditando(true);
+                  setTocado(true);
                 }}
               />
             </div>
           ))}
-
-          {pendiente && (
-            <button
-              type="button"
-              onClick={async () => {
-                await mutacion.mutateAsync(borrador);
-                setEditando(false);
-              }}
-              disabled={mutacion.isPending}
-              className="mt-2 w-full bg-text-primary text-canvas rounded-pill py-3 text-[14px] font-semibold disabled:opacity-50"
-            >
-              {mutacion.isPending ? "Guardando..." : "Guardar bienestar"}
-            </button>
-          )}
         </div>
       )}
     </BentoCard>

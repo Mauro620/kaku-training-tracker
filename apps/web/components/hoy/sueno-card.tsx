@@ -1,50 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BentoCard } from "@/components/ui/bento-card";
-import {
-  useSuenoDeHoy,
-  useUpsertSueno,
-  type RegistroSueno,
-} from "@/lib/api/hooks";
+import { useSuenoDeHoy, useUpsertSueno } from "@/lib/api/hooks";
 
 type Props = { fecha: string };
 
+const DEBOUNCE_MS = 800;
+
 /**
  * Sueño del día (DESIGN.md §2.1, SPEC.md §1, REGLAS_NEGOCIO §6).
- * Dos inputs nativos time + un checkbox + un botón guardar inline.
- * Sin modal: el registro se hace en 30s en la cama, la fricción mata.
+ * Dos inputs nativos time + un checkbox. Autoguardado con debounce, sin
+ * botón: el registro se hace en 30s en la cama, la fricción mata.
  */
 export function SuenoCard({ fecha }: Props) {
   const { data, isLoading } = useSuenoDeHoy(fecha);
-  const mutacion = useUpsertSueno(fecha);
+  const { mutate, isPending, isSuccess } = useUpsertSueno(fecha);
 
-  // El borrador se inicializa con lo que ya hay. Si el usuario está editando
-  // y el servidor responde con datos nuevos, no pisamos su input.
   const [inicio, setInicio] = useState("");
   const [fin, setFin] = useState("");
   const [celular, setCelular] = useState<boolean | null>(null);
-  const [editando, setEditando] = useState(false);
+  // El usuario ya tocó algo: no pisar su borrador si el servidor responde.
+  const [tocado, setTocado] = useState(false);
 
   useEffect(() => {
-    if (data && !editando) {
+    if (data && !tocado) {
       setInicio(toLocalTime(data.inicio));
       setFin(toLocalTime(data.fin));
       setCelular(data.celular_fuera);
     }
-  }, [data, editando]);
+  }, [data, tocado]);
 
-  const pendiente =
-    editando &&
-    data !== undefined &&
-    (toLocalTime(data.inicio) !== inicio ||
-      toLocalTime(data.fin) !== fin ||
-      data.celular_fuera !== celular);
+  useEffect(() => {
+    if (!tocado || !inicio || !fin) return;
+    const id = setTimeout(() => {
+      mutate({
+        inicio: toIsoDeInicio(fecha, inicio, fin),
+        fin: toIsoLocal(fecha, fin),
+        celular_fuera: celular,
+      });
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [inicio, fin, celular, tocado, fecha, mutate]);
 
   const horas =
-    data && validarHoras(inicio, fin)
-      ? formatHorasSueno(inicio, fin)
-      : data?.horas_sueno ?? null;
+    inicio && fin ? formatHorasSueno(inicio, fin) : (data?.horas_sueno ?? null);
 
   return (
     <BentoCard ancho="half">
@@ -52,11 +52,9 @@ export function SuenoCard({ fecha }: Props) {
         <p className="text-[11px] font-normal tracking-widest uppercase text-text-secondary">
           Sueño
         </p>
-        {data && (
-          <span className="text-[11px] text-text-secondary">
-            {new Date(fecha).toLocaleDateString("es-CO", { weekday: "short" })}
-          </span>
-        )}
+        <span className="text-[11px] text-text-secondary">
+          {isPending ? "Guardando…" : isSuccess || data ? "Guardado" : ""}
+        </span>
       </header>
 
       {isLoading ? (
@@ -78,7 +76,7 @@ export function SuenoCard({ fecha }: Props) {
                 value={inicio}
                 onChange={(e) => {
                   setInicio(e.target.value);
-                  setEditando(true);
+                  setTocado(true);
                 }}
                 className="bg-surface-secondary rounded-pill px-4 py-2 text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
               />
@@ -92,7 +90,7 @@ export function SuenoCard({ fecha }: Props) {
                 value={fin}
                 onChange={(e) => {
                   setFin(e.target.value);
-                  setEditando(true);
+                  setTocado(true);
                 }}
                 className="bg-surface-secondary rounded-pill px-4 py-2 text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
               />
@@ -105,30 +103,12 @@ export function SuenoCard({ fecha }: Props) {
               checked={celular === true}
               onChange={(e) => {
                 setCelular(e.target.checked);
-                setEditando(true);
+                setTocado(true);
               }}
               className="h-5 w-5 accent-text-primary"
             />
             <span className="text-[14px] text-text-secondary">Celular fuera</span>
           </label>
-
-          {pendiente && (
-            <button
-              type="button"
-              onClick={async () => {
-                await mutacion.mutateAsync({
-                  inicio: toIsoLocal(fecha, inicio),
-                  fin: toIsoLocal(fecha, fin),
-                  celular_fuera: celular,
-                });
-                setEditando(false);
-              }}
-              disabled={!validarHoras(inicio, fin) || mutacion.isPending}
-              className="mt-5 w-full bg-text-primary text-canvas rounded-pill py-3 text-[14px] font-semibold disabled:opacity-50"
-            >
-              {mutacion.isPending ? "Guardando..." : "Guardar sueño"}
-            </button>
-          )}
         </>
       )}
     </BentoCard>
@@ -138,24 +118,33 @@ export function SuenoCard({ fecha }: Props) {
 // ---------- Helpers locales ----------
 
 function toLocalTime(iso: string): string {
-  // `iso` viene como "2026-08-04T12:00:00Z" o con offset. Devuelve "HH:MM" local.
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function toIsoLocal(fecha: string, hora: string): string {
-  // "2026-08-04" + "07:00" -> "2026-08-04T07:00:00" sin TZ (interpretado como
-  // hora local por el backend al convertirlo).
   return `${fecha}T${hora}:00`;
 }
 
-function validarHoras(inicio: string, fin: string): boolean {
-  if (!inicio || !fin) return false;
-  // En el formulario el usuario no puede poner fin < inicio porque el input
-  // time no lo impide a priori. Pero el backend lo rechaza con 422 via el
-  // invariante de fecha del despertar. Acá no validamos: dejamos que el
-  // backend diga.
-  return true;
+/**
+ * `fecha` es siempre la fecha del despertar (REGLAS_NEGOCIO §6). La hora de
+ * acostarse pertenece al día ANTERIOR si su reloj marca más tarde que el de
+ * despertar (22:30 -> 05:20 cruza medianoche); si ya es más temprano
+ * (00:30 -> 05:20), quedó dentro del mismo día que el despertar.
+ */
+function toIsoDeInicio(fecha: string, inicio: string, fin: string): string {
+  const dia = inicio <= fin ? fecha : restarUnDia(fecha);
+  return toIsoLocal(dia, inicio);
+}
+
+function restarUnDia(fecha: string): string {
+  const [y = 1970, m = 1, d = 1] = fecha.split("-").map(Number);
+  const local = new Date(y, m - 1, d);
+  local.setDate(local.getDate() - 1);
+  const yy = local.getFullYear();
+  const mm = String(local.getMonth() + 1).padStart(2, "0");
+  const dd = String(local.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
 }
 
 function formatHorasSueno(inicio: string, fin: string): string {
