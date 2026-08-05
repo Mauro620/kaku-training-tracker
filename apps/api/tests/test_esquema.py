@@ -6,19 +6,15 @@ rechazar. Corre contra Postgres real: `Computed`, los enums nativos y
 `EXTRACT(EPOCH ...)` no existen en SQLite.
 """
 
-import asyncio
 import uuid
-from collections.abc import AsyncGenerator
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
-from app.db.base import Base
 from app.models import (
     Alimento,
     Ejercicio,
@@ -37,64 +33,9 @@ from app.seeds.__main__ import sembrar
 from app.seeds.catalogos import TIPOS_SESION, ZONAS_CORPORALES
 from app.seeds.parametros import PARAMETROS
 
+# `sesion` y `url_base_de_prueba` viven en conftest.py: las comparte con
+# test_auth.py.
 NOMBRE_USUARIO = "Test"
-
-
-async def _recrear_base(url_admin: str, nombre: str) -> None:
-    motor = create_async_engine(url_admin, isolation_level="AUTOCOMMIT")
-    async with motor.connect() as conexion:
-        await conexion.execute(text(f'DROP DATABASE IF EXISTS "{nombre}" WITH (FORCE)'))
-        await conexion.execute(text(f'CREATE DATABASE "{nombre}"'))
-    await motor.dispose()
-
-
-async def _preparar(url: str) -> None:
-    motor = create_async_engine(url)
-    async with motor.begin() as conexion:
-        await conexion.run_sync(Base.metadata.create_all)
-    async with async_sessionmaker(motor)() as s:
-        await sembrar(s, NOMBRE_USUARIO)
-        await s.commit()
-    await motor.dispose()
-
-
-@pytest.fixture(scope="session")
-def url_base_de_prueba() -> str:
-    """Base limpia por corrida: se crea, se migra y se siembra UNA vez.
-
-    Fixture síncrona a propósito: una async con scope de sesión necesitaría un
-    event loop compartido entre fixtures y tests, y no vale la complejidad.
-    """
-    settings = get_settings()
-    nombre = f"{settings.postgres_db}_test"
-    asyncio.run(_recrear_base(settings.dsn("postgres"), nombre))
-    asyncio.run(_preparar(settings.test_database_url))
-    return settings.test_database_url
-
-
-@pytest.fixture
-async def sesion(url_base_de_prueba: str) -> AsyncGenerator[AsyncSession, None]:
-    """Cada test corre dentro de una transacción que se revierte al terminar.
-
-    `join_transaction_mode="create_savepoint"` hace que los `commit()` del test
-    caigan en un SAVEPOINT: se ven dentro del test y desaparecen con el
-    rollback de afuera. Sin esto habría que recrear el esquema en cada test, que
-    era lo que hacía la suite tres veces más lenta.
-    """
-    motor = create_async_engine(url_base_de_prueba)
-    async with motor.connect() as conexion:
-        transaccion = await conexion.begin()
-        s = AsyncSession(
-            bind=conexion,
-            expire_on_commit=False,
-            join_transaction_mode="create_savepoint",
-        )
-        try:
-            yield s
-        finally:
-            await s.close()
-            await transaccion.rollback()
-    await motor.dispose()
 
 
 async def _ids_base(s: AsyncSession) -> tuple[uuid.UUID, int]:
