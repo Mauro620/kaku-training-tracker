@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rendimiento}
+      POSTGRES_USER: ${POSTGRES_USER:-rendimiento}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rendimiento}
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - datos_db:/var/lib/postgresql/data
+    healthcheck:
+      # Sin esto el api arranca contra una base que todavía no acepta
+      # conexiones y el primer request muere por una razón que no es la real.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rendimiento}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-rendimiento}
+      POSTGRES_USER: ${POSTGRES_USER:-rendimiento}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rendimiento}
+      SEED_USUARIO_NOMBRE: ${SEED_USUARIO_NOMBRE:-Mauro}
+      APP_ENV: ${APP_ENV:-local}
+      DEBUG: ${DEBUG:-true}
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/srv
+
+volumes:
+  datos_db:

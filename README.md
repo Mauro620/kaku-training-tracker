@@ -33,6 +33,10 @@ make seed
 make test
 ```
 
+Si ya tenés algo en los puertos 5432 u 8000, cambialos en `.env.local`:
+`POSTGRES_PORT` y `API_PORT`. `docker-compose.yml` y los tests los leen de ahí,
+así que no hay que tocar ningún archivo versionado.
+
 ## Estado
 
 Fases 0 y 1 completas: andamiaje y modelo de datos. Sin endpoints de negocio
