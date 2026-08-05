@@ -111,7 +111,16 @@ async def test_me_con_token_adulterado_devuelve_401(cliente_auth: AsyncClient) -
     login = await cliente_auth.post(
         "/api/v1/auth/login", json={"email": EMAIL, "password": PASSWORD}
     )
-    token_adulterado = login.json()["access_token"][:-1] + "x"
+    # Se muta un carácter del MEDIO del payload, no el último de ningún
+    # segmento: el último carácter de un segmento base64url a veces solo
+    # codifica bits de padding, y cambiarlo puede no cambiar los bytes
+    # decodificados (el token "adulterado" verificaba igual ~5% de las
+    # corridas). Un carácter interior siempre cae en un byte completo.
+    encabezado, cuerpo, firma = login.json()["access_token"].split(".")
+    medio = len(cuerpo) // 2
+    reemplazo = "a" if cuerpo[medio] != "a" else "b"
+    cuerpo_adulterado = cuerpo[:medio] + reemplazo + cuerpo[medio + 1 :]
+    token_adulterado = f"{encabezado}.{cuerpo_adulterado}.{firma}"
 
     respuesta = await cliente_auth.get(
         "/api/v1/auth/me",
