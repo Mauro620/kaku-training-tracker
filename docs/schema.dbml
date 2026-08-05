@@ -1,0 +1,526 @@
+enum demanda {
+	alta
+	media
+	baja
+}
+
+enum fase_ciclo {
+	readaptacion
+	carga
+	descarga
+}
+
+enum estado_ciclo {
+	planificado
+	activo
+	cerrado
+}
+
+enum momento_comida {
+	desayuno
+	media_manana
+	almuerzo
+	merienda
+	cena
+}
+
+enum estado_pesaje {
+	crudo
+	cocido
+}
+
+enum carga_lumbar {
+	alta
+	media
+	baja
+}
+
+enum origen_dato {
+	manual
+	health_kit
+	notion_backfill
+}
+
+enum grupo_alimento {
+	proteina_animal
+	lacteo
+	cereal
+	leguminosa
+	tuberculo
+	verdura
+	fruta
+	grasa
+	procesado
+}
+
+Table usuario [headercolor: #175e7a] {
+	id uuid [ pk ]
+	nombre varchar(80) [ not null ]
+	peso_objetivo_kg numeric(5,2)
+	creado_en timestamptz [ not null, default: `now()` ]
+
+	Note: 'App de un solo usuario hoy. La FK existe para no migrar 20 tablas si mañana entra un compañero o un preparador. Los umbrales calibrables (objetivo de sueño, proteina_g_por_kg) NO viven aquí: viven en parametro, que es el unico lugar calibrable.'
+}
+
+Table tipo_sesion [headercolor: #175e7a] {
+	id smallint [ pk, increment ]
+	codigo varchar(30) [ not null, unique ]
+	nombre varchar(60) [ not null ]
+	demanda demanda [ not null ]
+
+	Note: 'fuerza, velocidad_salto, resistencia, balon_control, balon_distribucion, recuperacion, partido'
+}
+
+Table ejercicio [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	nombre varchar(80) [ not null, unique ]
+	patron varchar(40)
+	carga_lumbar carga_lumbar [ not null, default: baja ]
+
+	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa'
+}
+
+Table zona_corporal [headercolor: #53177a] {
+	id smallint [ pk, increment ]
+	nombre varchar(40) [ not null, unique ]
+}
+
+Table tipo_test [headercolor: #175e7a] {
+	id smallint [ pk, increment ]
+	codigo varchar(30) [ not null, unique ]
+	nombre varchar(60) [ not null ]
+	unidad varchar(10) [ not null ]
+	mejor_es_mayor boolean [ not null ]
+
+	Note: 'mejor_es_mayor evita el bug clásico: en sprint_10m menos es mejor, en cmj más es mejor. Sin este campo, el cálculo de mejora se invierte en la mitad de los tests.'
+}
+
+Table alimento [headercolor: #ed9d3b] {
+	id integer [ pk, increment ]
+	nombre varchar(80) [ not null, unique ]
+	grupo grupo_alimento [ not null ]
+	estado_pesaje estado_pesaje [ not null, default: crudo ]
+	kcal_100g numeric(6,2) [ not null ]
+	proteina_100g numeric(5,2) [ not null ]
+	carbo_100g numeric(5,2) [ not null ]
+	grasa_100g numeric(5,2) [ not null ]
+	fibra_100g numeric(5,2)
+	fuente varchar(60)
+
+	Note: 'Todos los macros por 100 g. Universo cerrado (~40 alimentos de la despensa). Fuente: ICBF u Open Food Facts. grupo es lo que permite calcular pct_comidas_con_vegetal: cuenta grupo = verdura, no fruta ni tuberculo ni leguminosa.'
+}
+
+Table habito [headercolor: #34eb7a] {
+	id integer [ pk, increment ]
+	usuario_id uuid [ not null ]
+	nombre varchar(60) [ not null ]
+	activo boolean [ not null, default: true ]
+	orden smallint [ not null, default: 0 ]
+
+	indexes {
+		(usuario_id, nombre) [ unique ]
+	}
+
+	Note: 'Tabla, no columnas. Agregar un hábito es un INSERT, no una migración.'
+}
+
+Table ciclo [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	usuario_id uuid [ not null ]
+	numero smallint [ not null ]
+	objetivo text [ not null ]
+	fecha_inicio date [ not null ]
+	semanas smallint [ not null, default: 4 ]
+	estado estado_ciclo [ not null, default: planificado ]
+
+	indexes {
+		(usuario_id, numero) [ unique ]
+	}
+}
+
+Table ciclo_semana [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	ciclo_id integer [ not null ]
+	numero smallint [ not null ]
+	fase fase_ciclo [ not null ]
+	rpe_objetivo_min smallint
+	rpe_objetivo_max smallint
+	volumen_pct smallint [ not null, default: 100 ]
+
+	indexes {
+		(ciclo_id, numero) [ unique ]
+	}
+}
+
+Table sesion_plan [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	usuario_id uuid [ not null ]
+	ciclo_semana_id integer
+	fecha_prevista date [ not null ]
+	tipo_sesion_id smallint [ not null ]
+	objetivo text
+	duracion_min_est smallint
+	rpe_objetivo smallint
+
+	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga.'
+}
+
+Table serie_plan [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	sesion_plan_id integer [ not null ]
+	ejercicio_id integer [ not null ]
+	orden smallint [ not null ]
+	series smallint [ not null ]
+	reps_min smallint
+	reps_max smallint
+	peso_objetivo_kg numeric(5,2)
+
+	indexes {
+		(sesion_plan_id, orden) [ unique ]
+	}
+}
+
+Table sesion [headercolor: #175e7a] {
+	id uuid [ pk ]
+	usuario_id uuid [ not null ]
+	sesion_plan_id integer [ unique ]
+	fecha date [ not null ]
+	tipo_sesion_id smallint [ not null ]
+	duracion_min smallint [ not null, note: 'CHECK > 0' ]
+	rpe smallint [ not null, note: 'CHECK entre 1 y 10' ]
+	nota text
+	idempotency_key uuid [ not null, unique ]
+	registrado_en timestamptz [ not null, default: `now()` ]
+
+	indexes {
+		(usuario_id, fecha)
+	}
+
+	Note: 'carga_srpe = rpe * duracion_min → columna GENERATED ALWAYS AS (rpe * duracion_min) STORED. Nunca se captura. idempotency_key hace la cola de sync offline segura ante reintentos.'
+}
+
+Table serie [headercolor: #175e7a] {
+	id bigint [ pk, increment ]
+	sesion_id uuid [ not null ]
+	ejercicio_id integer [ not null ]
+	orden smallint [ not null ]
+	series smallint [ not null ]
+	reps smallint [ not null ]
+	peso_kg numeric(5,2)
+	rpe smallint [ note: 'Nullable, pero si viene: CHECK entre 1 y 10' ]
+	dolor_lumbar boolean [ not null, default: false ]
+
+	indexes {
+		(sesion_id, orden) [ unique ]
+	}
+}
+
+Table partido [headercolor: #175e7a] {
+	id uuid [ pk ]
+	sesion_id uuid [ not null, unique ]
+	rival varchar(80)
+	formato varchar(20)
+	minutos_jugados smallint [ not null ]
+	goles smallint [ not null, default: 0 ]
+	asistencias smallint [ not null, default: 0 ]
+	recuperaciones smallint
+	salio_bien text
+	a_ajustar text
+
+	Note: 'Un partido ES una sesión: duración y RPE viven en sesion, no se duplican. minutos_jugados ≠ sesion.duracion_min (esta incluye calentamiento).'
+}
+
+Table registro_sueno [headercolor: #53177a] {
+	id bigint [ pk, increment ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	inicio timestamptz [ not null ]
+	fin timestamptz [ not null, note: 'CHECK fin > inicio' ]
+	celular_fuera boolean [ note: 'Unico lugar donde vive este dato. NO existe como habito: se llena en el mismo formulario de sueno.' ]
+	origen origen_dato [ not null, default: manual ]
+
+	indexes {
+		(usuario_id, fecha) [ unique ]
+	}
+
+	Note: 'timestamptz en vez de time: cruzar medianoche con dos campos time obliga a lógica condicional en cada consulta. horas_sueno = EXTRACT(EPOCH FROM fin - inicio)/3600, generada. La fecha es la del despertar. INVARIANTE DE SERVICIO: fecha debe coincidir con la fecha local de fin. No se puede imponer con CHECK ni con columna generada porque la conversion de zona horaria no es IMMUTABLE en Postgres.'
+}
+
+Table registro_bienestar [headercolor: #53177a] {
+	id bigint [ pk, increment ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	sueno_pobre smallint [ not null ]
+	fatiga smallint [ not null ]
+	dolor_muscular smallint [ not null ]
+	estres smallint [ not null ]
+
+	indexes {
+		(usuario_id, fecha) [ unique ]
+	}
+
+	Note: 'Cuatro ítems 1-5. hooper = suma de los cuatro, columna generada. CHECK entre 1 y 5 en cada uno. Direccion: 1 es bueno, 5 es malo en los cuatro. El campo se llama sueno_pobre y no sueno_calidad para que el nombre apunte en la misma direccion que el valor.'
+}
+
+Table habito_registro [headercolor: #34eb7a] {
+	habito_id integer [ not null ]
+	fecha date [ not null ]
+	valor boolean [ not null ]
+
+	indexes {
+		(habito_id, fecha) [ pk ]
+	}
+
+	Note: 'PK compuesta (habito_id, fecha): un habito tiene como maximo un registro por dia. Esa PK es tambien la deduplicacion natural de la cola de sync, por eso no lleva idempotency_key.'
+}
+
+Table molestia [headercolor: #53177a] {
+	id bigint [ pk, increment ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	zona_id smallint [ not null ]
+	intensidad smallint [ not null, note: 'CHECK entre 1 y 10. El 0 es imposible por definicion: sin molestia no hay fila.' ]
+	nota text
+
+	indexes {
+		(usuario_id, fecha, zona_id) [ unique ]
+		(usuario_id, zona_id, fecha)
+	}
+
+	Note: 'Sin molestia no hay fila. No se pregunta a diario. El segundo índice sirve la consulta de frecuencia por zona en 14 días.'
+}
+
+Table medida_corporal [headercolor: #53177a] {
+	id bigint [ pk, increment ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	peso_kg numeric(5,2) [ not null ]
+	fc_reposo smallint
+	origen origen_dato [ not null, default: manual ]
+
+	indexes {
+		(usuario_id, fecha) [ unique ]
+	}
+
+	Note: 'Semanal, en ayunas, misma hora. El ruido diario es agua. origen distingue el dato manual del importado de Health. La unicidad (usuario_id, fecha) es la deduplicacion natural de la cola de sync.'
+}
+
+Table receta [headercolor: #ed9d3b] {
+	id integer [ pk, increment ]
+	usuario_id uuid [ not null ]
+	nombre varchar(80) [ not null ]
+	momento_default momento_comida
+	activa boolean [ not null, default: true ]
+
+	indexes {
+		(usuario_id, nombre) [ unique ]
+	}
+
+	Note: 'Se calibra una vez. Después registrar es un tap. Los macros son derivados, no se almacenan.'
+}
+
+Table receta_item [headercolor: #ed9d3b] {
+	id integer [ pk, increment ]
+	receta_id integer [ not null ]
+	alimento_id integer [ not null ]
+	cantidad_g numeric(7,2) [ not null ]
+
+	indexes {
+		(receta_id, alimento_id) [ unique ]
+	}
+}
+
+Table comida_log [headercolor: #ed9d3b] {
+	id uuid [ pk ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	momento momento_comida [ not null ]
+	receta_id integer
+	nota text
+	idempotency_key uuid [ not null, unique ]
+
+	indexes {
+		(usuario_id, fecha, momento)
+	}
+
+	Note: 'receta_id nulo = comida improvisada, sus ingredientes van en comida_item. Si receta_id existe, los ingredientes se resuelven vía receta_item.'
+}
+
+Table comida_item [headercolor: #ed9d3b] {
+	id bigint [ pk, increment ]
+	comida_log_id uuid [ not null ]
+	alimento_id integer [ not null ]
+	cantidad_g numeric(7,2) [ not null ]
+
+	Note: 'Solo para comidas sin receta. Evita duplicar la despensa en cada registro.'
+}
+
+Table despensa [headercolor: #ed9d3b] {
+	usuario_id uuid [ not null ]
+	alimento_id integer [ not null ]
+	imprescindible boolean [ not null, default: false ]
+	en_stock boolean [ not null, default: true ]
+
+	indexes {
+		(usuario_id, alimento_id) [ pk ]
+	}
+
+	Note: 'La lista de mercado es: imprescindible = true AND en_stock = false.'
+}
+
+Table test_fisico [headercolor: #175e7a] {
+	id uuid [ pk ]
+	usuario_id uuid [ not null ]
+	fecha date [ not null ]
+	tipo_test_id smallint [ not null ]
+	superficie varchar(40)
+	condiciones text
+	idempotency_key uuid [ not null, unique ]
+
+	indexes {
+		(usuario_id, tipo_test_id, fecha)
+	}
+
+	Note: 'superficie y condiciones no son decorativos: comparar un sprint en pista contra uno en grama es comparar cosas distintas. El indice (usuario_id, tipo_test_id, fecha) NO es unico a proposito (se puede repetir un test el mismo dia), por eso hace falta idempotency_key para la cola de sync.'
+}
+
+Table test_intento [headercolor: #175e7a] {
+	id bigint [ pk, increment ]
+	test_fisico_id uuid [ not null ]
+	numero smallint [ not null ]
+	valor numeric(7,3) [ not null ]
+
+	indexes {
+		(test_fisico_id, numero) [ unique ]
+	}
+
+	Note: 'Un modelo para todos los tests: RSA son 6 intentos, CMJ es mejor de 3, Yo-Yo es 1. Mejor, media y %decremento se calculan en el mart, no se almacenan. En Yo-Yo IR1 se almacena SOLO la distancia en valor; el nivel se deriva de la distancia con la tabla del protocolo, no se captura.'
+}
+
+Ref fk_habito_usuario_id_usuario {
+	habito.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_ciclo_usuario_id_usuario {
+	ciclo.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_ciclo_semana_ciclo_id_ciclo {
+	ciclo_semana.ciclo_id > ciclo.id [ delete: no action, update: no action ]
+}
+
+Ref fk_sesion_plan_usuario_id_usuario {
+	sesion_plan.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_sesion_plan_ciclo_semana_id_ciclo_semana {
+	sesion_plan.ciclo_semana_id > ciclo_semana.id [ delete: no action, update: no action ]
+}
+
+Ref fk_sesion_plan_tipo_sesion_id_tipo_sesion {
+	sesion_plan.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
+}
+
+Ref fk_serie_plan_sesion_plan_id_sesion_plan {
+	serie_plan.sesion_plan_id > sesion_plan.id [ delete: no action, update: no action ]
+}
+
+Ref fk_serie_plan_ejercicio_id_ejercicio {
+	serie_plan.ejercicio_id > ejercicio.id [ delete: no action, update: no action ]
+}
+
+Ref fk_sesion_usuario_id_usuario {
+	sesion.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_sesion_sesion_plan_id_sesion_plan {
+	sesion.sesion_plan_id - sesion_plan.id [ delete: no action, update: no action ]
+}
+
+Ref fk_sesion_tipo_sesion_id_tipo_sesion {
+	sesion.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
+}
+
+Ref fk_serie_sesion_id_sesion {
+	serie.sesion_id > sesion.id [ delete: no action, update: no action ]
+}
+
+Ref fk_serie_ejercicio_id_ejercicio {
+	serie.ejercicio_id > ejercicio.id [ delete: no action, update: no action ]
+}
+
+Ref fk_partido_sesion_id_sesion {
+	partido.sesion_id - sesion.id [ delete: no action, update: no action ]
+}
+
+Ref fk_registro_sueno_usuario_id_usuario {
+	registro_sueno.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_registro_bienestar_usuario_id_usuario {
+	registro_bienestar.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_habito_registro_habito_id_habito {
+	habito_registro.habito_id > habito.id [ delete: no action, update: no action ]
+}
+
+Ref fk_molestia_usuario_id_usuario {
+	molestia.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_molestia_zona_id_zona_corporal {
+	molestia.zona_id > zona_corporal.id [ delete: no action, update: no action ]
+}
+
+Ref fk_medida_corporal_usuario_id_usuario {
+	medida_corporal.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_receta_usuario_id_usuario {
+	receta.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_receta_item_receta_id_receta {
+	receta_item.receta_id > receta.id [ delete: no action, update: no action ]
+}
+
+Ref fk_receta_item_alimento_id_alimento {
+	receta_item.alimento_id > alimento.id [ delete: no action, update: no action ]
+}
+
+Ref fk_comida_log_usuario_id_usuario {
+	comida_log.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_comida_log_receta_id_receta {
+	comida_log.receta_id > receta.id [ delete: no action, update: no action ]
+}
+
+Ref fk_comida_item_comida_log_id_comida_log {
+	comida_item.comida_log_id > comida_log.id [ delete: no action, update: no action ]
+}
+
+Ref fk_comida_item_alimento_id_alimento {
+	comida_item.alimento_id > alimento.id [ delete: no action, update: no action ]
+}
+
+Ref fk_despensa_usuario_id_usuario {
+	despensa.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_despensa_alimento_id_alimento {
+	despensa.alimento_id > alimento.id [ delete: no action, update: no action ]
+}
+
+Ref fk_test_fisico_usuario_id_usuario {
+	test_fisico.usuario_id > usuario.id [ delete: no action, update: no action ]
+}
+
+Ref fk_test_fisico_tipo_test_id_tipo_test {
+	test_fisico.tipo_test_id > tipo_test.id [ delete: no action, update: no action ]
+}
+
+Ref fk_test_intento_test_fisico_id_test_fisico {
+	test_intento.test_fisico_id > test_fisico.id [ delete: no action, update: no action ]
+}
