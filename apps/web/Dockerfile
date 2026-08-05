@@ -30,6 +30,14 @@ ENV NODE_ENV=development \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000
 
+# node:20-slim ya trae un usuario "node" (uid 1000, igual al del dev en
+# Linux). Correr como root escribía .next/ con dueño root en el host vía el
+# bind mount del compose: el mismo bug que tuvo el .venv de la api en
+# Fase 0, arreglado ahí moviendo el venv fuera del mount. Acá se arregla
+# corriendo como no-root.
+RUN chown -R node:node /srv
+USER node
+
 EXPOSE 3000
 
 # Dev: hot reload via bind mount del compose. Para prod, sobreescribir el

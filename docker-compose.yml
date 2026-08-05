@@ -62,9 +62,15 @@ services:
     depends_on:
       - api
     volumes:
-      # Bind mount para hot reload en dev. El node_modules queda dentro del
-      # contenedor (no se monta) porque depende del OS y la version de pnpm.
+      # Bind mount para hot reload en dev.
       - ./apps/web:/srv/apps/web
+      # El bind mount de arriba tapa TODO apps/web, incluido el node_modules
+      # que pnpm instaló al construir la imagen. Sin este volumen anónimo
+      # "de más adentro", un checkout limpio (sin node_modules en el host)
+      # levanta con `next: not found`: se verificó vaciando node_modules y
+      # reconstruyendo. El volumen anónimo protege esa subruta y Docker la
+      # rellena con el contenido de la imagen la primera vez.
+      - /srv/apps/web/node_modules
 
 volumes:
   datos_db:
