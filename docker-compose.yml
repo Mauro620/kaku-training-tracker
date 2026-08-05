@@ -28,6 +28,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-rendimiento}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rendimiento}
       SEED_USUARIO_NOMBRE: ${SEED_USUARIO_NOMBRE:-Mauro}
+      SEED_USUARIO_EMAIL: ${SEED_USUARIO_EMAIL:-}
+      SEED_USUARIO_PASSWORD: ${SEED_USUARIO_PASSWORD:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
       APP_ENV: ${APP_ENV:-local}
       DEBUG: ${DEBUG:-true}
       TZ: ${TZ:-America/Bogota}
