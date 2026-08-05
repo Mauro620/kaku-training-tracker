@@ -21,5 +21,8 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  // app/sw.ts se excluye del typecheck de la app: necesita el lib
+  // "webworker" (self: ServiceWorkerGlobalScope), que choca con "dom" acá.
+  // Tiene su propio tsconfig.worker.json para el editor.
+  "exclude": ["node_modules", "app/sw.ts"]
 }

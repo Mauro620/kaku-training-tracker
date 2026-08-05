@@ -21,3 +21,9 @@ pnpm-debug.log*
 # next / typescript
 next-env.d.ts
 *.tsbuildinfo
+
+# service worker generado por Serwist en cada build (swSrc: app/sw.ts)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map

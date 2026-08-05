@@ -11,13 +11,16 @@
     "generate:api": "cd ../../packages/contracts && pnpm generate"
   },
   "dependencies": {
+    "@serwist/next": "^9.5.12",
+    "@serwist/sw": "^9.5.12",
     "@tanstack/react-query": "^5.62.0",
+    "@training-tracker/contracts": "workspace:*",
     "lucide-react": "^0.469.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zustand": "^5.0.0",
-    "@training-tracker/contracts": "workspace:*"
+    "serwist": "^9.5.12",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

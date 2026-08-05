@@ -15,6 +15,22 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Rendimiento",
   description: "Registro diario de entrenamiento, sueño, hábitos y nutrición.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    // iOS no lee el manifest para "Agregar a inicio": necesita estas meta
+    // tags propias. black-translucent deja el contenido correr debajo de
+    // la barra de estado, que es justo el "sin bordes" que pide DESIGN.md.
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Rendimiento",
+  },
 };
 
 export const viewport: Viewport = {
