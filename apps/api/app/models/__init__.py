@@ -1,10 +1,73 @@
 """Modelos de SQLAlchemy.
 
-Importar este paquete tiene que registrar TODAS las tablas en `Base.metadata`:
+Importar este paquete registra TODAS las tablas en `Base.metadata`:
 `alembic/env.py` depende de eso para que autogenerate vea el esquema completo.
-Cada modelo nuevo se re-exporta acá.
+Un modelo que no se re-exporte acá no existe para las migraciones.
 """
 
 from app.db.base import Base
+from app.models.bienestar import (
+    Habito,
+    HabitoRegistro,
+    MedidaCorporal,
+    Molestia,
+    RegistroBienestar,
+    RegistroSueno,
+)
+from app.models.catalogo import (
+    Ejercicio,
+    Parametro,
+    TipoSesion,
+    TipoTest,
+    Usuario,
+    ZonaCorporal,
+)
+from app.models.entrenamiento import (
+    Ciclo,
+    CicloSemana,
+    Partido,
+    Serie,
+    SeriePlan,
+    Sesion,
+    SesionPlan,
+)
+from app.models.evaluacion import TestFisico, TestIntento
+from app.models.nutricion import (
+    Alimento,
+    ComidaItem,
+    ComidaLog,
+    Despensa,
+    Receta,
+    RecetaItem,
+)
 
-__all__ = ["Base"]
+__all__ = [
+    "Alimento",
+    "Base",
+    "Ciclo",
+    "CicloSemana",
+    "ComidaItem",
+    "ComidaLog",
+    "Despensa",
+    "Ejercicio",
+    "Habito",
+    "HabitoRegistro",
+    "MedidaCorporal",
+    "Molestia",
+    "Parametro",
+    "Partido",
+    "Receta",
+    "RecetaItem",
+    "RegistroBienestar",
+    "RegistroSueno",
+    "Serie",
+    "SeriePlan",
+    "Sesion",
+    "SesionPlan",
+    "TestFisico",
+    "TestIntento",
+    "TipoSesion",
+    "TipoTest",
+    "Usuario",
+    "ZonaCorporal",
+]
