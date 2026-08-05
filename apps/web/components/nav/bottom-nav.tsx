@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Dumbbell, Home, UtensilsCrossed } from "lucide-react";
-
-const TABS = [
-  { href: "/hoy", icono: Home, etiqueta: "Hoy" },
-  { href: "/entreno", icono: Dumbbell, etiqueta: "Entreno" },
-  { href: "/cocina", icono: UtensilsCrossed, etiqueta: "Cocina" },
-  { href: "/progreso", icono: Calendar, etiqueta: "Progreso" },
-] as const;
+import { TABS } from "@/lib/tabs";
 
 /**
  * Bottom navigation de 4 pestañas (DESIGN.md §2.1).
