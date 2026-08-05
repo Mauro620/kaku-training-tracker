@@ -39,7 +39,7 @@ async function intentarRefresh(): Promise<boolean> {
   const refresh = leerRefreshToken();
   if (!refresh) return false;
   try {
-    const respuesta = await fetch(new URL("/auth/refresh", API), {
+    const respuesta = await fetch(`${API}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refresh }),
@@ -65,7 +65,8 @@ async function llamar<R>(
 ): Promise<R> {
   const { metodo = "GET", cuerpo, parametros, conAuth = true } = opciones;
 
-  const url = new URL(path, API);
+  // new URL(path, API) descartaría el /api/v1 de la base (path empieza con "/").
+  const url = new URL(`${API}${path}`);
   if (parametros) {
     for (const [clave, valor] of Object.entries(parametros)) {
       if (valor !== undefined) url.searchParams.set(clave, String(valor));

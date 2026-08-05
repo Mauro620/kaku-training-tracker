@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
     tz: str = "America/Bogota"
+    # Orígenes permitidos, separados por coma.
+    cors_origins: str = "http://localhost:3000"
 
     # ---------- Base de datos ----------
     # Las partes son la fuente de verdad; la URL se deriva. Tener las dos cosas
@@ -103,6 +105,12 @@ class Settings(BaseSettings):
     def test_database_url(self) -> str:
         """Base separada para tests. Se crea y se destruye en cada corrida."""
         return self.dsn(f"{self.postgres_db}_test")
+
+    @property
+    def cors_origins_lista(self) -> list[str]:
+        return [
+            origen.strip() for origen in self.cors_origins.split(",") if origen.strip()
+        ]
 
 
 @lru_cache

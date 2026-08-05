@@ -1,6 +1,7 @@
 """Punto de entrada de la API."""
 
 from fastapi import APIRouter, FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.routers import auth, bienestar, habitos, health, sueno
@@ -21,6 +22,15 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         debug=settings.debug,
         openapi_url=f"{settings.api_v1_prefix}/openapi.json",
+    )
+
+    # allow_credentials=False: la auth va por Bearer token, no cookies.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_lista,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     for excepcion, codigo in _STATUS_POR_EXCEPCION.items():
