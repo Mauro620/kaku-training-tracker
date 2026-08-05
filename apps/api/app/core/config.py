@@ -12,10 +12,23 @@ from typing import Literal
 from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Los .env viven en la raíz del monorepo, pero los comandos se corren desde
-# apps/api. Resolvemos la ruta desde __file__ y no desde el cwd: si no, migrar
-# desde apps/api no encuentra la configuración y falla por la razón equivocada.
-RAIZ_MONOREPO = Path(__file__).resolve().parents[4]
+
+def _raiz_monorepo() -> Path:
+    """Busca hacia arriba el directorio que tiene el `.env.example`.
+
+    Los .env viven en la raíz del monorepo pero los comandos se corren desde
+    apps/api, así que no sirve el cwd. Tampoco sirve contar niveles fijos desde
+    __file__: en la imagen de Docker el código queda en /srv/app/... y no hay
+    tantos padres. Si no aparece (que es el caso dentro del contenedor, donde
+    la configuración llega por variables de entorno), se usa el cwd y listo.
+    """
+    for directorio in Path(__file__).resolve().parents:
+        if (directorio / ".env.example").is_file():
+            return directorio
+    return Path.cwd()
+
+
+RAIZ_MONOREPO = _raiz_monorepo()
 
 
 class Settings(BaseSettings):
