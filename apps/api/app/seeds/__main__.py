@@ -17,10 +17,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.seguridad import hashear_password
 from app.db.base import Base
 from app.db.session import get_engine, get_sessionmaker
 from app.models import (
     Alimento,
+    AuthUsuario,
     Ejercicio,
     Habito,
     Parametro,
@@ -80,10 +82,33 @@ async def _sembrar_usuario(session: AsyncSession, nombre: str) -> uuid.UUID:
 
 
 async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
+    settings = get_settings()
+    if not settings.seed_usuario_email or not settings.seed_usuario_password:
+        # Aborta antes de tocar la base: el api ya levanto con estas vars
+        # vacias, pero el seed es quien crea la fila de AuthUsuario y sin
+        # password no hay forma de loguearse.
+        raise SystemExit(
+            "SEED_USUARIO_EMAIL y SEED_USUARIO_PASSWORD son obligatorios para "
+            "sembrar auth_usuario. Definilos en .env.local."
+        )
+
     usuario_id = await _sembrar_usuario(session, nombre_usuario)
+    password_hash = hashear_password(settings.seed_usuario_password)
 
     conteo = {
         "usuario": 1,
+        "auth_usuario": await _upsert(
+            session,
+            AuthUsuario,
+            [
+                {
+                    "usuario_id": usuario_id,
+                    "email": settings.seed_usuario_email,
+                    "password_hash": password_hash,
+                }
+            ],
+            ["usuario_id"],
+        ),
         "parametro": await _upsert(
             session,
             Parametro,

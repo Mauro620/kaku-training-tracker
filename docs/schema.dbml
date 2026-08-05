@@ -368,6 +368,19 @@ Table despensa [headercolor: #ed9d3b] {
 	Note: 'La lista de mercado es: imprescindible = true AND en_stock = false.'
 }
 
+Table auth_usuario [headercolor: #53177a] {
+	usuario_id uuid [ pk ]
+	email varchar(120) [ not null, unique ]
+	password_hash varchar(255) [ not null ]
+	refresh_token_hash varchar(255)
+	refresh_token_expira_en timestamptz
+	password_changed_at timestamptz [ not null, default: `now()` ]
+	ultimo_acceso_en timestamptz
+	creado_en timestamptz [ not null, default: `now()` ]
+
+	Note: 'Tabla separada de usuario para que la identidad de login (email, password, refresh) no contamine la tabla de dominio. PK = usuario_id porque la relacion es 1:1: un usuario, una sola fila de auth. refresh_token_hash se rota a NULL en logout; NULL equivale a "sin sesion activa". password_hash usa argon2id; refresh_token_hash usa SHA-256 porque el refresh es de alta entropia (48 bytes random), no es debil como una contrasena humana.'
+}
+
 Table test_fisico [headercolor: #175e7a] {
 	id uuid [ pk ]
 	usuario_id uuid [ not null ]
@@ -523,4 +536,8 @@ Ref fk_test_fisico_tipo_test_id_tipo_test {
 
 Ref fk_test_intento_test_fisico_id_test_fisico {
 	test_intento.test_fisico_id > test_fisico.id [ delete: no action, update: no action ]
+}
+
+Ref fk_auth_usuario_usuario_id_usuario {
+	auth_usuario.usuario_id > usuario.id [ delete: no action, update: no action ]
 }

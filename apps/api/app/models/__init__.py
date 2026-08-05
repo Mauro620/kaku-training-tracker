@@ -15,6 +15,7 @@ from app.models.bienestar import (
     RegistroSueno,
 )
 from app.models.catalogo import (
+    AuthUsuario,
     Ejercicio,
     Parametro,
     TipoSesion,
@@ -43,6 +44,7 @@ from app.models.nutricion import (
 
 __all__ = [
     "Alimento",
+    "AuthUsuario",
     "Base",
     "Ciclo",
     "CicloSemana",

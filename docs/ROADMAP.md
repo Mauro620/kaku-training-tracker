@@ -64,18 +64,24 @@ rechazan valores fuera de rango.
 
 ---
 
-## Fase 2 — Autenticación mínima
+## Fase 2 — Autenticación mínima ✅
 
 **Objetivo:** un usuario, sesión estable, sin construir un sistema de cuentas.
 
 **Entregables**
-- Login por contraseña con JWT de larga duración y refresh.
+- Login por contraseña con access JWT de 15 minutos y refresh token opaco
+  rotativo de 30 días. Se prefirió access corto + refresh rotativo a un JWT
+  de larga duración: el refresh existe justamente para que el access pueda
+  ser breve sin friccionar al usuario, y limita la ventana de un token
+  robado a 15 minutos en vez de meses.
 - Dependencia `get_usuario_actual`.
-- Credenciales del usuario único (email y hash de contraseña) desde variables
-  de entorno. La fila de `usuario` ya existe desde el seed de la fase 1;
-  aquí se le agregan las columnas de autenticación y se llenan.
+- Credenciales del usuario único (email y password) desde variables de
+  entorno, sembradas en una tabla `auth_usuario` **separada** de `usuario`
+  (1:1 por PK=FK), no como columnas agregadas a `usuario`: la identidad de
+  login es otro bounded context y no debía contaminar la tabla de dominio.
 
 **Aceptación:** un endpoint protegido rechaza sin token y responde con él.
+Cumplido — ver `apps/api/tests/test_auth.py`.
 
 **No hacer:** registro público, recuperación de contraseña, roles, OAuth.
 

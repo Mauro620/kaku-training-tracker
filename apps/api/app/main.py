@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, FastAPI
 
-from app.api.v1.routers import health
+from app.api.v1.routers import auth, health
 from app.core.config import get_settings
 
 
@@ -16,6 +16,7 @@ def create_app() -> FastAPI:
 
     v1 = APIRouter(prefix=settings.api_v1_prefix)
     v1.include_router(health.router)
+    v1.include_router(auth.router)
     app.include_router(v1)
 
     return app

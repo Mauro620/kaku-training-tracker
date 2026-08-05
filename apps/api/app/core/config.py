@@ -63,6 +63,25 @@ class Settings(BaseSettings):
     # necesita para que las tablas con usuario_id NOT NULL se puedan sembrar.
     seed_usuario_nombre: str = Field(min_length=1)
 
+    # Email y password del usuario único. El seed los usa para crear la fila
+    # de `auth_usuario`. Default vacio a proposito: el api arranca sin ellos
+    # (no son runtime), pero el seed aborta con error claro si estan vacios.
+    seed_usuario_email: str = ""
+    seed_usuario_password: str = ""
+
+    # ---------- Auth ----------
+    # Clave de firma del JWT. En Fase 3 con un solo usuario alcanza HS256;
+    # cuando haya mas de un issuer se cambia a RS256 sin tocar el codigo de
+    # los routers, solo este setting y `core/seguridad.py`. Default vacio:
+    # `core/seguridad.py` aborta al usarlo si el codigo llega a importarlo
+    # en un entorno sin clave (ej. tests sin auth).
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    # Access corto + refresh rotativo: el refresh existe justamente para que
+    # el access pueda ser de vida corta sin friccionar al usuario.
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 30
+
     def dsn(self, database: str) -> str:
         """URL de conexión a una base arbitraria del mismo servidor."""
         return str(
