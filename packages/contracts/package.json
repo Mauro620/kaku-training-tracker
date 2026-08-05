@@ -1,0 +1,13 @@
+{
+  "name": "@training-tracker/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "openapi-typescript http://localhost:8001/api/v1/openapi.json --output src/api.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.6.0"
+  }
+}

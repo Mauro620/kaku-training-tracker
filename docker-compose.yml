@@ -45,5 +45,32 @@ services:
     volumes:
       - ./apps/api:/srv
 
+  web:
+    build:
+      # El contexto es la raíz del monorepo porque pnpm necesita ver
+      # pnpm-workspace.yaml, package.json raíz y packages/contracts.
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      # En el celular, el front apunta al api por la IP del host. En este
+      # compose el api vive en otro contenedor, asi que usamos el nombre de
+      # servicio. Para el navegador del dev en :3000, la URL es la del host.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_PORT:-8000}/api/v1}
+      TZ: ${TZ:-America/Bogota}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      - api
+    volumes:
+      # Bind mount para hot reload en dev.
+      - ./apps/web:/srv/apps/web
+      # El bind mount de arriba tapa TODO apps/web, incluido el node_modules
+      # que pnpm instaló al construir la imagen. Sin este volumen anónimo
+      # "de más adentro", un checkout limpio (sin node_modules en el host)
+      # levanta con `next: not found`: se verificó vaciando node_modules y
+      # reconstruyendo. El volumen anónimo protege esa subruta y Docker la
+      # rellena con el contenido de la imagen la primera vez.
+      - /srv/apps/web/node_modules
+
 volumes:
   datos_db:

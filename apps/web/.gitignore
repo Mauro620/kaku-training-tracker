@@ -1,0 +1,29 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# env
+.env*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor
+.vscode/
+.idea/
+.DS_Store
+
+# next / typescript
+next-env.d.ts
+*.tsbuildinfo
+
+# service worker generado por Serwist en cada build (swSrc: app/sw.ts)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map
