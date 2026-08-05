@@ -50,7 +50,8 @@ class Settings(BaseSettings):
     # necesita para que las tablas con usuario_id NOT NULL se puedan sembrar.
     seed_usuario_nombre: str = Field(min_length=1)
 
-    def _dsn(self, database: str) -> str:
+    def dsn(self, database: str) -> str:
+        """URL de conexión a una base arbitraria del mismo servidor."""
         return str(
             PostgresDsn.build(
                 scheme="postgresql+asyncpg",
@@ -64,12 +65,12 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return self._dsn(self.postgres_db)
+        return self.dsn(self.postgres_db)
 
     @property
     def test_database_url(self) -> str:
         """Base separada para tests. Se crea y se destruye en cada corrida."""
-        return self._dsn(f"{self.postgres_db}_test")
+        return self.dsn(f"{self.postgres_db}_test")
 
 
 @lru_cache

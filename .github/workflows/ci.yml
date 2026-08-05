@@ -50,6 +50,11 @@ jobs:
       - name: Migraciones
         run: make migrate
 
+      # Falla si los modelos y la migración se separaron: es el error que
+      # aparece cuando alguien toca un modelo y se olvida de migrar.
+      - name: Verificar que no hay deriva de esquema
+        run: uv run --directory apps/api alembic check
+
       - name: Seeds
         run: make seed
 
