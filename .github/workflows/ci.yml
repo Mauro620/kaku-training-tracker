@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: rendimiento
+          POSTGRES_USER: rendimiento
+          POSTGRES_PASSWORD: rendimiento
+        ports:
+          - 5432:5432
+        # Los tests corren contra Postgres real: columnas generadas, enums
+        # nativos y EXTRACT(EPOCH ...) no existen en SQLite.
+        options: >-
+          --health-cmd "pg_isready -U rendimiento"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: rendimiento
+      POSTGRES_USER: rendimiento
+      POSTGRES_PASSWORD: rendimiento
+      SEED_USUARIO_NOMBRE: CI
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - name: Instalar dependencias
+        run: uv sync --frozen --directory apps/api
+
+      - name: Lint y tipos
+        run: make lint
+
+      - name: Migraciones
+        run: make migrate
+
+      - name: Seeds
+        run: make seed
+
+      - name: Tests
+        run: make test
