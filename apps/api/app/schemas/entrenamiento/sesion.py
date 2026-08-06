@@ -1,6 +1,8 @@
 import uuid
 from datetime import date, datetime
 
+from pydantic import Field
+
 from app.schemas.base import ReadBase, SchemaBase
 from app.schemas.types import DuracionMin, NoNegativo, Peso, Positivo, Rpe
 
@@ -20,6 +22,10 @@ class SesionCreate(SchemaBase):
     duracion_min: DuracionMin
     rpe: Rpe
     nota: str | None = None
+    # Series opcionales en el mismo body. Si se mandan, se crean con el
+    # `sesion_id` que el server asigna a la sesion. Si no, se crean via
+    # POST /series/{sesion_id} por separado.
+    series: list["SerieSinSesionCreate"] | None = None
 
 
 class SesionUpdate(SchemaBase):
@@ -42,10 +48,26 @@ class SesionRead(ReadBase):
     # Derivada, nunca se captura: carga_srpe = rpe * duracion_min.
     carga_srpe: int
     registrado_en: datetime
+    # Series de la sesion, ordenadas. El router las carga via selectinload
+    # para evitar N+1 cuando se listan varias sesiones.
+    series: list["SerieRead"] = Field(default_factory=list)
 
 
 class SerieCreate(SchemaBase):
     sesion_id: uuid.UUID
+    ejercicio_id: int
+    orden: NoNegativo
+    series: Positivo
+    reps: Positivo
+    peso_kg: Peso | None = None
+    rpe: Rpe | None = None
+    dolor_lumbar: bool = False
+
+
+class SerieSinSesionCreate(SchemaBase):
+    """Una serie dentro del body de POST /sesiones: el `sesion_id` lo
+    completa el server con el id de la sesion que se acaba de crear."""
+
     ejercicio_id: int
     orden: NoNegativo
     series: Positivo
@@ -75,3 +97,8 @@ class SerieRead(ReadBase):
     peso_kg: Peso | None
     rpe: int | None
     dolor_lumbar: bool
+
+
+# Resuelve las forward refs.
+SesionCreate.model_rebuild()
+SesionRead.model_rebuild()

@@ -5,13 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.routers import (
-    auth,
-    bienestar,
-    habitos,
-    health,
-    hidratacion,
-    parametros,
-    sueno,
+    auth_router,
+    bienestar_router,
+    catalogos_router,
+    entrenamiento_router,
+    habitos_router,
+    health_router,
+    hidratacion_router,
+    molestias_router,
+    parametros_router,
+    sueno_router,
 )
 from app.core.config import get_settings
 from app.core.exceptions import InvarianteDeNegocioError, RecursoNoEncontradoError
@@ -50,13 +53,16 @@ def create_app() -> FastAPI:
             return JSONResponse(status_code=codigo, content={"detail": str(exc)})
 
     v1 = APIRouter(prefix=settings.api_v1_prefix)
-    v1.include_router(health.router)
-    v1.include_router(auth.router)
-    v1.include_router(sueno.router)
-    v1.include_router(bienestar.router)
-    v1.include_router(habitos.router)
-    v1.include_router(hidratacion.router)
-    v1.include_router(parametros.router)
+    v1.include_router(health_router)
+    v1.include_router(auth_router)
+    v1.include_router(sueno_router)
+    v1.include_router(bienestar_router)
+    v1.include_router(molestias_router)
+    v1.include_router(habitos_router)
+    v1.include_router(hidratacion_router)
+    v1.include_router(parametros_router)
+    v1.include_router(entrenamiento_router)
+    v1.include_router(catalogos_router)
     app.include_router(v1)
 
     return app

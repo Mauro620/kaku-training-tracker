@@ -17,6 +17,7 @@ from app.schemas.entrenamiento.plan import (
 from app.schemas.entrenamiento.sesion import (
     SerieCreate,
     SerieRead,
+    SerieSinSesionCreate,
     SerieUpdate,
     SesionCreate,
     SesionRead,
@@ -35,6 +36,7 @@ __all__ = [
     "SeriePlanRead",
     "SeriePlanUpdate",
     "SerieRead",
+    "SerieSinSesionCreate",
     "SerieUpdate",
     "SesionCreate",
     "SesionPlanCreate",
