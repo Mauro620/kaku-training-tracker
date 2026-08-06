@@ -177,7 +177,7 @@ async def test_reemplazar_composicion_reemplaza_todo(
     ciclo_id = ciclo.json()["id"]
     semana = await cliente.post(
         f"/api/v1/ciclos/{ciclo_id}/semanas",
-        json={"ciclo_id": ciclo_id, "numero": 1, "fase": "carga", "volumen_pct": 100},
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
     )
     semana_id = semana.json()["id"]
 
@@ -218,7 +218,7 @@ async def test_cumplimiento_cuenta_sesiones_reales_no_sesion_plan(
     ciclo_id = ciclo.json()["id"]
     semana = await cliente.post(
         f"/api/v1/ciclos/{ciclo_id}/semanas",
-        json={"ciclo_id": ciclo_id, "numero": 1, "fase": "carga", "volumen_pct": 100},
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
     )
     semana_id = semana.json()["id"]
 
@@ -294,7 +294,7 @@ async def test_espaciado_fuerza_rechaza_menos_de_min_dias_y_acepta_en_el_limite(
     ciclo_id = ciclo.json()["id"]
     semana = await cliente.post(
         f"/api/v1/ciclos/{ciclo_id}/semanas",
-        json={"ciclo_id": ciclo_id, "numero": 1, "fase": "carga", "volumen_pct": 100},
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
     )
     semana_id = semana.json()["id"]
     fuerza_id = await _tipo_sesion_id(sesion, "fuerza")
@@ -347,7 +347,7 @@ async def test_espaciado_partido_rechaza_demanda_alta_en_ventana_previa(
     ciclo_id = ciclo.json()["id"]
     semana = await cliente.post(
         f"/api/v1/ciclos/{ciclo_id}/semanas",
-        json={"ciclo_id": ciclo_id, "numero": 1, "fase": "carga", "volumen_pct": 100},
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
     )
     semana_id = semana.json()["id"]
     fuerza_id = await _tipo_sesion_id(sesion, "fuerza")
@@ -392,7 +392,7 @@ async def test_listar_planes_de_fecha_resuelve_dia_sugerido_y_fecha_prevista(
     ciclo_id = ciclo.json()["id"]
     semana = await cliente.post(
         f"/api/v1/ciclos/{ciclo_id}/semanas",
-        json={"ciclo_id": ciclo_id, "numero": 1, "fase": "carga", "volumen_pct": 100},
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
     )
     semana_id = semana.json()["id"]
     resistencia_id = await _tipo_sesion_id(sesion, "resistencia")

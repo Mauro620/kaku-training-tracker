@@ -57,7 +57,10 @@ class _RpeObjetivoOrdenado(SchemaBase):
 
 
 class CicloSemanaCreate(_RpeObjetivoOrdenado):
-    ciclo_id: int
+    # `ciclo_id` viene en la URL del POST /ciclos/{ciclo_id}/semanas, no en
+    # el body. Si el cliente lo manda, FALLA: el router ya lo tiene y
+    # pasarlo aca es ruido que invita a errores (diferente ciclo_id en la
+    # URL y en el body).
     numero: Positivo
     fase: FaseCiclo
     volumen_pct: Positivo = 100
