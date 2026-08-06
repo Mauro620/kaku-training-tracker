@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EntrenoScreen } from "@/components/entreno/entreno-screen";
+import { HeaderAcciones } from "@/components/entreno/header-actions";
 import { haySesion } from "@/lib/auth";
 
 export default function EntrenoPage() {
@@ -26,15 +27,18 @@ export default function EntrenoPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-5 pt-8">
-      <header className="mb-6">
-        <h1 className="text-[28px] font-bold tracking-tight text-text-primary">Entreno</h1>
-        <p className="mt-1 text-[13px] text-text-secondary">
-          {new Date().toLocaleDateString("es-CO", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </p>
+      <header className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-[28px] font-bold tracking-tight text-text-primary">Entreno</h1>
+          <p className="mt-1 text-[13px] text-text-secondary">
+            {new Date().toLocaleDateString("es-CO", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </p>
+        </div>
+        <HeaderAcciones />
       </header>
       <EntrenoScreen />
     </main>

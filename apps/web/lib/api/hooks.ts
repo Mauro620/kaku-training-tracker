@@ -335,6 +335,137 @@ export function usePlanesDeFecha(fecha: string) {
   });
 }
 
+// ---------- Fase 4 R3a: ciclo, semana, composicion, cumplimiento ----------
+
+export type Ciclo = {
+  id: number;
+  usuario_id: string;
+  numero: number;
+  objetivo: string;
+  fecha_inicio: string;
+  semanas: number;
+  estado: "planificado" | "activo" | "cerrado";
+  fecha_fin_prevista: string;
+  fecha_cierre_real: string | null;
+};
+
+export type CicloSemana = {
+  id: number;
+  ciclo_id: number;
+  numero: number;
+  fase: "readaptacion" | "carga" | "descarga";
+  rpe_objetivo_min: number | null;
+  rpe_objetivo_max: number | null;
+  volumen_pct: number;
+};
+
+export type ComposicionItem = {
+  tipo_sesion_id: number;
+  cantidad_objetivo: number;
+};
+
+export type CumplimientoItem = {
+  tipo_sesion_id: number;
+  tipo_sesion_codigo: string;
+  tipo_sesion_nombre: string;
+  objetivo: number;
+  hecho: number;
+  cumplido: boolean;
+};
+
+export function useCiclos() {
+  return useQuery({
+    queryKey: ["ciclos"],
+    queryFn: () => api.get<Ciclo[]>("/ciclos"),
+  });
+}
+
+export function useCiclo(id: number | null) {
+  return useQuery({
+    queryKey: ["ciclo", id],
+    queryFn: () => api.get<Ciclo>(`/ciclos/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export function useCrearCiclo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      numero: number;
+      objetivo: string;
+      fecha_inicio: string;
+      semanas: number;
+    }) => api.post<Ciclo>("/ciclos", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["ciclos"] });
+    },
+  });
+}
+
+export function useCerrarCiclo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fecha_cierre_real }: { id: number; fecha_cierre_real?: string }) =>
+      api.post<Ciclo>(`/ciclos/${id}/cerrar`, { fecha_cierre_real }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["ciclos"] });
+      void qc.invalidateQueries({ queryKey: ["ciclo"] });
+    },
+  });
+}
+
+export function useSemanas(cicloId: number | null) {
+  return useQuery({
+    queryKey: ["ciclo", cicloId, "semanas"],
+    queryFn: () => api.get<CicloSemana[]>(`/ciclos/${cicloId}/semanas`),
+    enabled: cicloId !== null,
+  });
+}
+
+export function useCrearSemana(cicloId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      numero: number;
+      fase: "readaptacion" | "carga" | "descarga";
+      rpe_objetivo_min: number | null;
+      rpe_objetivo_max: number | null;
+      volumen_pct: number;
+    }) => api.post<CicloSemana>(`/ciclos/${cicloId}/semanas`, cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["ciclo", cicloId, "semanas"] });
+    },
+  });
+}
+
+export function useComposicion(semanaId: number | null) {
+  return useQuery({
+    queryKey: ["semana", semanaId, "composicion"],
+    queryFn: () => api.get<ComposicionItem[]>(`/ciclos/semanas/${semanaId}/composicion`),
+    enabled: semanaId !== null,
+  });
+}
+
+export function useReemplazarComposicion(semanaId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: ComposicionItem[]) =>
+      api.put<ComposicionItem[]>(`/ciclos/semanas/${semanaId}/composicion`, { items }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["semana", semanaId, "composicion"] });
+    },
+  });
+}
+
+export function useCumplimiento(semanaId: number | null) {
+  return useQuery({
+    queryKey: ["semana", semanaId, "cumplimiento"],
+    queryFn: () => api.get<CumplimientoItem[]>(`/ciclos/semanas/${semanaId}/cumplimiento`),
+    enabled: semanaId !== null,
+  });
+}
+
 // ---------- Fase 4: molestias ----------
 
 export function useMolestiasDeFecha(fecha: string) {
