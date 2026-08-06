@@ -53,8 +53,22 @@ async def crear_sesion_plan(
         duracion_min_est=payload.duracion_min_est,
         rpe_objetivo=payload.rpe_objetivo,
     )
+    for idx, sp in enumerate(payload.series or []):
+        await repo.crear_serie_plan(
+            session,
+            sesion_plan_id=plan.id,
+            ejercicio_id=sp.ejercicio_id,
+            orden=idx + 1,
+            series=sp.series,
+            reps_min=sp.reps_min,
+            reps_max=sp.reps_max,
+            peso_objetivo_kg=sp.peso_objetivo_kg,
+        )
+
     await session.commit()
-    await session.refresh(plan)
+    # attribute_names: SesionPlanRead siempre incluye series_planeadas, asi
+    # que el service es quien las deja cargadas antes de devolver.
+    await session.refresh(plan, attribute_names=["series_planeadas"])
     return plan
 
 

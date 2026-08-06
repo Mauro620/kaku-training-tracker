@@ -85,30 +85,41 @@ function SesionCard({
       )}
       {sesion.series.length > 0 && (
         <ul className="mt-3 flex flex-col gap-1 border-t border-border-subtle pt-2">
-          {sesion.series.map((se) => (
-            <li
-              key={se.id}
-              className="flex items-center justify-between text-[13px]"
-            >
-              <span className="text-text-primary">
-                {ejercicioNombre(se.ejercicio_id) ?? `Ejercicio ${se.ejercicio_id}`}
-              </span>
-              <span className="text-text-secondary tabular">
-                {se.series}×{se.reps}
-                {se.peso_kg ? ` · ${se.peso_kg}kg` : ""}
-                {se.rpe ? ` · RPE ${se.rpe}` : ""}
-                {se.dolor_lumbar ? " · lumbar" : ""}
-              </span>
-            </li>
-          ))}
+          {sesion.series.map((se) => {
+            // Match por ejercicio: el orden de la serie real no tiene por
+            // que coincidir con el de la planeada (se puede reordenar en el
+            // momento sin que eso invalide el objetivo).
+            const objetivo = plan?.series_planeadas.find(
+              (sp) => sp.ejercicio_id === se.ejercicio_id,
+            );
+            const deltaPeso =
+              objetivo?.peso_objetivo_kg && se.peso_kg
+                ? Number(se.peso_kg) - Number(objetivo.peso_objetivo_kg)
+                : null;
+            return (
+              <li key={se.id} className="flex items-center justify-between text-[13px]">
+                <span className="text-text-primary">
+                  {ejercicioNombre(se.ejercicio_id) ?? `Ejercicio ${se.ejercicio_id}`}
+                </span>
+                <span className="text-text-secondary tabular">
+                  {se.series}×{se.reps}
+                  {se.peso_kg ? ` · ${se.peso_kg}kg` : ""}
+                  {se.rpe ? ` · RPE ${se.rpe}` : ""}
+                  {se.dolor_lumbar ? " · lumbar" : ""}
+                  {deltaPeso !== null &&
+                    ` · obj ${objetivo!.peso_objetivo_kg}kg (Δ${deltaPeso > 0 ? "+" : ""}${deltaPeso})`}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
   );
 }
 
-// Sin serie_plan todavia (rebanada B) el delta solo compara RPE y duracion:
-// es lo unico que el plan captura hoy. Peso/reps objetivo llegan despues.
+// RPE y duracion siempre; peso solo si la serie real matchea una planeada
+// por ejercicio (arriba, junto a cada serie) — serie_plan es opcional.
 function DeltaPlan({ sesion, plan }: { sesion: Sesion; plan: SesionPlan }) {
   const deltaDuracion =
     plan.duracion_min_est !== null ? sesion.duracion_min - plan.duracion_min_est : null;

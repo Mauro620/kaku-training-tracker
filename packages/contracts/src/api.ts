@@ -903,6 +903,44 @@ export interface components {
             /** Horas Sueno */
             horas_sueno: string;
         };
+        /** SeriePlanRead */
+        SeriePlanRead: {
+            /** Id */
+            id: number;
+            /** Sesion Plan Id */
+            sesion_plan_id: number;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series: number;
+            /** Reps Min */
+            reps_min: number | null;
+            /** Reps Max */
+            reps_max: number | null;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg: string | null;
+        };
+        /**
+         * SeriePlanSinPlanCreate
+         * @description Una serie objetivo dentro del body de POST /planes: el
+         *     `sesion_plan_id` lo completa el server con el id del plan recien creado.
+         */
+        SeriePlanSinPlanCreate: {
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series: number;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg?: number | string | null;
+        };
         /** SerieRead */
         SerieRead: {
             /** Id */
@@ -1005,6 +1043,8 @@ export interface components {
             duracion_min_est?: number | null;
             /** Rpe Objetivo */
             rpe_objetivo?: number | null;
+            /** Series */
+            series?: components["schemas"]["SeriePlanSinPlanCreate"][] | null;
         };
         /** SesionPlanRead */
         SesionPlanRead: {
@@ -1029,6 +1069,8 @@ export interface components {
             duracion_min_est: number | null;
             /** Rpe Objetivo */
             rpe_objetivo: number | null;
+            /** Series Planeadas */
+            series_planeadas?: components["schemas"]["SeriePlanRead"][];
         };
         /** SesionRead */
         SesionRead: {

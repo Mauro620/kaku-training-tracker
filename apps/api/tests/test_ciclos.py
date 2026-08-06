@@ -46,6 +46,14 @@ async def _tipo_sesion_id(sesion: AsyncSession, codigo: str) -> int:
     return tipo_id
 
 
+async def _ejercicio_de_tipo(sesion: AsyncSession, tipo_sesion_id: int) -> int:
+    ejercicio_id = await sesion.scalar(
+        select(Ejercicio.id).where(Ejercicio.tipo_sesion_id == tipo_sesion_id)
+    )
+    assert ejercicio_id is not None
+    return ejercicio_id
+
+
 # ------------------------------------------------------------------ sesion --
 
 
@@ -411,3 +419,34 @@ async def test_listar_planes_de_fecha_resuelve_dia_sugerido_y_fecha_prevista(
 
     sin_planes = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-06"})
     assert sin_planes.json() == []
+
+
+async def test_crear_plan_con_series_objetivo(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    fuerza_id = await _tipo_sesion_id(sesion, "fuerza")
+    ejercicio_id = await _ejercicio_de_tipo(sesion, fuerza_id)
+
+    creado = await cliente.post(
+        "/api/v1/planes",
+        json={
+            "tipo_sesion_id": fuerza_id,
+            "fecha_prevista": "2026-08-10",
+            "series": [
+                {
+                    "ejercicio_id": ejercicio_id,
+                    "orden": 0,
+                    "series": 4,
+                    "reps_min": 6,
+                    "reps_max": 8,
+                    "peso_objetivo_kg": 80,
+                }
+            ],
+        },
+    )
+    assert creado.status_code == 200
+    assert len(creado.json()["series_planeadas"]) == 1
+    assert creado.json()["series_planeadas"][0]["peso_objetivo_kg"] == "80.00"
+
+    listado = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-10"})
+    assert len(listado.json()[0]["series_planeadas"]) == 1

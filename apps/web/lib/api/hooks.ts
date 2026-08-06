@@ -117,6 +117,17 @@ export type Molestia = {
   nota: string | null;
 };
 
+export type SeriePlan = {
+  id: number;
+  sesion_plan_id: number;
+  ejercicio_id: number;
+  orden: number;
+  series: number;
+  reps_min: number | null;
+  reps_max: number | null;
+  peso_objetivo_kg: string | null;
+};
+
 export type SesionPlan = {
   id: number;
   usuario_id: string;
@@ -127,6 +138,7 @@ export type SesionPlan = {
   objetivo: string | null;
   duracion_min_est: number | null;
   rpe_objetivo: number | null;
+  series_planeadas: SeriePlan[];
 };
 
 // ---------- Queries ----------

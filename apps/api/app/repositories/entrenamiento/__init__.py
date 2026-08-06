@@ -6,6 +6,7 @@ from app.repositories.entrenamiento import ciclo_semana as _ciclo_semana
 from app.repositories.entrenamiento import composicion as _composicion
 from app.repositories.entrenamiento import plan as _plan
 from app.repositories.entrenamiento.serie import crear as crear_serie
+from app.repositories.entrenamiento.serie_plan import crear as crear_serie_plan
 from app.repositories.entrenamiento.sesion import (
     contar_por_tipo_en_rango as contar_sesiones_por_tipo_en_rango,
 )
@@ -46,6 +47,7 @@ __all__ = [
     "crear_ciclo",
     "crear_ciclo_semana",
     "crear_serie",
+    "crear_serie_plan",
     "crear_sesion",
     "crear_sesion_plan",
     "listar_ciclo_semanas_por_ciclo",

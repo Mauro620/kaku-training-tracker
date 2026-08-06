@@ -6,6 +6,7 @@ from typing import cast
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Ciclo, CicloSemana, SesionPlan
 
@@ -86,5 +87,6 @@ async def listar_candidatos_de_fecha(
                 ),
             ),
         )
+        .options(selectinload(SesionPlan.series_planeadas))
     )
     return list(resultado.all())

@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from typing import Self
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from app.schemas.base import ReadBase, SchemaBase
 from app.schemas.types import DiaSemana, DuracionMin, NoNegativo, Peso, Positivo, Rpe
@@ -20,6 +20,9 @@ class SesionPlanCreate(SchemaBase):
     objetivo: str | None = None
     duracion_min_est: DuracionMin | None = None
     rpe_objetivo: Rpe | None = None
+    # Series objetivo en el mismo body, igual que sesion/serie: si se
+    # mandan, se crean con el `sesion_plan_id` que el server acaba de asignar.
+    series: list["SeriePlanSinPlanCreate"] | None = None
 
 
 class SesionPlanUpdate(SchemaBase):
@@ -42,6 +45,7 @@ class SesionPlanRead(ReadBase):
     objetivo: str | None
     duracion_min_est: int | None
     rpe_objetivo: int | None
+    series_planeadas: list["SeriePlanRead"] = Field(default_factory=list)
 
 
 class _RepsOrdenadas(SchemaBase):
@@ -64,6 +68,16 @@ class SeriePlanCreate(_RepsOrdenadas):
     peso_objetivo_kg: Peso | None = None
 
 
+class SeriePlanSinPlanCreate(_RepsOrdenadas):
+    """Una serie objetivo dentro del body de POST /planes: el
+    `sesion_plan_id` lo completa el server con el id del plan recien creado."""
+
+    ejercicio_id: int
+    orden: NoNegativo
+    series: Positivo
+    peso_objetivo_kg: Peso | None = None
+
+
 class SeriePlanUpdate(_RepsOrdenadas):
     ejercicio_id: int | None = None
     orden: NoNegativo | None = None
@@ -80,3 +94,8 @@ class SeriePlanRead(ReadBase):
     reps_min: int | None
     reps_max: int | None
     peso_objetivo_kg: Peso | None
+
+
+# Resuelve las forward refs.
+SesionPlanCreate.model_rebuild()
+SesionPlanRead.model_rebuild()
