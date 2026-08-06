@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.models import Molestia, Usuario
-from app.repositories.bienestar import molestia as repo
 from app.schemas.bienestar.molestia import MolestiaCreate, MolestiaRead
+from app.services.bienestar import molestia as service
 
 router = APIRouter(prefix="/molestias", tags=["bienestar"])
 
@@ -28,17 +28,14 @@ async def crear_molestia(
     usuario: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
 ) -> Molestia:
-    molestia = await repo.upsert(
+    return await service.registrar(
         sesion,
-        usuario_id=usuario.id,
-        fecha=payload.fecha,
-        zona_id=payload.zona_id,
-        intensidad=payload.intensidad,
-        nota=payload.nota,
+        usuario.id,
+        payload.fecha,
+        payload.zona_id,
+        payload.intensidad,
+        payload.nota,
     )
-    await sesion.commit()
-    await sesion.refresh(molestia)
-    return molestia
 
 
 @router.get(
@@ -51,4 +48,4 @@ async def listar_molestias(
     usuario: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
 ) -> list[Molestia]:
-    return await repo.listar_por_fecha(sesion, usuario.id, fecha)
+    return await service.listar_por_fecha(sesion, usuario.id, fecha)

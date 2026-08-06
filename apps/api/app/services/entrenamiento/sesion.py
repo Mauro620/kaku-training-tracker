@@ -72,7 +72,9 @@ async def crear_sesion_con_series(
             creadas += 1
 
     await session.commit()
-    await session.refresh(sesion_creada)
+    # attribute_names=["series"]: SesionRead siempre incluye las series, asi
+    # que el service es quien las deja cargadas antes de devolver.
+    await session.refresh(sesion_creada, attribute_names=["series"])
     return sesion_creada, creadas
 
 
