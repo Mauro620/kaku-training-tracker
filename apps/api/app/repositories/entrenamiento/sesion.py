@@ -10,9 +10,10 @@ import uuid
 from datetime import date
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Sesion
 
@@ -73,9 +74,83 @@ async def obtener_por_id(session: AsyncSession, sesion_id: uuid.UUID) -> Sesion 
 async def listar_por_fecha(
     session: AsyncSession, usuario_id: uuid.UUID, fecha: date
 ) -> list[Sesion]:
+    """`selectinload` evita N+1: SesionRead siempre incluye `series`, así que
+    cualquier consumidor de esta función las necesita cargadas."""
     resultado = await session.scalars(
         select(Sesion)
         .where(Sesion.usuario_id == usuario_id, Sesion.fecha == fecha)
+        .options(selectinload(Sesion.series))
         .order_by(Sesion.registrado_en)
+    )
+    return list(resultado.all())
+
+
+async def contar_por_tipo_en_rango(
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    tipo_sesion_id: int,
+    desde: date,
+    hasta: date,
+) -> int:
+    """Cuenta sesiones reales de un tipo dentro de un rango de fechas
+    (inclusive). Usado para el cumplimiento por composición semanal."""
+    return (
+        await session.scalar(
+            select(func.count())
+            .select_from(Sesion)
+            .where(
+                Sesion.usuario_id == usuario_id,
+                Sesion.tipo_sesion_id == tipo_sesion_id,
+                Sesion.fecha >= desde,
+                Sesion.fecha <= hasta,
+            )
+        )
+    ) or 0
+
+
+async def listar_fechas_por_tipo_en_rango(
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    tipo_sesion_id: int,
+    desde: date,
+    hasta: date,
+) -> list[date]:
+    """Fechas de sesiones reales de un tipo dentro de un rango (inclusive).
+    Usado para validar el espaciado entre sesiones del mismo tipo (ej.
+    fuerza) o la ventana previa a un partido, al sugerir un día nuevo."""
+    resultado = await session.scalars(
+        select(Sesion.fecha)
+        .where(
+            Sesion.usuario_id == usuario_id,
+            Sesion.tipo_sesion_id == tipo_sesion_id,
+            Sesion.fecha >= desde,
+            Sesion.fecha <= hasta,
+        )
+        .order_by(Sesion.fecha)
+    )
+    return list(resultado.all())
+
+
+async def listar_fechas_de_demanda_en_rango(
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    tipo_sesion_ids: list[int],
+    desde: date,
+    hasta: date,
+) -> list[date]:
+    """Fechas de sesiones reales de cualquiera de los tipos dados (usado con
+    los tipos de demanda alta) dentro de un rango. Para la regla de la
+    ventana previa a un partido."""
+    if not tipo_sesion_ids:
+        return []
+    resultado = await session.scalars(
+        select(Sesion.fecha)
+        .where(
+            Sesion.usuario_id == usuario_id,
+            Sesion.tipo_sesion_id.in_(tipo_sesion_ids),
+            Sesion.fecha >= desde,
+            Sesion.fecha <= hasta,
+        )
+        .order_by(Sesion.fecha)
     )
     return list(resultado.all())

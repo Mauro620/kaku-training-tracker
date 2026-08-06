@@ -24,6 +24,14 @@ class CicloUpdate(SchemaBase):
     estado: EstadoCiclo | None = None
 
 
+class CicloCerrarRequest(SchemaBase):
+    """Sin body obligatorio: `fecha_cierre_real` default hoy. El service
+    setea `estado=cerrado` junto con la fecha, atómico — el cliente no
+    tiene que conocer el CHECK que los mantiene coherentes."""
+
+    fecha_cierre_real: date | None = None
+
+
 class CicloRead(ReadBase):
     id: int
     usuario_id: uuid.UUID
@@ -32,6 +40,8 @@ class CicloRead(ReadBase):
     fecha_inicio: date
     semanas: int
     estado: EstadoCiclo
+    fecha_fin_prevista: date
+    fecha_cierre_real: date | None
 
 
 class _RpeObjetivoOrdenado(SchemaBase):
@@ -66,3 +76,32 @@ class CicloSemanaRead(ReadBase):
     rpe_objetivo_min: int | None
     rpe_objetivo_max: int | None
     volumen_pct: int
+
+
+class ComposicionItem(SchemaBase):
+    """Un tipo de sesión con su cantidad objetivo en la semana."""
+
+    tipo_sesion_id: int
+    cantidad_objetivo: Positivo
+
+
+class ReemplazarComposicionRequest(SchemaBase):
+    """Reemplaza TODA la composición de la semana (no upsert incremental):
+    declarar la semana completa de una vez evita composiciones a medias
+    con filas viejas colgando."""
+
+    items: list[ComposicionItem] = Field(min_length=1)
+
+
+class ComposicionItemRead(ReadBase):
+    tipo_sesion_id: int
+    cantidad_objetivo: int
+
+
+class CumplimientoItem(ReadBase):
+    tipo_sesion_id: int
+    tipo_sesion_codigo: str
+    tipo_sesion_nombre: str
+    objetivo: int
+    hecho: int
+    cumplido: bool

@@ -27,6 +27,7 @@ from app.models.catalogo import (
 from app.models.entrenamiento import (
     Ciclo,
     CicloSemana,
+    CicloSemanaComposicion,
     Partido,
     Serie,
     SeriePlan,
@@ -49,6 +50,7 @@ __all__ = [
     "Base",
     "Ciclo",
     "CicloSemana",
+    "CicloSemanaComposicion",
     "ComidaItem",
     "ComidaLog",
     "Despensa",

@@ -2,6 +2,7 @@ from datetime import date
 
 from sqlalchemy import (
     CheckConstraint,
+    Computed,
     Date,
     Enum,
     ForeignKey,
@@ -18,7 +19,13 @@ from app.models.types import IntPk, UsuarioFk
 
 class Ciclo(Base):
     __tablename__ = "ciclo"
-    __table_args__ = (UniqueConstraint("usuario_id", "numero"),)
+    __table_args__ = (
+        UniqueConstraint("usuario_id", "numero"),
+        CheckConstraint(
+            "fecha_cierre_real IS NULL OR estado = 'cerrado'",
+            name="fecha_cierre_coherente",
+        ),
+    )
 
     id: Mapped[IntPk]
     usuario_id: Mapped[UsuarioFk]
@@ -33,6 +40,15 @@ class Ciclo(Base):
         nullable=False,
         server_default=EstadoCiclo.planificado.value,
     )
+    # Derivada, nunca se captura: fecha_inicio + (semanas x 7 - 1) dias.
+    fecha_fin_prevista: Mapped[date] = mapped_column(
+        Date,
+        Computed("fecha_inicio + (semanas * 7 - 1)", persisted=True),
+    )
+    # NULL hasta que el ciclo se cierra. La distancia contra
+    # fecha_fin_prevista es la señal de "se cortó antes/después de lo
+    # planeado" (REGLAS_NEGOCIO, docs/PENDIENTES.md).
+    fecha_cierre_real: Mapped[date | None] = mapped_column(Date)
 
     semanas_del_ciclo: Mapped[list["CicloSemana"]] = relationship(
         back_populates="ciclo", order_by="CicloSemana.numero"
@@ -75,3 +91,26 @@ class CicloSemana(Base):
     )
 
     ciclo: Mapped[Ciclo] = relationship(back_populates="semanas_del_ciclo")
+
+
+class CicloSemanaComposicion(Base):
+    """Composición objetivo de la semana por tipo de sesión (ej. fuerza: 2).
+
+    Cuelga de `ciclo_semana`, no de `ciclo`: la semana de descarga puede
+    llevar 1 de fuerza en vez de 2 sin lógica especial, cada semana declara
+    la suya (REGLAS_NEGOCIO §13)."""
+
+    __tablename__ = "ciclo_semana_composicion"
+    __table_args__ = (
+        UniqueConstraint("ciclo_semana_id", "tipo_sesion_id"),
+        CheckConstraint("cantidad_objetivo > 0", name="cantidad_objetivo_positiva"),
+    )
+
+    id: Mapped[IntPk]
+    ciclo_semana_id: Mapped[int] = mapped_column(
+        ForeignKey("ciclo_semana.id"), nullable=False
+    )
+    tipo_sesion_id: Mapped[int] = mapped_column(
+        ForeignKey("tipo_sesion.id"), nullable=False
+    )
+    cantidad_objetivo: Mapped[int] = mapped_column(SmallInteger, nullable=False)

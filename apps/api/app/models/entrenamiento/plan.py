@@ -28,12 +28,20 @@ class SesionPlan(Base):
             "duracion_min_est IS NULL OR duracion_min_est > 0",
             name="duracion_min_est_positiva",
         ),
+        CheckConstraint(
+            "dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6",
+            name="dia_sugerido_rango",
+        ),
     )
 
     id: Mapped[IntPk]
     usuario_id: Mapped[UsuarioFk]
     ciclo_semana_id: Mapped[int | None] = mapped_column(ForeignKey("ciclo_semana.id"))
-    fecha_prevista: Mapped[date] = mapped_column(Date, nullable=False)
+    # Nullable desde que el cumplimiento se mide por composición semanal, no
+    # por fecha exacta (REGLAS_NEGOCIO §13). dia_sugerido (0=lunes..6=domingo)
+    # es sugerencia de UI, no compromiso.
+    fecha_prevista: Mapped[date | None] = mapped_column(Date)
+    dia_sugerido: Mapped[int | None] = mapped_column(SmallInteger)
     tipo_sesion_id: Mapped[int] = mapped_column(
         ForeignKey("tipo_sesion.id"), nullable=False
     )

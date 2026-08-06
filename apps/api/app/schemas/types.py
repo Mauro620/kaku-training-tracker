@@ -23,3 +23,6 @@ DuracionMin = Annotated[int, Field(gt=0)]
 Positivo = Annotated[int, Field(gt=0)]
 NoNegativo = Annotated[int, Field(ge=0)]
 Peso = Annotated[Decimal, Field(gt=0, max_digits=5, decimal_places=2)]
+
+DiaSemana = Annotated[int, Field(ge=0, le=6)]
+"""0=lunes..6=domingo (REGLAS_NEGOCIO §13.3)."""

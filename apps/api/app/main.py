@@ -8,12 +8,14 @@ from app.api.v1.routers import (
     auth_router,
     bienestar_router,
     catalogos_router,
+    ciclos_router,
     entrenamiento_router,
     habitos_router,
     health_router,
     hidratacion_router,
     molestias_router,
     parametros_router,
+    planes_router,
     sueno_router,
 )
 from app.core.config import get_settings
@@ -63,6 +65,8 @@ def create_app() -> FastAPI:
     v1.include_router(parametros_router)
     v1.include_router(entrenamiento_router)
     v1.include_router(catalogos_router)
+    v1.include_router(ciclos_router)
+    v1.include_router(planes_router)
     app.include_router(v1)
 
     return app

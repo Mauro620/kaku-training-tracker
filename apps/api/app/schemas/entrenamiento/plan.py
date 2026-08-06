@@ -5,12 +5,17 @@ from typing import Self
 from pydantic import model_validator
 
 from app.schemas.base import ReadBase, SchemaBase
-from app.schemas.types import DuracionMin, NoNegativo, Peso, Positivo, Rpe
+from app.schemas.types import DiaSemana, DuracionMin, NoNegativo, Peso, Positivo, Rpe
 
 
 class SesionPlanCreate(SchemaBase):
+    """`dia_sugerido` (0=lunes..6=domingo) es sugerencia de UI, no
+    compromiso: si se envía, el service valida el espaciado (REGLAS_NEGOCIO
+    §13.3) contra sesiones reales y otros planes del mismo ciclo."""
+
     ciclo_semana_id: int | None = None
-    fecha_prevista: date
+    fecha_prevista: date | None = None
+    dia_sugerido: DiaSemana | None = None
     tipo_sesion_id: int
     objetivo: str | None = None
     duracion_min_est: DuracionMin | None = None
@@ -20,6 +25,7 @@ class SesionPlanCreate(SchemaBase):
 class SesionPlanUpdate(SchemaBase):
     ciclo_semana_id: int | None = None
     fecha_prevista: date | None = None
+    dia_sugerido: DiaSemana | None = None
     tipo_sesion_id: int | None = None
     objetivo: str | None = None
     duracion_min_est: DuracionMin | None = None
@@ -30,7 +36,8 @@ class SesionPlanRead(ReadBase):
     id: int
     usuario_id: uuid.UUID
     ciclo_semana_id: int | None
-    fecha_prevista: date
+    fecha_prevista: date | None
+    dia_sugerido: int | None
     tipo_sesion_id: int
     objetivo: str | None
     duracion_min_est: int | None

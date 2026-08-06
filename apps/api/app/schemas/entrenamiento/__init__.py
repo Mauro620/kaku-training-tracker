@@ -1,10 +1,15 @@
 from app.schemas.entrenamiento.ciclo import (
+    CicloCerrarRequest,
     CicloCreate,
     CicloRead,
     CicloSemanaCreate,
     CicloSemanaRead,
     CicloSemanaUpdate,
     CicloUpdate,
+    ComposicionItem,
+    ComposicionItemRead,
+    CumplimientoItem,
+    ReemplazarComposicionRequest,
 )
 from app.schemas.entrenamiento.plan import (
     SeriePlanCreate,
@@ -25,12 +30,17 @@ from app.schemas.entrenamiento.sesion import (
 )
 
 __all__ = [
+    "CicloCerrarRequest",
     "CicloCreate",
     "CicloRead",
     "CicloSemanaCreate",
     "CicloSemanaRead",
     "CicloSemanaUpdate",
     "CicloUpdate",
+    "ComposicionItem",
+    "ComposicionItemRead",
+    "CumplimientoItem",
+    "ReemplazarComposicionRequest",
     "SerieCreate",
     "SeriePlanCreate",
     "SeriePlanRead",

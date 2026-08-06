@@ -134,10 +134,14 @@ Table ciclo [headercolor: #175e7a] {
 	fecha_inicio date [ not null ]
 	semanas smallint [ not null, default: 4 ]
 	estado estado_ciclo [ not null, default: planificado ]
+	fecha_fin_prevista date [ not null ]
+	fecha_cierre_real date
 
 	indexes {
 		(usuario_id, numero) [ unique ]
 	}
+
+	Note: 'fecha_fin_prevista = fecha_inicio + (semanas×7 − 1) días, columna GENERATED (Postgres calcula, nunca se captura). fecha_cierre_real es NULL hasta que el ciclo se cierra; CHECK fecha_cierre_real IS NULL OR estado = cerrado — evita un ciclo cerrado sin fecha o una fecha en un ciclo que sigue activo. La distancia entre fecha_fin_prevista y fecha_cierre_real es la señal de "se cortó antes/después de lo planeado" que Fase 8 necesita para no comparar ciclos completos contra interrumpidos como si fueran iguales.'
 }
 
 Table ciclo_semana [headercolor: #175e7a] {
@@ -154,17 +158,31 @@ Table ciclo_semana [headercolor: #175e7a] {
 	}
 }
 
+Table ciclo_semana_composicion [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	ciclo_semana_id integer [ not null ]
+	tipo_sesion_id smallint [ not null ]
+	cantidad_objetivo smallint [ not null ]
+
+	indexes {
+		(ciclo_semana_id, tipo_sesion_id) [ unique ]
+	}
+
+	Note: 'Composición objetivo de la semana por tipo de sesión (ej. fuerza: 2, resistencia: 1). Cuelga de ciclo_semana, no de ciclo: la semana de descarga puede llevar 1 de fuerza en vez de 2 sin lógica especial, cada semana declara la suya. Cumplimiento = contar sesion reales de ese tipo dentro del rango de fechas de la semana (derivado de ciclo.fecha_inicio + numero, no una columna nueva) contra cantidad_objetivo. CHECK cantidad_objetivo > 0.'
+}
+
 Table sesion_plan [headercolor: #175e7a] {
 	id integer [ pk, increment ]
 	usuario_id uuid [ not null ]
 	ciclo_semana_id integer
-	fecha_prevista date [ not null ]
+	fecha_prevista date
+	dia_sugerido smallint
 	tipo_sesion_id smallint [ not null ]
 	objetivo text
 	duracion_min_est smallint
 	rpe_objetivo smallint
 
-	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga.'
+	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga. fecha_prevista es NULLABLE desde que el cumplimiento pasó a medirse por composición semanal, no por fecha exacta (REGLAS_NEGOCIO §13): un plan puede vivir solo dentro de una ciclo_semana sin comprometerse a un día. dia_sugerido (0=lunes..6=domingo) es sugerencia de UI, no obligación — CHECK dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6.'
 }
 
 Table serie_plan [headercolor: #175e7a] {
@@ -435,6 +453,14 @@ Ref fk_ciclo_usuario_id_usuario {
 
 Ref fk_ciclo_semana_ciclo_id_ciclo {
 	ciclo_semana.ciclo_id > ciclo.id [ delete: no action, update: no action ]
+}
+
+Ref fk_ciclo_semana_composicion_ciclo_semana_id_ciclo_semana {
+	ciclo_semana_composicion.ciclo_semana_id > ciclo_semana.id [ delete: no action, update: no action ]
+}
+
+Ref fk_ciclo_semana_composicion_tipo_sesion_id_tipo_sesion {
+	ciclo_semana_composicion.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
 }
 
 Ref fk_sesion_plan_usuario_id_usuario {
