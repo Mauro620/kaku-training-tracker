@@ -117,6 +117,18 @@ export type Molestia = {
   nota: string | null;
 };
 
+export type SesionPlan = {
+  id: number;
+  usuario_id: string;
+  ciclo_semana_id: number | null;
+  fecha_prevista: string | null;
+  dia_sugerido: number | null;
+  tipo_sesion_id: number;
+  objetivo: string | null;
+  duracion_min_est: number | null;
+  rpe_objetivo: number | null;
+};
+
 // ---------- Queries ----------
 
 export const QUERY_HOY = ["cierre-del-dia", "hoy"] as const;
@@ -278,6 +290,7 @@ export function useCrearSesion(fecha: string) {
     mutationFn: (cuerpo: {
       id?: string;
       idempotency_key: string;
+      sesion_plan_id?: number | null;
       tipo_sesion_id: number;
       duracion_min: number;
       rpe: number;
@@ -295,7 +308,18 @@ export function useCrearSesion(fecha: string) {
       api.post<Sesion>("/sesiones", { fecha, ...cuerpo }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["sesiones", fecha] });
+      // Una sesion vinculada a un plan lo saca de "pendiente".
+      void qc.invalidateQueries({ queryKey: ["planes", fecha] });
     },
+  });
+}
+
+// ---------- Fase 4 R2: planes ----------
+
+export function usePlanesDeFecha(fecha: string) {
+  return useQuery({
+    queryKey: ["planes", fecha],
+    queryFn: () => api.get<SesionPlan[]>(`/planes?fecha=${fecha}`),
   });
 }
 

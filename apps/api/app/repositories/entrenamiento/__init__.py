@@ -38,6 +38,7 @@ listar_composicion_por_semana = _composicion.listar_por_semana
 crear_sesion_plan = _plan.crear
 obtener_sesion_plan_por_id = _plan.obtener_por_id
 listar_planes_por_ciclo_y_tipos = _plan.listar_por_ciclo_y_tipos
+listar_planes_candidatos_de_fecha = _plan.listar_candidatos_de_fecha
 
 __all__ = [
     "cerrar_ciclo",
@@ -53,6 +54,7 @@ __all__ = [
     "listar_ejercicios",
     "listar_fechas_de_demanda_en_rango",
     "listar_fechas_por_tipo_en_rango",
+    "listar_planes_candidatos_de_fecha",
     "listar_planes_por_ciclo_y_tipos",
     "listar_sesiones_por_fecha",
     "listar_tipos_sesion",

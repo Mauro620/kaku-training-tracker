@@ -6,12 +6,14 @@ import { BentoCard } from "@/components/ui/bento-card";
 import {
   useCrearSesion,
   useEjercicios,
+  useSesionesDeFecha,
   useTiposSesion,
   type Ejercicio,
+  type SesionPlan,
   type TipoSesion,
 } from "@/lib/api/hooks";
 
-type Props = { fecha: string };
+type Props = { fecha: string; planes: SesionPlan[] };
 
 type SerieBorrador = {
   // Identificador local para key de React. No se manda al backend.
@@ -45,9 +47,10 @@ const CODIGO_FUERZA = "fuerza";
  * El cliente genera `id` y `idempotency_key` (uuid v4) para que el backend
  * pueda detectar reintentos idempotentes (Fase 5 offline-first).
  */
-export function SesionForm({ fecha }: Props) {
+export function SesionForm({ fecha, planes }: Props) {
   const tipos = useTiposSesion();
   const ejercicios = useEjercicios();
+  const sesionesDeHoy = useSesionesDeFecha(fecha);
   const crear = useCrearSesion(fecha);
 
   const [tipoSesionId, setTipoSesionId] = useState<number | null>(null);
@@ -62,6 +65,17 @@ export function SesionForm({ fecha }: Props) {
   const ejerciciosDelTipo = (ejercicios.data ?? []).filter(
     (e) => e.tipo_sesion_id === tipoSesionId,
   );
+
+  // Un plan ya cumplido (tiene una sesion real que lo referencia) no se
+  // vuelve a ofrecer: linkearlo dos veces confundiria el delta.
+  const idsPlanesCumplidos = new Set(
+    (sesionesDeHoy.data ?? [])
+      .map((s) => s.sesion_plan_id)
+      .filter((id): id is number => id !== null),
+  );
+  const planesPendientes = planes.filter((p) => !idsPlanesCumplidos.has(p.id));
+  const planVinculado =
+    planesPendientes.find((p) => p.tipo_sesion_id === tipoSesionId) ?? null;
 
   const cargaEstimada = rpe * duracionMin;
 
@@ -103,6 +117,39 @@ export function SesionForm({ fecha }: Props) {
         )}
       </header>
 
+      {/* Plan de hoy: solo antes de elegir tipo, para no competir con el
+          selector una vez que ya se sabe que se esta registrando. */}
+      {!tipoSesionId && planesPendientes.length > 0 && (
+        <div className="mb-4 flex flex-col gap-2">
+          <p className="text-[11px] uppercase tracking-widest text-text-secondary">
+            Plan de hoy
+          </p>
+          {planesPendientes.map((p) => {
+            const nombre = tipos.data?.find((t) => t.id === p.tipo_sesion_id)?.nombre;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => elegirTipo(p.tipo_sesion_id)}
+                className="flex items-center justify-between rounded-bento border border-border-subtle bg-surface-secondary px-4 py-2.5 text-left"
+              >
+                <span className="text-[14px] font-medium text-text-primary">
+                  {nombre ?? "Sesion"}
+                </span>
+                <span className="text-[12px] text-text-secondary">
+                  {[
+                    p.rpe_objetivo && `RPE ${p.rpe_objetivo}`,
+                    p.duracion_min_est && `${p.duracion_min_est} min`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Tipo de sesion: colapsado muestra solo el elegido, se expande al tocar. */}
       <p className="mb-2 text-[13px] text-text-secondary">Tipo</p>
       {tipoExpandido ? (
@@ -125,6 +172,13 @@ export function SesionForm({ fecha }: Props) {
           {tipoSeleccionado?.nombre ?? "Elegir tipo…"}
           <ChevronDown size={16} className="text-text-secondary" />
         </button>
+      )}
+      {planVinculado && (
+        <p className="mt-1.5 text-[11px] text-text-secondary">
+          Vinculada al plan de hoy
+          {planVinculado.rpe_objetivo ? ` · RPE objetivo ${planVinculado.rpe_objetivo}` : ""}
+          {planVinculado.duracion_min_est ? ` · ${planVinculado.duracion_min_est} min` : ""}
+        </p>
       )}
 
       {/* Duracion, RPE, nota */}
@@ -229,6 +283,7 @@ export function SesionForm({ fecha }: Props) {
             // El dev server corre en localhost asi que funciona.
             id: crypto.randomUUID(),
             idempotency_key: crypto.randomUUID(),
+            sesion_plan_id: planVinculado?.id ?? null,
             tipo_sesion_id: tipoSesionId,
             duracion_min: duracionMin,
             rpe,

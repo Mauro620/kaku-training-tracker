@@ -363,3 +363,51 @@ async def test_espaciado_partido_rechaza_demanda_alta_en_ventana_previa(
         },
     )
     assert rechazado.status_code == 422
+
+
+async def test_listar_planes_de_fecha_resuelve_dia_sugerido_y_fecha_prevista(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """dia_sugerido=2 en la semana 1 de un ciclo que arranca el lunes
+    2026-08-03 cae el 2026-08-05. fecha_prevista es un match directo, sin
+    pasar por ciclo. Una fecha que no matchea ninguna de las dos no trae
+    nada (el rango del ciclo no alcanza para filtrar el dia exacto)."""
+    ciclo = await cliente.post(
+        "/api/v1/ciclos",
+        json={
+            "numero": 1,
+            "objetivo": "Pretemporada",
+            "fecha_inicio": "2026-08-03",  # lunes
+            "semanas": 4,
+        },
+    )
+    ciclo_id = ciclo.json()["id"]
+    semana = await cliente.post(
+        f"/api/v1/ciclos/{ciclo_id}/semanas",
+        json={"ciclo_id": ciclo_id, "numero": 1, "fase": "carga", "volumen_pct": 100},
+    )
+    semana_id = semana.json()["id"]
+    resistencia_id = await _tipo_sesion_id(sesion, "resistencia")
+    recuperacion_id = await _tipo_sesion_id(sesion, "recuperacion")
+
+    plan_por_dia = await cliente.post(
+        "/api/v1/planes",
+        json={
+            "ciclo_semana_id": semana_id,
+            "tipo_sesion_id": resistencia_id,
+            "dia_sugerido": 2,  # 2026-08-03 + 2 dias = 2026-08-05
+        },
+    )
+    plan_por_fecha = await cliente.post(
+        "/api/v1/planes",
+        json={"tipo_sesion_id": recuperacion_id, "fecha_prevista": "2026-08-07"},
+    )
+
+    del_dia = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-05"})
+    assert [p["id"] for p in del_dia.json()] == [plan_por_dia.json()["id"]]
+
+    de_la_fecha = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-07"})
+    assert [p["id"] for p in de_la_fecha.json()] == [plan_por_fecha.json()["id"]]
+
+    sin_planes = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-06"})
+    assert sin_planes.json() == []

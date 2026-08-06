@@ -4,10 +4,10 @@ import uuid
 from datetime import date
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import CicloSemana, SesionPlan
+from app.models import Ciclo, CicloSemana, SesionPlan
 
 
 async def crear(
@@ -59,6 +59,32 @@ async def listar_por_ciclo_y_tipos(
             CicloSemana.ciclo_id == ciclo_id,
             SesionPlan.tipo_sesion_id.in_(tipo_sesion_ids),
             SesionPlan.dia_sugerido.is_not(None),
+        )
+    )
+    return list(resultado.all())
+
+
+async def listar_candidatos_de_fecha(
+    session: AsyncSession, usuario_id: uuid.UUID, fecha: date
+) -> list[SesionPlan]:
+    """Planes con `fecha_prevista` exacta, mas los que tienen `dia_sugerido`
+    dentro del rango del ciclo al que pertenecen. El match exacto de dia
+    (que requiere `ciclo_semana.numero`) lo resuelve el service: acá solo se
+    acota por rango para no traer planes de otros ciclos."""
+    resultado = await session.scalars(
+        select(SesionPlan)
+        .join(CicloSemana, CicloSemana.id == SesionPlan.ciclo_semana_id, isouter=True)
+        .join(Ciclo, Ciclo.id == CicloSemana.ciclo_id, isouter=True)
+        .where(
+            SesionPlan.usuario_id == usuario_id,
+            or_(
+                SesionPlan.fecha_prevista == fecha,
+                and_(
+                    SesionPlan.dia_sugerido.is_not(None),
+                    Ciclo.fecha_inicio <= fecha,
+                    Ciclo.fecha_fin_prevista >= fecha,
+                ),
+            ),
         )
     )
     return list(resultado.all())

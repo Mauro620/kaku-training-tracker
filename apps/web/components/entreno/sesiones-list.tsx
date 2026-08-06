@@ -1,15 +1,21 @@
 "use client";
 
 import { BentoCard } from "@/components/ui/bento-card";
-import { useSesionesDeFecha, useTiposSesion, useEjercicios, type Sesion } from "@/lib/api/hooks";
+import {
+  useSesionesDeFecha,
+  useTiposSesion,
+  useEjercicios,
+  type Sesion,
+  type SesionPlan,
+} from "@/lib/api/hooks";
 
-type Props = { fecha: string };
+type Props = { fecha: string; planes: SesionPlan[] };
 
 /**
  * Lista de las sesiones registradas en la fecha (ROADMAP §4).
  * El backend carga las series via selectinload asi que no hay N+1.
  */
-export function SesionesList({ fecha }: Props) {
+export function SesionesList({ fecha, planes }: Props) {
   const { data, isLoading } = useSesionesDeFecha(fecha);
   const tipos = useTiposSesion();
   const ejercicios = useEjercicios();
@@ -37,6 +43,7 @@ export function SesionesList({ fecha }: Props) {
             <SesionCard
               key={s.id}
               sesion={s}
+              plan={planes.find((p) => p.id === s.sesion_plan_id) ?? null}
               tipoNombre={tipos.data?.find((t) => t.id === s.tipo_sesion_id)?.nombre}
               ejercicioNombre={(id) =>
                 ejercicios.data?.find((e) => e.id === id)?.nombre
@@ -51,10 +58,12 @@ export function SesionesList({ fecha }: Props) {
 
 function SesionCard({
   sesion,
+  plan,
   tipoNombre,
   ejercicioNombre,
 }: {
   sesion: Sesion;
+  plan: SesionPlan | null;
   tipoNombre: string | undefined;
   ejercicioNombre: (id: number) => string | undefined;
 }) {
@@ -70,6 +79,7 @@ function SesionCard({
         {sesion.duracion_min} min · RPE {sesion.rpe} · {sesion.series.length} serie
         {sesion.series.length === 1 ? "" : "s"}
       </p>
+      {plan && <DeltaPlan sesion={sesion} plan={plan} />}
       {sesion.nota && (
         <p className="mt-2 text-[13px] text-text-secondary">{sesion.nota}</p>
       )}
@@ -94,5 +104,30 @@ function SesionCard({
         </ul>
       )}
     </div>
+  );
+}
+
+// Sin serie_plan todavia (rebanada B) el delta solo compara RPE y duracion:
+// es lo unico que el plan captura hoy. Peso/reps objetivo llegan despues.
+function DeltaPlan({ sesion, plan }: { sesion: Sesion; plan: SesionPlan }) {
+  const deltaDuracion =
+    plan.duracion_min_est !== null ? sesion.duracion_min - plan.duracion_min_est : null;
+  const deltaRpe = plan.rpe_objetivo !== null ? sesion.rpe - plan.rpe_objetivo : null;
+
+  if (deltaDuracion === null && deltaRpe === null) return null;
+
+  return (
+    <p className="mt-1 text-[11px] text-text-secondary">
+      Plan: {plan.rpe_objetivo !== null && `RPE ${plan.rpe_objetivo}`}
+      {plan.rpe_objetivo !== null && plan.duracion_min_est !== null ? " · " : ""}
+      {plan.duracion_min_est !== null && `${plan.duracion_min_est} min`}
+      {" · Δ "}
+      {[
+        deltaRpe !== null && `RPE ${deltaRpe > 0 ? "+" : ""}${deltaRpe}`,
+        deltaDuracion !== null && `${deltaDuracion > 0 ? "+" : ""}${deltaDuracion} min`,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+    </p>
   );
 }

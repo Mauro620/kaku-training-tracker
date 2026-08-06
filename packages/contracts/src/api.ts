@@ -457,7 +457,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Planes de una fecha: fecha_prevista exacta o dia_sugerido resuelto. */
+        get: operations["listar_planes_api_v1_planes_get"];
         put?: never;
         /** Crea un plan de sesión. Valida espaciado si trae dia_sugerido. */
         post: operations["crear_plan_api_v1_planes_post"];
@@ -613,6 +614,8 @@ export interface components {
             /** Patron */
             patron: string | null;
             carga_lumbar: components["schemas"]["CargaLumbar"];
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
         };
         /**
          * EstadoCiclo
@@ -2010,6 +2013,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CumplimientoItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_planes_api_v1_planes_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local del registro */
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionPlanRead"][];
                 };
             };
             /** @description Validation Error */
