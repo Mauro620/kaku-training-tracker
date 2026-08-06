@@ -104,6 +104,17 @@ horas_sueno = EXTRACT(EPOCH FROM fin - inicio) / 3600.0
 Columna generada en `registro_sueno`. La `fecha` del registro es la del
 **despertar**. `fin` debe ser posterior a `inicio` (CHECK).
 
+**Fecha del registro y hora de corte del día.** Un usuario que se acuesta
+después de medianoche no debería ver la pantalla Hoy en blanco antes de
+dormir. La regla es: si la hora local actual es anterior a
+`parametro.dia_registro_hora_corte` (semilla: 4.0 h), el "día de registro"
+sigue siendo el de calendario anterior; después del corte, pasa al día
+nuevo. Esto vive en `lib/fecha.ts` del frontend y se aplica al construir
+la fecha que se manda al API, no en el backend: el backend sigue aceptando
+la fecha que el cliente le pasa, y la unicidad `(usuario_id, fecha)` actúa
+como deduplicación natural sin lógica extra. Editar "antes del corte" ES
+editar el día anterior.
+
 ```
 deuda_sueno_7d = Σ max(0, sueno_objetivo_horas − horas_sueno_del_dia)
 ```

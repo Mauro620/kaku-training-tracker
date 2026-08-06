@@ -71,3 +71,34 @@ pero hoy ninguna fila lo tiene. Si en seis meses sigue vacío, sacarlo.
 
 **Excepción viva:** el atún en lata está sembrado con el valor del producto
 escurrido, listo para comer. Es la única fila que no es crudo literal.
+
+---
+
+## `usuario.agua_objetivo_ml_min` y `_max` son personales, no viven en `parametro`
+
+La meta diaria de hidratación (ej. 2.5–3 L) es **personal** y por eso vive
+en `usuario`, no en la tabla `parametro` global. Mismo patrón que
+`usuario.peso_objetivo_kg`. Esto rompe a propósito el principio de
+"umbrales calibrables en `parametro`": la diferencia es que un rango de
+meta individual no es una constante de fórmula compartida — dos atletas
+del mismo sistema podrían tener metas distintas y ninguna tiene razón de
+ganar. Si más adelante la meta de hidratación pasa a depender de peso o
+clima, se mueve a una `parametro` con `usuario_id` (no rompe nada: ya
+está prevista esa migración, ver entrada anterior).
+
+---
+
+## El hábito `hidratacion` se desactivó pero no se borró
+
+`Habito.activo = false` para la fila sembrada de "hidratacion". La
+hidratación pasó a ser un registro por cantidad (en litros) en
+`registro_hidratacion`, no un check booleano. Los registros históricos
+del hábito (`habito_registro` con `valor = true/false` para fechas
+anteriores) siguen existiendo y son legítimos: el usuario marcó lo que
+correspondía al modelo viejo. Borrarlos sería falsificar historia.
+
+**Cuándo dejarlo de lado:** cuando la pantalla Hoy deje de mostrar el
+hábito desactivado y nadie lo busque. En la práctica eso ya pasó (la
+checklist de hábitos no incluye `activo = false`), así que esta nota
+es por si alguien mira la base y se pregunta por qué hay un hábito
+desactivado.
