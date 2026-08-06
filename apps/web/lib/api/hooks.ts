@@ -60,6 +60,62 @@ export type UsuarioPerfil = {
   agua_objetivo_ml_max: number | null;
 };
 
+// ---------- Fase 4: sesion, serie, molestia, catalogos ----------
+
+export type TipoSesion = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  demanda: "alta" | "media" | "baja";
+};
+
+export type Ejercicio = {
+  id: number;
+  nombre: string;
+  patron: string | null;
+  carga_lumbar: "alta" | "media" | "baja";
+};
+
+export type ZonaCorporal = {
+  id: number;
+  nombre: string;
+};
+
+export type Serie = {
+  id: number;
+  sesion_id: string;
+  ejercicio_id: number;
+  orden: number;
+  series: number;
+  reps: number;
+  peso_kg: string | null;
+  rpe: number | null;
+  dolor_lumbar: boolean;
+};
+
+export type Sesion = {
+  id: string;
+  usuario_id: string;
+  sesion_plan_id: number | null;
+  fecha: string;
+  tipo_sesion_id: number;
+  duracion_min: number;
+  rpe: number;
+  nota: string | null;
+  carga_srpe: number;
+  registrado_en: string;
+  series: Serie[];
+};
+
+export type Molestia = {
+  id: number;
+  usuario_id: string;
+  fecha: string;
+  zona_id: number;
+  intensidad: number;
+  nota: string | null;
+};
+
 // ---------- Queries ----------
 
 export const QUERY_HOY = ["cierre-del-dia", "hoy"] as const;
@@ -176,6 +232,88 @@ export function useSumarHidratacion(fecha: string) {
     // esperar un segundo round-trip para ver el número actualizado.
     onSuccess: (data) => {
       qc.setQueryData(["hidratacion", fecha], data);
+    },
+  });
+}
+
+// ---------- Fase 4: catalogos ----------
+
+export function useTiposSesion() {
+  return useQuery({
+    queryKey: ["catalogos", "tipos-sesion"],
+    queryFn: () => api.get<TipoSesion[]>("/catalogos/tipos-sesion"),
+    staleTime: Infinity, // un catalogo sembrado no cambia en una sesion
+  });
+}
+
+export function useEjercicios() {
+  return useQuery({
+    queryKey: ["catalogos", "ejercicios"],
+    queryFn: () => api.get<Ejercicio[]>("/catalogos/ejercicios"),
+    staleTime: Infinity,
+  });
+}
+
+export function useZonasCorporales() {
+  return useQuery({
+    queryKey: ["catalogos", "zonas-corporales"],
+    queryFn: () => api.get<ZonaCorporal[]>("/catalogos/zonas-corporales"),
+    staleTime: Infinity,
+  });
+}
+
+// ---------- Fase 4: sesiones ----------
+
+export function useSesionesDeFecha(fecha: string) {
+  return useQuery({
+    queryKey: ["sesiones", fecha],
+    queryFn: () => api.get<Sesion[]>(`/sesiones?fecha=${fecha}`),
+  });
+}
+
+export function useCrearSesion(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      id?: string;
+      idempotency_key: string;
+      tipo_sesion_id: number;
+      duracion_min: number;
+      rpe: number;
+      nota?: string | null;
+      series: Array<{
+        ejercicio_id: number;
+        orden: number;
+        series: number;
+        reps: number;
+        peso_kg: number | null;
+        rpe: number | null;
+        dolor_lumbar?: boolean;
+      }>;
+    }) =>
+      api.post<Sesion>("/sesiones", { fecha, ...cuerpo }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["sesiones", fecha] });
+    },
+  });
+}
+
+// ---------- Fase 4: molestias ----------
+
+export function useMolestiasDeFecha(fecha: string) {
+  return useQuery({
+    queryKey: ["molestias", fecha],
+    queryFn: () => api.get<Molestia[]>(`/molestias?fecha=${fecha}`),
+  });
+}
+
+export function useCrearMolestia(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: { zona_id: number; intensidad: number; nota?: string | null }) =>
+      api.post<Molestia>("/molestias", { fecha, ...cuerpo }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["molestias", fecha] });
     },
   });
 }
