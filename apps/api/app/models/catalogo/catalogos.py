@@ -1,6 +1,6 @@
 """Catálogos sembrados. Agregar una fila es un seed, nunca una migración."""
 
-from sqlalchemy import Boolean, Enum, String
+from sqlalchemy import Boolean, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -30,6 +30,11 @@ class Ejercicio(Base):
         Enum(CargaLumbar, name="carga_lumbar"),
         nullable=False,
         server_default=CargaLumbar.baja.value,
+    )
+    # `serie` es propio de sesiones de fuerza: sin esto el selector de
+    # ejercicio de cualquier tipo de sesion mostraba el catalogo entero.
+    tipo_sesion_id: Mapped[int] = mapped_column(
+        ForeignKey("tipo_sesion.id"), nullable=False
     )
 
 

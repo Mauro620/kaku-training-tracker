@@ -32,6 +32,7 @@ class EjercicioRead(ReadBase):
     nombre: str
     patron: str | None
     carga_lumbar: CargaLumbar
+    tipo_sesion_id: int
 
 
 class ZonaCorporalRead(ReadBase):

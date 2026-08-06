@@ -74,6 +74,7 @@ export type Ejercicio = {
   nombre: string;
   patron: string | null;
   carga_lumbar: "alta" | "media" | "baja";
+  tipo_sesion_id: number;
 };
 
 export type ZonaCorporal = {

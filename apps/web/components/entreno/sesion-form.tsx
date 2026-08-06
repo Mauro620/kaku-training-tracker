@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Minus, Plus, Trash2 } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import {
   useCrearSesion,
@@ -37,6 +37,8 @@ function uid(): number {
   return Math.floor(Math.random() * 1e9);
 }
 
+const CODIGO_FUERZA = "fuerza";
+
 /**
  * Form de sesion (Fase 4 R1, ROADMAP §4).
  * Un unico paso visible: tipo, duracion, RPE, nota, y N series editables.
@@ -49,10 +51,17 @@ export function SesionForm({ fecha }: Props) {
   const crear = useCrearSesion(fecha);
 
   const [tipoSesionId, setTipoSesionId] = useState<number | null>(null);
+  const [tipoExpandido, setTipoExpandido] = useState(false);
   const [duracionMin, setDuracionMin] = useState<number>(60);
   const [rpe, setRpe] = useState<number>(7);
   const [nota, setNota] = useState("");
   const [series, setSeries] = useState<SerieBorrador[]>([]);
+
+  const tipoSeleccionado = tipos.data?.find((t) => t.id === tipoSesionId) ?? null;
+  const esFuerza = tipoSeleccionado?.codigo === CODIGO_FUERZA;
+  const ejerciciosDelTipo = (ejercicios.data ?? []).filter(
+    (e) => e.tipo_sesion_id === tipoSesionId,
+  );
 
   const cargaEstimada = rpe * duracionMin;
 
@@ -68,10 +77,18 @@ export function SesionForm({ fecha }: Props) {
     setSeries((s) => s.map((x) => (x.localId === localId ? { ...x, ...cambio } : x)));
   }
 
+  function elegirTipo(id: number) {
+    setTipoSesionId(id);
+    setSeries([]); // el ejercicio de la serie vieja puede no ser del tipo nuevo
+    setTipoExpandido(false);
+  }
+
+  // `serie` es propio de fuerza (REGLAS_NEGOCIO): en el resto de los tipos
+  // no hay bloque de series que llenar, y por lo tanto nada que exigir acá.
   const puedeGuardar =
     tipoSesionId !== null &&
-    series.length > 0 &&
-    series.every((s) => s.ejercicio_id !== null);
+    (!esFuerza ||
+      (series.length > 0 && series.every((s) => s.ejercicio_id !== null)));
 
   return (
     <BentoCard>
@@ -79,25 +96,36 @@ export function SesionForm({ fecha }: Props) {
         <p className="text-[11px] font-normal tracking-widest uppercase text-text-secondary">
           Nueva sesion
         </p>
-        {series.length > 0 && (
+        {esFuerza && series.length > 0 && (
           <span className="text-[11px] text-text-secondary">
             {series.length} serie{series.length === 1 ? "" : "s"}
           </span>
         )}
       </header>
 
-      {/* Tipo de sesion */}
+      {/* Tipo de sesion: colapsado muestra solo el elegido, se expande al tocar. */}
       <p className="mb-2 text-[13px] text-text-secondary">Tipo</p>
-      <div className="flex flex-wrap gap-2">
-        {tipos.data?.map((t: TipoSesion) => (
-          <BotonTipo
-            key={t.id}
-            tipo={t}
-            activo={tipoSesionId === t.id}
-            onClick={() => setTipoSesionId(t.id)}
-          />
-        ))}
-      </div>
+      {tipoExpandido ? (
+        <div className="flex flex-wrap gap-2">
+          {tipos.data?.map((t: TipoSesion) => (
+            <BotonTipo
+              key={t.id}
+              tipo={t}
+              activo={tipoSesionId === t.id}
+              onClick={() => elegirTipo(t.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setTipoExpandido(true)}
+          className="flex min-h-[40px] w-full items-center justify-between rounded-pill bg-surface-secondary px-4 text-[13px] text-text-primary"
+        >
+          {tipoSeleccionado?.nombre ?? "Elegir tipo…"}
+          <ChevronDown size={16} className="text-text-secondary" />
+        </button>
+      )}
 
       {/* Duracion, RPE, nota */}
       <div className="mt-5 grid grid-cols-2 gap-3">
@@ -162,30 +190,34 @@ export function SesionForm({ fecha }: Props) {
         />
       </label>
 
-      {/* Series */}
-      <div className="mt-6 flex items-center justify-between">
-        <p className="text-[13px] text-text-secondary">Series</p>
-        <button
-          type="button"
-          onClick={agregarSerie}
-          className="flex items-center gap-1 rounded-pill bg-surface-secondary px-4 py-1.5 text-[13px] font-medium text-text-primary"
-        >
-          <Plus size={14} /> Agregar
-        </button>
-      </div>
+      {/* Series: solo fuerza usa serie/ejercicio, el resto de tipos no. */}
+      {esFuerza && (
+        <>
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-[13px] text-text-secondary">Series</p>
+            <button
+              type="button"
+              onClick={agregarSerie}
+              className="flex items-center gap-1 rounded-pill bg-surface-secondary px-4 py-1.5 text-[13px] font-medium text-text-primary"
+            >
+              <Plus size={14} /> Agregar
+            </button>
+          </div>
 
-      <div className="mt-3 flex flex-col gap-2">
-        {series.map((s, idx) => (
-          <SerieBorradorCard
-            key={s.localId}
-            serie={s}
-            orden={idx + 1}
-            ejercicios={ejercicios.data ?? []}
-            onChange={(c) => actualizarSerie(s.localId, c)}
-            onEliminar={() => eliminarSerie(s.localId)}
-          />
-        ))}
-      </div>
+          <div className="mt-3 flex flex-col gap-2">
+            {series.map((s, idx) => (
+              <SerieBorradorCard
+                key={s.localId}
+                serie={s}
+                orden={idx + 1}
+                ejercicios={ejerciciosDelTipo}
+                onChange={(c) => actualizarSerie(s.localId, c)}
+                onEliminar={() => eliminarSerie(s.localId)}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       <button
         type="button"
@@ -342,6 +374,16 @@ function SerieBorradorCard({
           />
         </label>
       </div>
+
+      <label className="mt-2 flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={serie.dolor_lumbar}
+          onChange={(e) => onChange({ dolor_lumbar: e.target.checked })}
+          className="h-4 w-4 accent-text-primary"
+        />
+        <span className="text-[12px] text-text-secondary">Dolor lumbar</span>
+      </label>
     </div>
   );
 }
