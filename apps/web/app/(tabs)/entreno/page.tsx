@@ -1,20 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EntrenoScreen } from "@/components/entreno/entreno-screen";
 import { haySesion } from "@/lib/auth";
 
 export default function EntrenoPage() {
   const router = useRouter();
+  const [autenticado, setAutenticado] = useState(false);
 
   useEffect(() => {
     if (!haySesion()) {
       router.replace("/login");
+      return;
     }
+    setAutenticado(true);
   }, [router]);
 
-  if (typeof window !== "undefined" && !haySesion()) {
+  // Nada dependiente de window/Date se renderiza en SSR: server y cliente
+  // arrancan iguales (null), el contenido real llega recien en el efecto,
+  // sin eso `new Date()...` desincroniza contra el reloj/timezone del server.
+  if (!autenticado) {
     return null;
   }
 
