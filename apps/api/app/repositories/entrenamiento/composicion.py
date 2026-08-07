@@ -42,3 +42,11 @@ async def listar_por_semana(
         .order_by(CicloSemanaComposicion.tipo_sesion_id)
     )
     return list(resultado.all())
+
+
+async def eliminar_por_semana(session: AsyncSession, ciclo_semana_id: int) -> None:
+    await session.execute(
+        delete(CicloSemanaComposicion).where(
+            CicloSemanaComposicion.ciclo_semana_id == ciclo_semana_id
+        )
+    )

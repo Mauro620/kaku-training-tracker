@@ -46,3 +46,27 @@ async def listar_por_ciclo(session: AsyncSession, ciclo_id: int) -> list[CicloSe
         .order_by(CicloSemana.numero)
     )
     return list(resultado.all())
+
+
+async def actualizar(
+    session: AsyncSession,
+    semana: CicloSemana,
+    *,
+    fase: FaseCiclo,
+    rpe_objetivo_min: int | None,
+    rpe_objetivo_max: int | None,
+    volumen_pct: int,
+) -> CicloSemana:
+    # numero no se edita: es la identidad de la semana dentro del ciclo
+    # (junto con ciclo_id, UNIQUE), y de ella se deriva su rango de fechas.
+    semana.fase = fase
+    semana.rpe_objetivo_min = rpe_objetivo_min
+    semana.rpe_objetivo_max = rpe_objetivo_max
+    semana.volumen_pct = volumen_pct
+    await session.flush()
+    return semana
+
+
+async def eliminar(session: AsyncSession, semana: CicloSemana) -> None:
+    await session.delete(semana)
+    await session.flush()

@@ -6,7 +6,7 @@ de bienestar usa /{fecha} y /molestias matchearia con esa regla.
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
@@ -49,3 +49,16 @@ async def listar_molestias(
     sesion: AsyncSession = Depends(get_session),
 ) -> list[Molestia]:
     return await service.listar_por_fecha(sesion, usuario.id, fecha)
+
+
+@router.delete(
+    "/{molestia_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Elimina una molestia.",
+)
+async def eliminar_molestia(
+    molestia_id: int,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> None:
+    await service.eliminar(sesion, usuario.id, molestia_id)

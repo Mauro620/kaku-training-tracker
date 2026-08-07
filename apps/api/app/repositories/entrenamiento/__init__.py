@@ -14,6 +14,9 @@ from app.repositories.entrenamiento.bloque import (
     eliminar_por_sesion as eliminar_bloques_de_sesion,
 )
 from app.repositories.entrenamiento.bloque_plan import crear as crear_bloque_plan
+from app.repositories.entrenamiento.bloque_plan import (
+    eliminar_por_sesion_plan as eliminar_bloques_de_plan,
+)
 from app.repositories.entrenamiento.sesion import (
     actualizar as actualizar_sesion,
 )
@@ -22,6 +25,9 @@ from app.repositories.entrenamiento.sesion import (
 )
 from app.repositories.entrenamiento.sesion import (
     crear as crear_sesion,
+)
+from app.repositories.entrenamiento.sesion import (
+    desvincular_de_plan as desvincular_sesiones_de_plan,
 )
 from app.repositories.entrenamiento.sesion import (
     eliminar as eliminar_sesion,
@@ -45,16 +51,22 @@ cerrar_ciclo = _ciclo.cerrar
 crear_ciclo_semana = _ciclo_semana.crear
 obtener_ciclo_semana_por_id = _ciclo_semana.obtener_por_id
 listar_ciclo_semanas_por_ciclo = _ciclo_semana.listar_por_ciclo
+actualizar_ciclo_semana = _ciclo_semana.actualizar
+eliminar_ciclo_semana = _ciclo_semana.eliminar
 
 reemplazar_composicion = _composicion.reemplazar
 listar_composicion_por_semana = _composicion.listar_por_semana
+eliminar_composicion_de_semana = _composicion.eliminar_por_semana
 
 crear_sesion_plan = _plan.crear
 obtener_sesion_plan_por_id = _plan.obtener_por_id
 listar_planes_por_ciclo_y_tipos = _plan.listar_por_ciclo_y_tipos
 listar_planes_candidatos_de_fecha = _plan.listar_candidatos_de_fecha
+listar_planes_por_ciclo_semana = _plan.listar_por_ciclo_semana
+eliminar_sesion_plan = _plan.eliminar
 
 __all__ = [
+    "actualizar_ciclo_semana",
     "actualizar_sesion",
     "cerrar_ciclo",
     "contar_sesiones_por_tipo_en_rango",
@@ -65,8 +77,13 @@ __all__ = [
     "crear_ejercicio",
     "crear_sesion",
     "crear_sesion_plan",
+    "desvincular_sesiones_de_plan",
+    "eliminar_bloques_de_plan",
     "eliminar_bloques_de_sesion",
+    "eliminar_ciclo_semana",
+    "eliminar_composicion_de_semana",
     "eliminar_sesion",
+    "eliminar_sesion_plan",
     "listar_ciclo_semanas_por_ciclo",
     "listar_ciclos_por_usuario",
     "listar_composicion_por_semana",
@@ -75,6 +92,7 @@ __all__ = [
     "listar_fechas_de_demanda_en_rango",
     "listar_fechas_por_tipo_en_rango",
     "listar_planes_candidatos_de_fecha",
+    "listar_planes_por_ciclo_semana",
     "listar_planes_por_ciclo_y_tipos",
     "listar_sesiones_por_fecha",
     "listar_tipos_sesion",

@@ -267,7 +267,7 @@ function CamposBloque({
 // Buscador de ejercicio con creacion inline: escribir filtra el catalogo,
 // y si no matchea nada ofrece crear uno nuevo ahi mismo (nombre + tipo de
 // medicion), sin salir del form de la sesion.
-function EjercicioPicker({
+export function EjercicioPicker({
   ejercicioId,
   ejercicios,
   onElegir,

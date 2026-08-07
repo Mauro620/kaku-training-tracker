@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
-import { useZonasCorporales, useCrearMolestia, type Molestia } from "@/lib/api/hooks";
+import {
+  useZonasCorporales,
+  useCrearMolestia,
+  useEliminarMolestia,
+  type Molestia,
+} from "@/lib/api/hooks";
 
 type Props = {
   fecha: string;
@@ -18,6 +24,7 @@ type Props = {
 export function MolestiaForm({ fecha, existentes }: Props) {
   const { data: zonas, isLoading } = useZonasCorporales();
   const crear = useCrearMolestia(fecha);
+  const eliminar = useEliminarMolestia(fecha);
 
   const [zonaId, setZonaId] = useState<number | null>(null);
   const [intensidad, setIntensidad] = useState<number>(5);
@@ -125,6 +132,15 @@ export function MolestiaForm({ fecha, existentes }: Props) {
                         </span>
                       )}
                       <span>{m.intensidad}/10</span>
+                      <button
+                        type="button"
+                        aria-label="Eliminar molestia"
+                        disabled={eliminar.isPending}
+                        onClick={() => eliminar.mutate(m.id)}
+                        className="text-text-secondary disabled:opacity-50"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </span>
                   </li>
                 );

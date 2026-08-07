@@ -10,7 +10,7 @@ import uuid
 from datetime import date
 from typing import cast
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -98,6 +98,17 @@ async def eliminar(session: AsyncSession, sesion: Sesion) -> None:
     # Los bloques se van solos: FK ondelete=CASCADE (REGLAS_NEGOCIO §15).
     await session.delete(sesion)
     await session.flush()
+
+
+async def desvincular_de_plan(session: AsyncSession, sesion_plan_id: int) -> None:
+    """Al borrar un sesion_plan (ej. se borra la semana entera), la sesion
+    real que ya se registro contra el NO se borra: el entrenamiento paso de
+    verdad. Solo pierde la referencia al plan."""
+    await session.execute(
+        update(Sesion)
+        .where(Sesion.sesion_plan_id == sesion_plan_id)
+        .values(sesion_plan_id=None)
+    )
 
 
 async def listar_por_fecha(

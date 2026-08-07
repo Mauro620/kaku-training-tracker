@@ -209,6 +209,24 @@ async def test_molestia_post_es_upsert_por_fecha_y_zona(cliente: AsyncClient) ->
     assert listado.json()[0]["intensidad"] == 4
 
 
+async def test_eliminar_molestia(cliente: AsyncClient) -> None:
+    creada = await cliente.post(
+        "/api/v1/molestias", json={"fecha": "2026-08-04", "zona_id": 1, "intensidad": 3}
+    )
+    molestia_id = creada.json()["id"]
+
+    eliminada = await cliente.delete(f"/api/v1/molestias/{molestia_id}")
+    assert eliminada.status_code == 204
+
+    listado = await cliente.get("/api/v1/molestias", params={"fecha": "2026-08-04"})
+    assert listado.json() == []
+
+
+async def test_eliminar_molestia_inexistente_devuelve_404(cliente: AsyncClient) -> None:
+    respuesta = await cliente.delete("/api/v1/molestias/999999")
+    assert respuesta.status_code == 404
+
+
 # -------------------------------------------------------------- catalogos --
 
 
@@ -317,6 +335,152 @@ async def test_obtener_composicion_de_semana_inexistente_devuelve_404(
     cliente: AsyncClient,
 ) -> None:
     respuesta = await cliente.get("/api/v1/ciclos/semanas/999999/composicion")
+    assert respuesta.status_code == 404
+
+
+async def test_actualizar_semana_reemplaza_fase_y_rpe(cliente: AsyncClient) -> None:
+    ciclo = await cliente.post(
+        "/api/v1/ciclos",
+        json={
+            "numero": 1,
+            "objetivo": "Pretemporada",
+            "fecha_inicio": "2026-08-03",
+            "semanas": 4,
+        },
+    )
+    ciclo_id = ciclo.json()["id"]
+    semana = await cliente.post(
+        f"/api/v1/ciclos/{ciclo_id}/semanas",
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
+    )
+    semana_id = semana.json()["id"]
+
+    actualizada = await cliente.put(
+        f"/api/v1/ciclos/semanas/{semana_id}",
+        json={
+            "fase": "descarga",
+            "rpe_objetivo_min": 4,
+            "rpe_objetivo_max": 6,
+            "volumen_pct": 60,
+        },
+    )
+    assert actualizada.status_code == 200
+    assert actualizada.json()["fase"] == "descarga"
+    assert actualizada.json()["volumen_pct"] == 60
+    assert actualizada.json()["numero"] == 1  # inmutable
+
+
+async def test_actualizar_semana_inexistente_devuelve_404(cliente: AsyncClient) -> None:
+    respuesta = await cliente.put(
+        "/api/v1/ciclos/semanas/999999",
+        json={"fase": "carga", "volumen_pct": 100},
+    )
+    assert respuesta.status_code == 404
+
+
+async def test_eliminar_semana_desvincula_sesiones_reales_y_borra_planes(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    ciclo = await cliente.post(
+        "/api/v1/ciclos",
+        json={
+            "numero": 1,
+            "objetivo": "Pretemporada",
+            "fecha_inicio": "2026-08-03",
+            "semanas": 4,
+        },
+    )
+    ciclo_id = ciclo.json()["id"]
+    semana = await cliente.post(
+        f"/api/v1/ciclos/{ciclo_id}/semanas",
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
+    )
+    semana_id = semana.json()["id"]
+    fuerza_id = await _tipo_sesion_id(sesion, "fuerza")
+    ejercicio_id = await _ejercicio_de_medicion(sesion, TipoMedicion.carga)
+
+    await cliente.put(
+        f"/api/v1/ciclos/semanas/{semana_id}/composicion",
+        json={"items": [{"tipo_sesion_id": fuerza_id, "cantidad_objetivo": 2}]},
+    )
+    plan = await cliente.post(
+        "/api/v1/planes",
+        json={
+            "ciclo_semana_id": semana_id,
+            "tipo_sesion_id": fuerza_id,
+            "bloques": [
+                {"ejercicio_id": ejercicio_id, "orden": 0, "peso_objetivo_kg": 80}
+            ],
+        },
+    )
+    plan_id = plan.json()["id"]
+
+    sid = str(uuid.uuid4())
+    sesion_real = await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": sid,
+            "idempotency_key": str(uuid.uuid4()),
+            "sesion_plan_id": plan_id,
+            "fecha": "2026-08-04",
+            "tipo_sesion_id": fuerza_id,
+            "duracion_min": 60,
+            "rpe": 7,
+        },
+    )
+    assert sesion_real.json()["sesion_plan_id"] == plan_id
+
+    eliminada = await cliente.delete(f"/api/v1/ciclos/semanas/{semana_id}")
+    assert eliminada.status_code == 204
+
+    releida_semana = await cliente.get(f"/api/v1/ciclos/{ciclo_id}/semanas")
+    assert releida_semana.json() == []
+
+    # La sesion real no se borra: solo pierde la referencia al plan.
+    releida_sesion = await cliente.get(f"/api/v1/sesiones/{sid}")
+    assert releida_sesion.status_code == 200
+    assert releida_sesion.json()["sesion_plan_id"] is None
+
+
+async def test_eliminar_semana_inexistente_devuelve_404(cliente: AsyncClient) -> None:
+    respuesta = await cliente.delete("/api/v1/ciclos/semanas/999999")
+    assert respuesta.status_code == 404
+
+
+async def test_listar_planes_de_semana(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    ciclo = await cliente.post(
+        "/api/v1/ciclos",
+        json={
+            "numero": 1,
+            "objetivo": "Pretemporada",
+            "fecha_inicio": "2026-08-03",
+            "semanas": 4,
+        },
+    )
+    ciclo_id = ciclo.json()["id"]
+    semana = await cliente.post(
+        f"/api/v1/ciclos/{ciclo_id}/semanas",
+        json={"numero": 1, "fase": "carga", "volumen_pct": 100},
+    )
+    semana_id = semana.json()["id"]
+    fuerza_id = await _tipo_sesion_id(sesion, "fuerza")
+
+    creado = await cliente.post(
+        "/api/v1/planes",
+        json={"ciclo_semana_id": semana_id, "tipo_sesion_id": fuerza_id},
+    )
+
+    listado = await cliente.get(f"/api/v1/ciclos/semanas/{semana_id}/planes")
+    assert listado.status_code == 200
+    assert [p["id"] for p in listado.json()] == [creado.json()["id"]]
+
+
+async def test_listar_planes_de_semana_inexistente_devuelve_404(
+    cliente: AsyncClient,
+) -> None:
+    respuesta = await cliente.get("/api/v1/ciclos/semanas/999999/planes")
     assert respuesta.status_code == 404
 
 

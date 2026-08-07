@@ -531,6 +531,35 @@ export function useCrearSemana(cicloId: number) {
   });
 }
 
+export function useActualizarSemana(cicloId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...cuerpo
+    }: {
+      id: number;
+      fase: "readaptacion" | "carga" | "descarga";
+      rpe_objetivo_min: number | null;
+      rpe_objetivo_max: number | null;
+      volumen_pct: number;
+    }) => api.put<CicloSemana>(`/ciclos/semanas/${id}`, cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["ciclo", cicloId, "semanas"] });
+    },
+  });
+}
+
+export function useEliminarSemana(cicloId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/ciclos/semanas/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["ciclo", cicloId, "semanas"] });
+    },
+  });
+}
+
 export function useComposicion(semanaId: number | null) {
   return useQuery({
     queryKey: ["semana", semanaId, "composicion"],
@@ -558,6 +587,44 @@ export function useCumplimiento(semanaId: number | null) {
   });
 }
 
+export function usePlanesDeSemana(semanaId: number | null) {
+  return useQuery({
+    queryKey: ["semana", semanaId, "planes"],
+    queryFn: () => api.get<SesionPlan[]>(`/ciclos/semanas/${semanaId}/planes`),
+    enabled: semanaId !== null,
+  });
+}
+
+export type BloquePlanCreatePayload = {
+  ejercicio_id: number;
+  orden: number;
+  series: number | null;
+  reps_min: number | null;
+  reps_max: number | null;
+  peso_objetivo_kg: number | null;
+  distancia_objetivo_m: number | null;
+  duracion_objetivo_s: number | null;
+};
+
+export function useCrearPlan(semanaId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      dia_sugerido: number | null;
+      tipo_sesion_id: number;
+      objetivo: string | null;
+      duracion_min_est: number | null;
+      rpe_objetivo: number | null;
+      bloques: BloquePlanCreatePayload[];
+    }) =>
+      api.post<SesionPlan>("/planes", { ciclo_semana_id: semanaId, ...cuerpo }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["semana", semanaId, "planes"] });
+      void qc.invalidateQueries({ queryKey: ["planes"] });
+    },
+  });
+}
+
 // ---------- Fase 4: molestias ----------
 
 export function useMolestiasDeFecha(fecha: string) {
@@ -572,6 +639,16 @@ export function useCrearMolestia(fecha: string) {
   return useMutation({
     mutationFn: (cuerpo: { zona_id: number; intensidad: number; nota?: string | null }) =>
       api.post<Molestia>("/molestias", { fecha, ...cuerpo }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["molestias", fecha] });
+    },
+  });
+}
+
+export function useEliminarMolestia(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/molestias/${id}`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["molestias", fecha] });
     },

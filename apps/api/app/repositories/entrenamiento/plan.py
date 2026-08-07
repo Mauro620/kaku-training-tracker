@@ -45,6 +45,22 @@ async def obtener_por_id(session: AsyncSession, plan_id: int) -> SesionPlan | No
     )
 
 
+async def listar_por_ciclo_semana(
+    session: AsyncSession, ciclo_semana_id: int
+) -> list[SesionPlan]:
+    resultado = await session.scalars(
+        select(SesionPlan)
+        .where(SesionPlan.ciclo_semana_id == ciclo_semana_id)
+        .options(selectinload(SesionPlan.bloques_planeados))
+    )
+    return list(resultado.all())
+
+
+async def eliminar(session: AsyncSession, plan: SesionPlan) -> None:
+    await session.delete(plan)
+    await session.flush()
+
+
 async def listar_por_ciclo_y_tipos(
     session: AsyncSession, ciclo_id: int, tipo_sesion_ids: list[int]
 ) -> list[SesionPlan]:

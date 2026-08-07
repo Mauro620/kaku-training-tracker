@@ -50,3 +50,15 @@ async def listar_por_fecha(
         .order_by(Molestia.zona_id)
     )
     return list(resultado.all())
+
+
+async def obtener_por_id(session: AsyncSession, molestia_id: int) -> Molestia | None:
+    return cast(
+        "Molestia | None",
+        await session.scalar(select(Molestia).where(Molestia.id == molestia_id)),
+    )
+
+
+async def eliminar(session: AsyncSession, molestia: Molestia) -> None:
+    await session.delete(molestia)
+    await session.flush()

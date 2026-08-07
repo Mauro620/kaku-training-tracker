@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import RecursoNoEncontradoError
-from app.models import Ciclo, CicloSemana, CicloSemanaComposicion
+from app.models import Ciclo, CicloSemana, CicloSemanaComposicion, SesionPlan
 from app.models.enums import FaseCiclo
 from app.repositories import entrenamiento as repo
 from app.schemas.entrenamiento.ciclo import (
@@ -107,6 +107,58 @@ async def obtener_semana(
         raise RecursoNoEncontradoError(f"ciclo_semana {semana_id} no encontrada")
     await obtener_ciclo(session, usuario_id, semana.ciclo_id)  # valida dueño
     return semana
+
+
+async def actualizar_semana(
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    semana_id: int,
+    *,
+    fase: FaseCiclo,
+    rpe_objetivo_min: int | None,
+    rpe_objetivo_max: int | None,
+    volumen_pct: int,
+) -> CicloSemana:
+    semana = await obtener_semana(session, usuario_id, semana_id)  # valida dueño
+    actualizada = await repo.actualizar_ciclo_semana(
+        session,
+        semana,
+        fase=fase,
+        rpe_objetivo_min=rpe_objetivo_min,
+        rpe_objetivo_max=rpe_objetivo_max,
+        volumen_pct=volumen_pct,
+    )
+    await session.commit()
+    await session.refresh(actualizada)
+    return actualizada
+
+
+async def eliminar_semana(
+    session: AsyncSession, usuario_id: uuid.UUID, semana_id: int
+) -> None:
+    """Borra la semana y todo lo que cuelga de ella. Las sesiones reales ya
+    registradas NO se borran (el entrenamiento pasó de verdad): solo
+    pierden la referencia al plan (REGLAS_NEGOCIO §15, mismo criterio que
+    el cascade real->bloque, pero acá es orquestado a mano porque no
+    queremos que borrar una semana borre sesiones reales)."""
+    semana = await obtener_semana(session, usuario_id, semana_id)  # valida dueño
+
+    planes = await repo.listar_planes_por_ciclo_semana(session, semana_id)
+    for plan in planes:
+        await repo.desvincular_sesiones_de_plan(session, plan.id)
+        await repo.eliminar_bloques_de_plan(session, plan.id)
+        await repo.eliminar_sesion_plan(session, plan)
+
+    await repo.eliminar_composicion_de_semana(session, semana_id)
+    await repo.eliminar_ciclo_semana(session, semana)
+    await session.commit()
+
+
+async def listar_planes_de_semana(
+    session: AsyncSession, usuario_id: uuid.UUID, semana_id: int
+) -> list[SesionPlan]:
+    await obtener_semana(session, usuario_id, semana_id)  # valida dueño
+    return await repo.listar_planes_por_ciclo_semana(session, semana_id)
 
 
 def calcular_rango_semana(

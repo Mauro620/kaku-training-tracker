@@ -67,8 +67,12 @@ class CicloSemanaCreate(_RpeObjetivoOrdenado):
 
 
 class CicloSemanaUpdate(_RpeObjetivoOrdenado):
-    fase: FaseCiclo | None = None
-    volumen_pct: Positivo | None = None
+    """PUT reemplaza completo, igual que sesion y composicion: `numero` no
+    se edita (identidad de la semana dentro del ciclo, de ahi se deriva su
+    rango de fechas)."""
+
+    fase: FaseCiclo
+    volumen_pct: Positivo = 100
 
 
 class CicloSemanaRead(ReadBase):

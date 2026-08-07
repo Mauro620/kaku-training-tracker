@@ -12,6 +12,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import RecursoNoEncontradoError
 from app.models import Molestia
 from app.repositories.bienestar import molestia as repo
 
@@ -41,3 +42,13 @@ async def listar_por_fecha(
     session: AsyncSession, usuario_id: uuid.UUID, fecha: date
 ) -> list[Molestia]:
     return await repo.listar_por_fecha(session, usuario_id, fecha)
+
+
+async def eliminar(
+    session: AsyncSession, usuario_id: uuid.UUID, molestia_id: int
+) -> None:
+    molestia = await repo.obtener_por_id(session, molestia_id)
+    if molestia is None or molestia.usuario_id != usuario_id:
+        raise RecursoNoEncontradoError(f"molestia {molestia_id} no encontrada")
+    await repo.eliminar(session, molestia)
+    await session.commit()

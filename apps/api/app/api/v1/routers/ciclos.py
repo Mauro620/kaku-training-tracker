@@ -6,17 +6,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
-from app.models import Ciclo, CicloSemana, CicloSemanaComposicion, Usuario
+from app.models import Ciclo, CicloSemana, CicloSemanaComposicion, SesionPlan, Usuario
 from app.schemas.entrenamiento.ciclo import (
     CicloCerrarRequest,
     CicloCreate,
     CicloRead,
     CicloSemanaCreate,
     CicloSemanaRead,
+    CicloSemanaUpdate,
     ComposicionItemRead,
     CumplimientoItem,
     ReemplazarComposicionRequest,
 )
+from app.schemas.entrenamiento.plan import SesionPlanRead
 from app.services.entrenamiento import ciclo as service
 
 router = APIRouter(prefix="/ciclos", tags=["ciclos"])
@@ -99,6 +101,55 @@ async def listar_semanas(
     sesion: AsyncSession = Depends(get_session),
 ) -> list[CicloSemana]:
     return await service.listar_semanas(sesion, usuario.id, ciclo_id)
+
+
+@router.put(
+    "/semanas/{semana_id}",
+    response_model=CicloSemanaRead,
+    summary="Reemplaza fase/rpe_objetivo/volumen_pct de la semana (numero inmutable).",
+)
+async def actualizar_semana(
+    semana_id: int,
+    payload: CicloSemanaUpdate,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> CicloSemana:
+    return await service.actualizar_semana(
+        sesion,
+        usuario.id,
+        semana_id,
+        fase=payload.fase,
+        rpe_objetivo_min=payload.rpe_objetivo_min,
+        rpe_objetivo_max=payload.rpe_objetivo_max,
+        volumen_pct=payload.volumen_pct,
+    )
+
+
+@router.delete(
+    "/semanas/{semana_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Elimina la semana, su composicion y sus planes. Las sesiones reales "
+    "ya registradas no se borran, solo pierden la referencia al plan.",
+)
+async def eliminar_semana(
+    semana_id: int,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> None:
+    await service.eliminar_semana(sesion, usuario.id, semana_id)
+
+
+@router.get(
+    "/semanas/{semana_id}/planes",
+    response_model=list[SesionPlanRead],
+    summary="Lista los planes de la semana, con sus bloques objetivo.",
+)
+async def listar_planes_de_semana(
+    semana_id: int,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> list[SesionPlan]:
+    return await service.listar_planes_de_semana(sesion, usuario.id, semana_id)
 
 
 @router.put(

@@ -1,5 +1,6 @@
 """Persistencia de bloque_plan. Una sesion_plan tiene N bloques objetivo."""
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import BloquePlan
@@ -33,3 +34,9 @@ async def crear(
     session.add(bloque_plan)
     await session.flush()
     return bloque_plan
+
+
+async def eliminar_por_sesion_plan(session: AsyncSession, sesion_plan_id: int) -> None:
+    await session.execute(
+        delete(BloquePlan).where(BloquePlan.sesion_plan_id == sesion_plan_id)
+    )
