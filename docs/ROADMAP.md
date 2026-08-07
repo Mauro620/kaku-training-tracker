@@ -214,6 +214,25 @@ Notas:
 - Frontend: pestaña **Cocina** con registro por tap, biblioteca de recetas y
   despensa.
 
+**Estado: ✅ completa (commits `b3da3a5`, `97470d6`, `c8c9709`).**
+
+Notas:
+- Los modelos de nutrición (`app/models/nutricion/`) y las tablas ya
+  existían desde la migración inicial (esquema completo desde el
+  arranque, no incremental); esta fase agregó repos, servicios,
+  schemas, routers y el seed de 24 alimentos que faltaban.
+- Solo `comida_log` pasa por la cola offline (Fase 5): es el registro
+  diario. CRUD de receta/despensa va directo a la API porque es setup
+  puntual, no vale el costo de meterlo en el outbox.
+- Dexie sube a `version(2)` agregando la tabla `comida` sin perder la
+  `version(1)` de Fase 5.
+- 105 tests backend + 14 tests frontend pasan. Ruff + mypy + typecheck
+  limpios.
+- Pendiente menor (ver PENDIENTES.md): `ComidasList` muestra
+  `Receta #N` en vez del nombre (falta el join en el server); la
+  migración IndexedDB v1→v2 no se valida en navegador real, solo en
+  tests de Node.
+
 **Aceptación:** registrar el desayuno en un tap y ver los macros del día;
 la lista de mercado se genera sola.
 

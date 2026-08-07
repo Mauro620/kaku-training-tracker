@@ -205,3 +205,33 @@ suma al total del dia" sin modelo de evento explicito).
 **Cuando dejar de lado:** si la cola pasa a reintentar en paralelo o
 si se detecta doble suma en produccion, se introduce la tabla de
 eventos. Mientras tanto, el patron actual es simple y suficiente.
+
+---
+
+## `ComidasList` muestra `Receta #N` en vez del nombre
+
+**Estado:** aceptado en Fase 6, gap chico.
+
+El frontend lista las comidas del dia con `receta_id` crudo cuando la
+comida viene de una receta: falta el join contra `receta` en el
+service (o resolver el nombre client-side con la lista de recetas ya
+cargada por `useRecetas`). No bloquea nada, es cosmetico.
+
+**Cuando dejar de lado:** la proxima vez que se toque `ComidasList` o
+`services/nutricion/comida.py`.
+
+---
+
+## Migracion Dexie v1→v2 (Fase 6) sin validar en navegador real
+
+**Estado:** aceptado en Fase 6.
+
+`db/dexie.ts` agrego `version(2)` con la tabla `comida` sin perder la
+`version(1)` de Fase 5. La migracion de Dexie (agregar una tabla nueva
+en una version posterior) esta documentada como no-destructiva, pero
+solo se probo con tests de Node (`outbox.test.ts`), no con IndexedDB
+real en un navegador que ya tuviera datos de la version 1.
+
+**Cuando dejar de lado:** antes de confiar en la cola offline con
+usuarios reales que ya tengan la app instalada (hoy es un solo
+usuario en dev, el riesgo es bajo).
