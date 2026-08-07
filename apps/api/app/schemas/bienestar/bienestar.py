@@ -6,13 +6,18 @@ from app.schemas.types import ItemHooper
 
 
 class RegistroBienestarCreate(SchemaBase):
-    """Los cuatro ítems del Hooper. En los cuatro, 1 es bueno y 5 es malo."""
+    """Los cuatro ítems del Hooper. En los cuatro, 1 es bueno y 5 es malo.
+
+    `idempotency_key` lo genera el cliente (Fase 5, offline-first). Nullable
+    para admitir backfill historico (Fase 9, Notion).
+    """
 
     fecha: date
     sueno_pobre: ItemHooper
     fatiga: ItemHooper
     dolor_muscular: ItemHooper
     estres: ItemHooper
+    idempotency_key: uuid.UUID | None = None
 
 
 class RegistroBienestarUpdate(SchemaBase):
@@ -31,3 +36,4 @@ class RegistroBienestarRead(ReadBase):
     dolor_muscular: int
     estres: int
     hooper: int
+    idempotency_key: uuid.UUID | None

@@ -12,12 +12,41 @@ from app.models import RegistroHidratacion
 
 
 async def sumar(
-    session: AsyncSession, usuario_id: uuid.UUID, fecha: date, cantidad_ml: int
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    fecha: date,
+    cantidad_ml: int,
+    idempotency_key: uuid.UUID | None,
 ) -> RegistroHidratacion:
-    """Cada tap SUMA a `ml_totales`, no lo reemplaza."""
+    """Cada tap SUMA a `ml_totales`, no lo reemplaza.
+
+    Fase 5: si llega `idempotency_key` y la cola repite, devolvemos la fila
+    existente en vez de sumar dos veces. Patron del repo de Sesion: SELECT
+    previo por key + ON CONFLICT DO UPDATE sumando solo si la key es nueva.
+
+    Nota de concurrencia: dos POSTs simultaneos con la misma key pueden
+    pasar el SELECT previo y sumar dos veces. La cola de Fase 5 reintenta
+    con delays (1s, 2s, ...), no concurrencia, asi que el riesgo es bajo.
+    La forma atomica sin tabla de eventos exigiria cambiar el modelo
+    (ver docs/PENDIENTES.md).
+    """
+    if idempotency_key is not None:
+        existente = await session.scalar(
+            select(RegistroHidratacion).where(
+                RegistroHidratacion.idempotency_key == idempotency_key
+            )
+        )
+        if existente is not None:
+            return existente
+
     stmt = (
         pg_insert(RegistroHidratacion)
-        .values(usuario_id=usuario_id, fecha=fecha, ml_totales=cantidad_ml)
+        .values(
+            usuario_id=usuario_id,
+            fecha=fecha,
+            ml_totales=cantidad_ml,
+            idempotency_key=idempotency_key,
+        )
         .on_conflict_do_update(
             index_elements=["usuario_id", "fecha"],
             set_={

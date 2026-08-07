@@ -12,11 +12,12 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.types import BigIntPk, IdempotencyKey, UsuarioFk, UuidPk
+from app.models.types import BigIntPk, UsuarioFk, UuidPk
 
 
 class TestFisico(Base):
@@ -46,7 +47,9 @@ class TestFisico(Base):
     )
     superficie: Mapped[str | None] = mapped_column(String(40))
     condiciones: Mapped[str | None] = mapped_column(Text)
-    idempotency_key: Mapped[IdempotencyKey]
+    idempotency_key: Mapped[uuid.UUID] = mapped_column(
+        Uuid, nullable=False, unique=True
+    )
 
     intentos: Mapped[list["TestIntento"]] = relationship(
         back_populates="test_fisico", order_by="TestIntento.numero"

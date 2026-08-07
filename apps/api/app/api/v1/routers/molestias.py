@@ -35,6 +35,7 @@ async def crear_molestia(
         payload.zona_id,
         payload.intensidad,
         payload.nota,
+        idempotency_key=payload.idempotency_key,
     )
 
 

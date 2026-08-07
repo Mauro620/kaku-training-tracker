@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 from sqlalchemy import (
@@ -8,6 +9,7 @@ from sqlalchemy import (
     SmallInteger,
     Text,
     UniqueConstraint,
+    Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +21,10 @@ class Molestia(Base):
     """Sin molestia no hay fila. No se pregunta a diario.
 
     Se registra para tener historial, no para autodiagnosticarse.
+
+    La unicidad natural es `(usuario_id, fecha, zona_id)`; `idempotency_key`
+    es metadata para la cola de Fase 5. Nullable para admitir backfill
+    historico (Fase 9, Notion).
     """
 
     __tablename__ = "molestia"
@@ -37,3 +43,4 @@ class Molestia(Base):
     zona_id: Mapped[int] = mapped_column(ForeignKey("zona_corporal.id"), nullable=False)
     intensidad: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     nota: Mapped[str | None] = mapped_column(Text)
+    idempotency_key: Mapped[uuid.UUID | None] = mapped_column(Uuid, unique=True)

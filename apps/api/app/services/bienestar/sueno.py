@@ -39,6 +39,7 @@ async def registrar(
         fin=payload.fin,
         celular_fuera=payload.celular_fuera,
         origen=payload.origen,
+        idempotency_key=payload.idempotency_key,
     )
     await session.commit()
     return registro

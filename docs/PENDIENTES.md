@@ -137,3 +137,66 @@ por el `tipo_medicion` del ejercicio individual.
 referencias en el seed y en busquedas historicas), pero la UI ya no la
 expone ni la usa. Si en algun momento se decide que tampoco sirve como
 categorizacion de referencia, se migra a una tabla aparte de tags.
+
+---
+
+## JWT vive en `localStorage`, no en cookie httpOnly
+
+**Estado:** aceptado en Fase 5, deuda para una fase de seguridad.
+
+`apps/web/lib/auth.ts` guarda el JWT en `localStorage`. AGENTS §5 dice
+"Sin localStorage para datos de dominio", pero el token es auth, no
+dominio. Aun asi, queda expuesto a XSS: un script malicioso puede
+robarlo. La defensa correcta es cookie httpOnly + CSRF token (SameSite
+Strict cubre la mayoria del riesgo sin CSRF explicito, pero hay que
+auditarlo).
+
+**Cuando se mueve:** cuando entren autenticacion con sesiones largas o
+se decida que el riesgo de XSS ya no es aceptable. Fase 5 priorizo
+rapidez de implementacion (no hubo cambio de sesion, mismo flujo de
+login). No es bloqueante porque la app es de un solo usuario.
+
+---
+
+## `idempotency_key` en `habito_registro` rompe la decision original del DBML
+
+**Estado:** revertido en Fase 5.
+
+Antes de Fase 5 el DBML decia: "PK compuesta `(habito_id, fecha)`: un
+habito tiene como maximo un registro por dia. Esa PK es tambien la
+deduplicacion natural de la cola de sync, por eso no lleva
+`idempotency_key`". Esa decision era coherente con la idea de que la
+PK simple bastaba como unicidad para la cola. En Fase 5 se decidio que
+**toda mutacion del cliente lleva `idempotency_key`**, incluso cuando
+la unicidad natural ya identifica el recurso. Razones:
+
+- Simetria: las 5 mutaciones de captura tienen el mismo flujo de cola.
+- El cliente offline genera una key por intento (RFC 7240): si la red
+  falla, reintenta con la misma key sin ambiguedad.
+- El `idempotency_key` queda como **metadata** del recurso, no como
+  segunda unicidad. Nullable para admitir backfill (Fase 9, Notion).
+
+**Cuando deja de aplicar:** si en algun momento se decide que la
+politica "una key por intento del cliente" no escala (ej. backend
+con rate limiting por key), se vuelve a la decision original.
+
+---
+
+## Hidratacion: idempotencia con `SELECT` previo, no atomica
+
+**Estado:** aceptado en Fase 5, race condition documentada.
+
+`registro_hidratacion` hace `SELECT WHERE idempotency_key = ?` y si
+no encuentra, hace `INSERT ... ON CONFLICT (usuario_id, fecha) DO
+UPDATE SET ml_totales = ml_totales + cantidad_ml`. Dos POSTs
+simultaneos con la misma key pueden pasar el SELECT previo y sumar
+dos veces: la cola de Fase 5 reintenta con delays (1s, 2s, ...), no
+concurrencia, asi que el riesgo es bajo. La forma atomica exigiria
+una tabla de eventos `hidratacion_tap (idempotency_key pk, ...)` y
+calcular `ml_totales = SUM(cantidad_ml)` por fecha. Eso cambia el
+modelo (y entra en conflicto con el SPEC §2.4 que dice "cada tap
+suma al total del dia" sin modelo de evento explicito).
+
+**Cuando dejar de lado:** si la cola pasa a reintentar en paralelo o
+si se detecta doble suma en produccion, se introduce la tabla de
+eventos. Mientras tanto, el patron actual es simple y suficiente.

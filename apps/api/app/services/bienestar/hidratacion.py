@@ -11,9 +11,15 @@ from app.repositories.bienestar import hidratacion as repo
 
 
 async def registrar(
-    session: AsyncSession, usuario_id: uuid.UUID, fecha: date, cantidad_ml: int
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    fecha: date,
+    cantidad_ml: int,
+    idempotency_key: uuid.UUID | None = None,
 ) -> RegistroHidratacion:
-    registro = await repo.sumar(session, usuario_id, fecha, cantidad_ml)
+    registro = await repo.sumar(
+        session, usuario_id, fecha, cantidad_ml, idempotency_key=idempotency_key
+    )
     await session.commit()
     return registro
 

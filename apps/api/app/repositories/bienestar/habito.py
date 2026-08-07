@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,13 +37,61 @@ async def obtener_habito(
 
 
 async def upsert_registro(
-    session: AsyncSession, habito_id: int, fecha: date, valor: bool
+    session: AsyncSession,
+    habito_id: int,
+    fecha: date,
+    valor: bool,
+    idempotency_key: uuid.UUID | None,
 ) -> HabitoRegistro:
-    """PK compuesta `(habito_id, fecha)`: es la deduplicación natural de la
-    cola de sync (docs/schema.dbml)."""
+    """PK compuesta `(habito_id, fecha)`. Fase 5: ver patron de 3 pasos en
+    el repo de Sueno."""
+    valores: dict[str, object] = {
+        "habito_id": habito_id,
+        "fecha": fecha,
+        "valor": valor,
+        "idempotency_key": idempotency_key,
+    }
+
+    if idempotency_key is not None:
+        existente_por_key = await session.scalar(
+            select(HabitoRegistro).where(
+                HabitoRegistro.idempotency_key == idempotency_key
+            )
+        )
+        if existente_por_key is not None:
+            return existente_por_key
+
+        stmt = (
+            pg_insert(HabitoRegistro)
+            .values(**valores)
+            .on_conflict_do_nothing()
+            .returning(HabitoRegistro)
+        )
+        creada = await session.scalar(stmt)
+        if creada is not None:
+            return creada
+
+        actualizado = await session.scalar(
+            update(HabitoRegistro)
+            .where(
+                HabitoRegistro.habito_id == habito_id,
+                HabitoRegistro.fecha == fecha,
+            )
+            .values(
+                valor=valor,
+                idempotency_key=idempotency_key,
+            )
+            .returning(HabitoRegistro)
+        )
+        if actualizado is None:
+            raise RuntimeError(
+                "habito_registro no encontrado despues de on_conflict_do_nothing"
+            )
+        return actualizado
+
     stmt = (
         pg_insert(HabitoRegistro)
-        .values(habito_id=habito_id, fecha=fecha, valor=valor)
+        .values(**valores)
         .on_conflict_do_update(
             index_elements=["habito_id", "fecha"], set_={"valor": valor}
         )

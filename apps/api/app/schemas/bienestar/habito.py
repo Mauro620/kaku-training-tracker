@@ -31,6 +31,7 @@ class HabitoRegistroCreate(SchemaBase):
     habito_id: int
     fecha: date
     valor: bool
+    idempotency_key: uuid.UUID | None = None
 
 
 class HabitoRegistroUpdate(SchemaBase):
@@ -41,3 +42,4 @@ class HabitoRegistroRead(ReadBase):
     habito_id: int
     fecha: date
     valor: bool
+    idempotency_key: uuid.UUID | None

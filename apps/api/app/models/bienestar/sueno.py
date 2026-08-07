@@ -1,3 +1,4 @@
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Enum,
     Numeric,
     UniqueConstraint,
+    Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,8 +29,9 @@ class RegistroSueno(Base):
     conversión de zona horaria no es IMMUTABLE en Postgres. El servicio que
     escribe sueño es el responsable.
 
-    La unicidad `(usuario_id, fecha)` es la deduplicación natural de la cola de
-    sync: la operación es un upsert y no hace falta `idempotency_key`.
+    La unicidad natural es `(usuario_id, fecha)`; `idempotency_key` es
+    metadata para la cola de Fase 5. Nullable para admitir backfill
+    historico (Fase 9, Notion).
     """
 
     __tablename__ = "registro_sueno"
@@ -50,6 +53,7 @@ class RegistroSueno(Base):
         nullable=False,
         server_default=OrigenDato.manual.value,
     )
+    idempotency_key: Mapped[uuid.UUID | None] = mapped_column(Uuid, unique=True)
 
     # REGLAS_NEGOCIO §6. Restar dos timestamptz da un interval, y
     # EXTRACT(EPOCH FROM interval) es IMMUTABLE: se puede usar en una generada.
