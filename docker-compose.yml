@@ -1,11 +1,8 @@
 services:
   db:
     image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-rendimiento}
-      POSTGRES_USER: ${POSTGRES_USER:-rendimiento}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rendimiento}
-      TZ: ${TZ:-America/Bogota}
+    env_file:
+      - .env.local
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -21,23 +18,20 @@ services:
   api:
     build:
       context: ./apps/api
+    # env_file, no environment: con ${VAR:-default}: ese patron resuelve
+    # contra el shell del HOST al momento de `docker compose up`, y si el
+    # shell no exporto la variable gana el default y PISA lo que haya en
+    # .env.local (environment: tiene prioridad sobre env_file). Esa fue la
+    # causa de que JWT_SECRET_KEY llegara vacio al contenedor pese a estar
+    # bien seteado en el archivo.
+    env_file:
+      - .env.local
     environment:
+      # Wiring interno del compose, no vive en .env.local: el host/puerto
+      # real de Postgres en la red de contenedores siempre es este, sin
+      # importar que POSTGRES_PORT en .env.local mapee el puerto del host.
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-rendimiento}
-      POSTGRES_USER: ${POSTGRES_USER:-rendimiento}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rendimiento}
-      SEED_USUARIO_NOMBRE: ${SEED_USUARIO_NOMBRE:-Mauro}
-      SEED_USUARIO_EMAIL: ${SEED_USUARIO_EMAIL:-}
-      SEED_USUARIO_PASSWORD: ${SEED_USUARIO_PASSWORD:-}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${WEB_PORT:-3000}}
-      APP_ENV: ${APP_ENV:-local}
-      DEBUG: ${DEBUG:-true}
-      TZ: ${TZ:-America/Bogota}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
