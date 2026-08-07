@@ -1,18 +1,24 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, Index, Text
+from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, Index, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.enums import MomentoComida
-from app.models.types import BigIntPk, Gramos, IdempotencyKey, UsuarioFk, UuidPk
+from app.models.types import BigIntPk, Gramos, UsuarioFk, UuidPk
 
 
 class ComidaLog(Base):
     """`receta_id` nulo = comida improvisada, y sus ingredientes van en
     `comida_item`. Si hay receta, los ingredientes se resuelven vía
-    `receta_item` y no se duplican acá."""
+    `receta_item` y no se duplican acá.
+
+    `idempotency_key` NOT NULL (DBML): cada comida es un POST del cliente,
+    siempre lleva su key. Es la unica unicidad real: el cliente puede
+    registrar varias comidas en el mismo (fecha, momento), asi que no hay
+    PK natural que proteger.
+    """
 
     __tablename__ = "comida_log"
     __table_args__ = (
@@ -29,7 +35,9 @@ class ComidaLog(Base):
     )
     receta_id: Mapped[int | None] = mapped_column(ForeignKey("receta.id"))
     nota: Mapped[str | None] = mapped_column(Text)
-    idempotency_key: Mapped[IdempotencyKey]
+    idempotency_key: Mapped[uuid.UUID] = mapped_column(
+        Uuid, nullable=False, unique=True
+    )
 
     items: Mapped[list["ComidaItem"]] = relationship(back_populates="comida_log")
 
