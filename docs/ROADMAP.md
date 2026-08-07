@@ -167,6 +167,24 @@ red se sincroniza sola y sin duplicados.
 
 **No hacer:** resolución de conflictos multiusuario. Hay un solo usuario.
 
+**Estado: ✅ completa en `feat/fase-5-offline` (commits
+`9df3b9d`, `9b49f5a`, `d1e852e`, `80e54c6`, `960794d`, `137b938`).**
+
+Notas:
+- `idempotency_key` se agrego a las 6 mutaciones del cliente
+  (registro_sueno, registro_bienestar, registro_hidratacion,
+  habito_registro, molestia, sesion). Nullable para admitir backfill
+  de Fase 9 (Notion) sin UUID.
+- Patron de 3 pasos en repos: SELECT previo por key (idempotente),
+  INSERT ON CONFLICT DO NOTHING, UPDATE por la unicidad natural
+  (edicion).
+- Hidratacion usa variante SELECT previo + ON CONFLICT DO UPDATE
+  sumando `ml_totales`. Race condition de doble suma bajo concurrencia
+  documentada en PENDIENTES; la cola reintenta con delays.
+- JWT queda en localStorage (deuda de seguridad, ver PENDIENTES).
+- 86 tests backend + 8 tests frontend pasan. Ruff + mypy + typecheck
+  limpios.
+
 ---
 
 ## Fase 6 — Nutrición
