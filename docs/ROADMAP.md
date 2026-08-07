@@ -253,6 +253,39 @@ un partido y que su carga entre en el total de la semana.
 
 **No hacer:** capa de métricas todavía.
 
+**Estado: ✅ completa.**
+
+Notas:
+- Modelos (`app/models/evaluacion/`, `bienestar/medida.py`,
+  `entrenamiento/sesion.py::Partido`) y tablas ya existían desde la
+  migración inicial, igual que en Fase 6; esta fase agregó repos,
+  servicios, schemas y routers.
+- `pct_decremento` solo se calcula para `tipo_test.codigo == 'rsa_30m'`
+  (REGLAS_NEGOCIO §7 lo scopea explícitamente a ese tipo) y requiere
+  4+ intentos, si no `None`. Verificado end-to-end con el caso exacto
+  de la regla: 6 tiempos → `pct_decremento` 4.603.
+- `pct_cambio` compara contra el mejor resultado del **primer** test
+  registrado de ese `tipo_test` (no el anterior): `None` si el test
+  actual es el primero. Respeta `mejor_es_mayor` (min para sprint,
+  max para CMJ) tanto para elegir "mejor" como para el signo del
+  cálculo.
+- `GET /tests/{id}/resultado` es un endpoint separado del recurso
+  crudo (`GET /tests/{id}`): mejor/media/pct_decremento/pct_cambio son
+  derivados, no se almacenan (mismo principio que macros de receta en
+  Fase 6).
+- Partido no tiene endpoint propio de creación "suelta": siempre
+  referencia una `sesion` ya creada (`sesion_id` unique), duración y
+  RPE viven ahí. Verificado que `carga_srpe` se calcula solo al crear
+  la sesión de tipo `partido`.
+- Bug encontrado y corregido en el camino: `services/nutricion/comida.py`
+  (Fase 6) agregaba `comida_item` sin chequear si la comida ya
+  existía por idempotencia, duplicando items en cada reintento. Mismo
+  patrón de fix que se aplicó acá para `test_intento` (contar via
+  query antes de insertar, no vía la colección ORM recién creada, que
+  además revienta con `MissingGreenlet` si se la toca directo).
+- 119 tests backend + 14 tests frontend pasan. Ruff + mypy + typecheck
+  limpios.
+
 ---
 
 ## Fase 8 — Capa de métricas

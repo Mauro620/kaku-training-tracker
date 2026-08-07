@@ -235,3 +235,22 @@ real en un navegador que ya tuviera datos de la version 1.
 **Cuando dejar de lado:** antes de confiar en la cola offline con
 usuarios reales que ya tengan la app instalada (hoy es un solo
 usuario en dev, el riesgo es bajo).
+
+---
+
+## Objetivo diario de proteína (REGLAS_NEGOCIO §12) no expuesto todavía
+
+**Estado:** pendiente, dependencia recien disponible en Fase 7.
+
+REGLAS_NEGOCIO §12 define `objetivo_proteina_g = peso_kg × proteina_g_por_kg`
+usando el peso del `medida_corporal` más reciente. En Fase 6
+(`services/nutricion/`) `medida_corporal` todavía no existía como
+repo/servicio, así que el endpoint de macros del día no lo calcula.
+Fase 7 agregó `evaluacion/medida.py` con
+`obtener_medida_mas_reciente`, así que la dependencia ya está lista.
+
+**Cuándo hacerlo:** la próxima vez que se toque `services/nutricion/comida.py`
+o `MacrosCard` del frontend: sumar `objetivo_proteina_g` a
+`ResultadoMacrosRead` (o a un endpoint separado) usando
+`repo_evaluacion.obtener_medida_mas_reciente` + `parametro.proteina_g_por_kg`.
+Se muestra como referencia, no como meta a perseguir (dice la regla).
