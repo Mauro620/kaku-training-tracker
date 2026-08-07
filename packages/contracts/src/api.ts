@@ -295,6 +295,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sesiones/{sesion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una sesion, con sus bloques. */
+        get: operations["obtener_sesion_api_v1_sesiones__sesion_id__get"];
+        /** Reemplaza cabecera y bloques de la sesion (completo, no incremental). */
+        put: operations["actualizar_sesion_api_v1_sesiones__sesion_id__put"];
+        post?: never;
+        /** Elimina la sesion y sus bloques. */
+        delete: operations["eliminar_sesion_api_v1_sesiones__sesion_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogos/tipos-sesion": {
         parameters: {
             query?: never;
@@ -1137,6 +1156,30 @@ export interface components {
             bloques?: components["schemas"]["BloqueRead"][];
         };
         /**
+         * SesionUpdate
+         * @description PUT reemplaza la sesion completa (cabecera + bloques), igual que
+         *     ciclo_semana_composicion: declarar todo de una vez evita bloques
+         *     viejos de un `orden` que ya no existe. `sesion_plan_id` no se
+         *     reasigna por acá: el link nace en la creación, no en la edición.
+         */
+        SesionUpdate: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Duracion Min */
+            duracion_min: number;
+            /** Rpe */
+            rpe: number;
+            /** Nota */
+            nota?: string | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueSinSesionCreate"][] | null;
+        };
+        /**
          * TipoMedicion
          * @description Determina que campos acepta un bloque de este ejercicio
          *     (REGLAS_NEGOCIO §15): carga->series/reps/peso_kg,
@@ -1781,6 +1824,101 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SesionRead"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_sesion_api_v1_sesiones__sesion_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sesion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_sesion_api_v1_sesiones__sesion_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sesion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SesionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_sesion_api_v1_sesiones__sesion_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sesion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

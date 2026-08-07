@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { BentoCard } from "@/components/ui/bento-card";
+import { SesionDetalle } from "@/components/entreno/sesion-detalle";
 import {
   useSesionesDeFecha,
   useTiposSesion,
@@ -16,11 +18,13 @@ type Props = { fecha: string; planes: SesionPlan[] };
 /**
  * Lista de las sesiones registradas en la fecha (ROADMAP §4).
  * El backend carga los bloques via selectinload asi que no hay N+1.
+ * Tocar una sesion abre el detalle/edicion (sesion-detalle.tsx).
  */
 export function SesionesList({ fecha, planes }: Props) {
   const { data, isLoading } = useSesionesDeFecha(fecha);
   const tipos = useTiposSesion();
   const ejercicios = useEjercicios();
+  const [sesionAbiertaId, setSesionAbiertaId] = useState<string | null>(null);
 
   return (
     <BentoCard>
@@ -50,9 +54,17 @@ export function SesionesList({ fecha, planes }: Props) {
               ejercicioNombre={(id) =>
                 ejercicios.data?.find((e) => e.id === id)?.nombre
               }
+              onAbrir={() => setSesionAbiertaId(s.id)}
             />
           ))}
         </div>
+      )}
+
+      {sesionAbiertaId && (
+        <SesionDetalle
+          sesionId={sesionAbiertaId}
+          onCerrar={() => setSesionAbiertaId(null)}
+        />
       )}
     </BentoCard>
   );
@@ -63,14 +75,20 @@ function SesionCard({
   plan,
   tipoNombre,
   ejercicioNombre,
+  onAbrir,
 }: {
   sesion: Sesion;
   plan: SesionPlan | null;
   tipoNombre: string | undefined;
   ejercicioNombre: (id: number) => string | undefined;
+  onAbrir: () => void;
 }) {
   return (
-    <div className="rounded-bento border border-border-subtle bg-surface-secondary p-4">
+    <button
+      type="button"
+      onClick={onAbrir}
+      className="w-full rounded-bento border border-border-subtle bg-surface-secondary p-4 text-left"
+    >
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-[16px] font-semibold text-text-primary">
           {tipoNombre ?? "Sesion"}
@@ -111,7 +129,7 @@ function SesionCard({
       ) : (
         <p className="mt-3 text-[12px] text-text-secondary">Sesion sin bloques.</p>
       )}
-    </div>
+    </button>
   );
 }
 

@@ -352,6 +352,72 @@ export function useCrearSesion(fecha: string) {
   });
 }
 
+export function useSesion(id: string | null) {
+  return useQuery({
+    queryKey: ["sesion", id],
+    queryFn: () => api.get<Sesion>(`/sesiones/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export type SesionActualizarPayload = {
+  fecha: string;
+  tipo_sesion_id: number;
+  duracion_min: number;
+  rpe: number;
+  nota?: string | null;
+  bloques: BloqueBorradorPayload[];
+};
+
+export function useActualizarSesion(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: SesionActualizarPayload) =>
+      api.put<Sesion>(`/sesiones/${id}`, cuerpo),
+    onSuccess: (data) => {
+      qc.setQueryData(["sesion", id], data);
+      // La fecha pudo cambiar: invalido cualquier lista de sesiones por
+      // fecha, no solo la de hoy.
+      void qc.invalidateQueries({ queryKey: ["sesiones"] });
+      void qc.invalidateQueries({ queryKey: ["planes"] });
+    },
+  });
+}
+
+export function useEliminarSesion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/sesiones/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["sesiones"] });
+      void qc.invalidateQueries({ queryKey: ["planes"] });
+    },
+  });
+}
+
+// Duplicar: crea una sesion nueva (id/idempotency_key propios) copiando
+// bloques a otra fecha. Sin hook de "fecha fija" como useCrearSesion
+// porque el destino puede ser cualquier dia, no el de la pantalla actual.
+export function useDuplicarSesion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      id: string;
+      idempotency_key: string;
+      fecha: string;
+      tipo_sesion_id: number;
+      duracion_min: number;
+      rpe: number;
+      nota?: string | null;
+      bloques: BloqueBorradorPayload[];
+    }) => api.post<Sesion>("/sesiones", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["sesiones"] });
+      void qc.invalidateQueries({ queryKey: ["planes"] });
+    },
+  });
+}
+
 // ---------- Fase 4 R2: planes ----------
 
 export function usePlanesDeFecha(fecha: string) {
