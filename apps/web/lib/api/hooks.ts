@@ -989,3 +989,167 @@ export function useEliminarDeDespensa() {
     },
   });
 }
+
+// ---------- Fase 7: tests fisicos, medida corporal, partidos ----------
+
+export type TipoTest = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  unidad: string;
+  mejor_es_mayor: boolean;
+};
+
+export type TestIntento = {
+  numero: number;
+  valor: string;
+};
+
+export type TestFisico = {
+  id: string;
+  usuario_id: string;
+  fecha: string;
+  tipo_test_id: number;
+  superficie: string | null;
+  condiciones: string | null;
+  intentos: TestIntento[];
+};
+
+export type ResultadoTest = {
+  mejor: string;
+  media: string;
+  pct_decremento: string | null;
+  pct_cambio: string | null;
+};
+
+export type MedidaCorporal = {
+  id: number;
+  usuario_id: string;
+  fecha: string;
+  peso_kg: string;
+  fc_reposo: number | null;
+  origen: "manual" | "health_kit" | "notion_backfill";
+};
+
+export type Partido = {
+  id: string;
+  sesion_id: string;
+  rival: string | null;
+  formato: string | null;
+  minutos_jugados: number;
+  goles: number;
+  asistencias: number;
+  recuperaciones: number | null;
+  salio_bien: string | null;
+  a_ajustar: string | null;
+};
+
+export function useTiposTest() {
+  return useQuery({
+    queryKey: ["catalogos", "tipos-test"],
+    queryFn: () => api.get<TipoTest[]>("/catalogos/tipos-test"),
+    staleTime: Infinity, // un catalogo sembrado no cambia en una sesion
+  });
+}
+
+export function useTestsDeFecha(fecha: string) {
+  return useQuery({
+    queryKey: ["tests", fecha],
+    queryFn: () => api.get<TestFisico[]>(`/tests?fecha=${fecha}`),
+  });
+}
+
+export function useTest(id: string | null) {
+  return useQuery({
+    queryKey: ["test", id],
+    queryFn: () => api.get<TestFisico>(`/tests/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export function useResultadoTest(id: string | null) {
+  return useQuery({
+    queryKey: ["test", id, "resultado"],
+    queryFn: () => api.get<ResultadoTest>(`/tests/${id}/resultado`),
+    enabled: id !== null,
+  });
+}
+
+export function useRegistrarTest(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      idempotency_key: string;
+      tipo_test_id: number;
+      superficie?: string | null;
+      condiciones?: string | null;
+      valores: string[];
+    }) => api.post<TestFisico>("/tests", { fecha, ...cuerpo }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tests", fecha] });
+    },
+  });
+}
+
+export function useEliminarTest(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/tests/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tests", fecha] });
+    },
+  });
+}
+
+export function useMedidas() {
+  return useQuery({
+    queryKey: ["medidas"],
+    queryFn: () => api.get<MedidaCorporal[]>("/medidas"),
+  });
+}
+
+export function useRegistrarMedida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: { fecha: string; peso_kg: string; fc_reposo?: number | null }) =>
+      api.post<MedidaCorporal>("/medidas", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["medidas"] });
+    },
+  });
+}
+
+export function usePartidos() {
+  return useQuery({
+    queryKey: ["partidos"],
+    queryFn: () => api.get<Partido[]>("/partidos"),
+  });
+}
+
+export function usePartido(id: string | null) {
+  return useQuery({
+    queryKey: ["partido", id],
+    queryFn: () => api.get<Partido>(`/partidos/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export function useRegistrarPartido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      sesion_id: string;
+      rival?: string | null;
+      formato?: string | null;
+      minutos_jugados: number;
+      goles?: number;
+      asistencias?: number;
+      recuperaciones?: number | null;
+      salio_bien?: string | null;
+      a_ajustar?: string | null;
+    }) => api.post<Partido>("/partidos", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["partidos"] });
+    },
+  });
+}
