@@ -14,6 +14,8 @@
 
 import Dexie, { type Table } from "dexie";
 
+import type { ItemOutbox } from "@/lib/sync/tipos";
+
 /** Registro de sueno en el cliente. Espejo de `registro_sueno`. */
 export interface CapturaSueno {
   fecha: string; // ISO YYYY-MM-DD
@@ -96,6 +98,7 @@ export class DexieCapturas extends Dexie {
   habito_registro!: Table<CapturaHabitoRegistro, string>;
   molestia!: Table<CapturaMolestia, string>;
   sesion!: Table<CapturaSesion, string>;
+  outbox!: Table<ItemOutbox, string>;
 
   constructor() {
     super("training_tracker");
@@ -105,7 +108,9 @@ export class DexieCapturas extends Dexie {
     // distintas, solo guarda el intento.
     //
     // Las secundarias son los indices que la UI consulta antes de sincronizar
-    // (ej. "traeme el sueno de hoy").
+    // (ej. "traeme el sueno de hoy"). La cola (`outbox`) se indexa por estado
+    // y por creacion para que `procesarCola` agarre rapido el siguiente
+    // pendiente.
     this.version(1).stores({
       sueno: "&idempotency_key, fecha",
       bienestar: "&idempotency_key, fecha",
@@ -113,6 +118,7 @@ export class DexieCapturas extends Dexie {
       habito_registro: "&[habito_id+fecha], idempotency_key, fecha",
       molestia: "&idempotency_key, fecha, zona_id",
       sesion: "&id, idempotency_key, fecha",
+      outbox: "&id, estado, creado_en",
     });
   }
 }
