@@ -284,10 +284,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Sesiones del usuario en una fecha, con sus series. */
+        /** Sesiones del usuario en una fecha, con sus bloques. */
         get: operations["listar_sesiones_api_v1_sesiones_get"];
         put?: never;
-        /** Crea sesion con sus series (opcional). Idempotente por idempotency_key. */
+        /** Crea sesion con sus bloques (opcional). Idempotente por idempotency_key. */
         post: operations["crear_sesion_api_v1_sesiones_post"];
         delete?: never;
         options?: never;
@@ -322,7 +322,8 @@ export interface paths {
         /** Lista los ejercicios sembrados. */
         get: operations["listar_ejercicios_api_v1_catalogos_ejercicios_get"];
         put?: never;
-        post?: never;
+        /** Crea un ejercicio. Unico catalogo que el usuario puede ampliar. */
+        post: operations["crear_ejercicio_api_v1_catalogos_ejercicios_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -473,6 +474,112 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BloquePlanRead */
+        BloquePlanRead: {
+            /** Id */
+            id: number;
+            /** Sesion Plan Id */
+            sesion_plan_id: number;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series: number | null;
+            /** Reps Min */
+            reps_min: number | null;
+            /** Reps Max */
+            reps_max: number | null;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg: string | null;
+            /** Distancia Objetivo M */
+            distancia_objetivo_m: string | null;
+            /** Duracion Objetivo S */
+            duracion_objetivo_s: number | null;
+        };
+        /**
+         * BloquePlanSinPlanCreate
+         * @description Un bloque objetivo dentro del body de POST /planes: el
+         *     `sesion_plan_id` lo completa el server con el id del plan recien creado.
+         */
+        BloquePlanSinPlanCreate: {
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series?: number | null;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg?: number | string | null;
+            /** Distancia Objetivo M */
+            distancia_objetivo_m?: number | string | null;
+            /** Duracion Objetivo S */
+            duracion_objetivo_s?: number | null;
+        };
+        /** BloqueRead */
+        BloqueRead: {
+            /** Id */
+            id: number;
+            /**
+             * Sesion Id
+             * Format: uuid
+             */
+            sesion_id: string;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series: number | null;
+            /** Reps */
+            reps: number | null;
+            /** Distancia M */
+            distancia_m: string | null;
+            /** Duracion S */
+            duracion_s: number | null;
+            /** Calidad */
+            calidad: number | null;
+            /** Peso Kg */
+            peso_kg: string | null;
+            /** Rpe */
+            rpe: number | null;
+            /** Dolor Lumbar */
+            dolor_lumbar: boolean;
+        };
+        /**
+         * BloqueSinSesionCreate
+         * @description Un bloque dentro del body de POST /sesiones: el `sesion_id` lo
+         *     completa el server con el id de la sesion que se acaba de crear.
+         */
+        BloqueSinSesionCreate: {
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series?: number | null;
+            /** Reps */
+            reps?: number | null;
+            /** Distancia M */
+            distancia_m?: number | string | null;
+            /** Duracion S */
+            duracion_s?: number | null;
+            /** Calidad */
+            calidad?: number | null;
+            /** Peso Kg */
+            peso_kg?: number | string | null;
+            /** Rpe */
+            rpe?: number | null;
+            /**
+             * Dolor Lumbar
+             * @default false
+             */
+            dolor_lumbar: boolean;
+        };
         /**
          * CargaLumbar
          * @enum {string}
@@ -604,6 +711,12 @@ export interface components {
          * @enum {string}
          */
         Demanda: "alta" | "media" | "baja";
+        /** EjercicioCreate */
+        EjercicioCreate: {
+            /** Nombre */
+            nombre: string;
+            tipo_medicion: components["schemas"]["TipoMedicion"];
+        };
         /** EjercicioRead */
         EjercicioRead: {
             /** Id */
@@ -614,7 +727,8 @@ export interface components {
             patron: string | null;
             carga_lumbar: components["schemas"]["CargaLumbar"];
             /** Tipo Sesion Id */
-            tipo_sesion_id: number;
+            tipo_sesion_id: number | null;
+            tipo_medicion: components["schemas"]["TipoMedicion"];
         };
         /**
          * EstadoCiclo
@@ -902,92 +1016,6 @@ export interface components {
             /** Horas Sueno */
             horas_sueno: string;
         };
-        /** SeriePlanRead */
-        SeriePlanRead: {
-            /** Id */
-            id: number;
-            /** Sesion Plan Id */
-            sesion_plan_id: number;
-            /** Ejercicio Id */
-            ejercicio_id: number;
-            /** Orden */
-            orden: number;
-            /** Series */
-            series: number;
-            /** Reps Min */
-            reps_min: number | null;
-            /** Reps Max */
-            reps_max: number | null;
-            /** Peso Objetivo Kg */
-            peso_objetivo_kg: string | null;
-        };
-        /**
-         * SeriePlanSinPlanCreate
-         * @description Una serie objetivo dentro del body de POST /planes: el
-         *     `sesion_plan_id` lo completa el server con el id del plan recien creado.
-         */
-        SeriePlanSinPlanCreate: {
-            /** Reps Min */
-            reps_min?: number | null;
-            /** Reps Max */
-            reps_max?: number | null;
-            /** Ejercicio Id */
-            ejercicio_id: number;
-            /** Orden */
-            orden: number;
-            /** Series */
-            series: number;
-            /** Peso Objetivo Kg */
-            peso_objetivo_kg?: number | string | null;
-        };
-        /** SerieRead */
-        SerieRead: {
-            /** Id */
-            id: number;
-            /**
-             * Sesion Id
-             * Format: uuid
-             */
-            sesion_id: string;
-            /** Ejercicio Id */
-            ejercicio_id: number;
-            /** Orden */
-            orden: number;
-            /** Series */
-            series: number;
-            /** Reps */
-            reps: number;
-            /** Peso Kg */
-            peso_kg: string | null;
-            /** Rpe */
-            rpe: number | null;
-            /** Dolor Lumbar */
-            dolor_lumbar: boolean;
-        };
-        /**
-         * SerieSinSesionCreate
-         * @description Una serie dentro del body de POST /sesiones: el `sesion_id` lo
-         *     completa el server con el id de la sesion que se acaba de crear.
-         */
-        SerieSinSesionCreate: {
-            /** Ejercicio Id */
-            ejercicio_id: number;
-            /** Orden */
-            orden: number;
-            /** Series */
-            series: number;
-            /** Reps */
-            reps: number;
-            /** Peso Kg */
-            peso_kg?: number | string | null;
-            /** Rpe */
-            rpe?: number | null;
-            /**
-             * Dolor Lumbar
-             * @default false
-             */
-            dolor_lumbar: boolean;
-        };
         /**
          * SesionCreate
          * @description `id` e `idempotency_key` los genera el cliente antes de tener red.
@@ -1018,8 +1046,8 @@ export interface components {
             rpe: number;
             /** Nota */
             nota?: string | null;
-            /** Series */
-            series?: components["schemas"]["SerieSinSesionCreate"][] | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueSinSesionCreate"][] | null;
         };
         /**
          * SesionPlanCreate
@@ -1042,8 +1070,8 @@ export interface components {
             duracion_min_est?: number | null;
             /** Rpe Objetivo */
             rpe_objetivo?: number | null;
-            /** Series */
-            series?: components["schemas"]["SeriePlanSinPlanCreate"][] | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloquePlanSinPlanCreate"][] | null;
         };
         /** SesionPlanRead */
         SesionPlanRead: {
@@ -1068,8 +1096,8 @@ export interface components {
             duracion_min_est: number | null;
             /** Rpe Objetivo */
             rpe_objetivo: number | null;
-            /** Series Planeadas */
-            series_planeadas?: components["schemas"]["SeriePlanRead"][];
+            /** Bloques Planeados */
+            bloques_planeados?: components["schemas"]["BloquePlanRead"][];
         };
         /** SesionRead */
         SesionRead: {
@@ -1105,9 +1133,18 @@ export interface components {
              * Format: date-time
              */
             registrado_en: string;
-            /** Series */
-            series?: components["schemas"]["SerieRead"][];
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueRead"][];
         };
+        /**
+         * TipoMedicion
+         * @description Determina que campos acepta un bloque de este ejercicio
+         *     (REGLAS_NEGOCIO §15): carga->series/reps/peso_kg,
+         *     distancia->reps/distancia_m, tiempo->duracion_s,
+         *     tecnica->reps o duracion_s + calidad.
+         * @enum {string}
+         */
+        TipoMedicion: "carga" | "distancia" | "tiempo" | "tecnica";
         /** TipoSesionRead */
         TipoSesionRead: {
             /** Id */
@@ -1792,6 +1829,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EjercicioRead"][];
+                };
+            };
+        };
+    };
+    crear_ejercicio_api_v1_catalogos_ejercicios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EjercicioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EjercicioRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

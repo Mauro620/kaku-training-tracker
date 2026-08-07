@@ -69,12 +69,15 @@ export type TipoSesion = {
   demanda: "alta" | "media" | "baja";
 };
 
+export type TipoMedicion = "carga" | "distancia" | "tiempo" | "tecnica";
+
 export type Ejercicio = {
   id: number;
   nombre: string;
   patron: string | null;
   carga_lumbar: "alta" | "media" | "baja";
-  tipo_sesion_id: number;
+  tipo_sesion_id: number | null;
+  tipo_medicion: TipoMedicion;
 };
 
 export type ZonaCorporal = {
@@ -82,13 +85,16 @@ export type ZonaCorporal = {
   nombre: string;
 };
 
-export type Serie = {
+export type Bloque = {
   id: number;
   sesion_id: string;
   ejercicio_id: number;
   orden: number;
-  series: number;
-  reps: number;
+  series: number | null;
+  reps: number | null;
+  distancia_m: string | null;
+  duracion_s: number | null;
+  calidad: number | null;
   peso_kg: string | null;
   rpe: number | null;
   dolor_lumbar: boolean;
@@ -105,7 +111,7 @@ export type Sesion = {
   nota: string | null;
   carga_srpe: number;
   registrado_en: string;
-  series: Serie[];
+  bloques: Bloque[];
 };
 
 export type Molestia = {
@@ -117,15 +123,17 @@ export type Molestia = {
   nota: string | null;
 };
 
-export type SeriePlan = {
+export type BloquePlan = {
   id: number;
   sesion_plan_id: number;
   ejercicio_id: number;
   orden: number;
-  series: number;
+  series: number | null;
   reps_min: number | null;
   reps_max: number | null;
   peso_objetivo_kg: string | null;
+  distancia_objetivo_m: string | null;
+  duracion_objetivo_s: number | null;
 };
 
 export type SesionPlan = {
@@ -138,7 +146,7 @@ export type SesionPlan = {
   objetivo: string | null;
   duracion_min_est: number | null;
   rpe_objetivo: number | null;
-  series_planeadas: SeriePlan[];
+  bloques_planeados: BloquePlan[];
 };
 
 // ---------- Queries ----------
@@ -279,6 +287,19 @@ export function useEjercicios() {
   });
 }
 
+// Unico catalogo que el usuario amplia (REGLAS_NEGOCIO §15): el universo
+// de ejercicios de una rutina real es abierto.
+export function useCrearEjercicio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: { nombre: string; tipo_medicion: TipoMedicion }) =>
+      api.post<Ejercicio>("/catalogos/ejercicios", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["catalogos", "ejercicios"] });
+    },
+  });
+}
+
 export function useZonasCorporales() {
   return useQuery({
     queryKey: ["catalogos", "zonas-corporales"],
@@ -296,6 +317,19 @@ export function useSesionesDeFecha(fecha: string) {
   });
 }
 
+export type BloqueBorradorPayload = {
+  ejercicio_id: number;
+  orden: number;
+  series?: number | null;
+  reps?: number | null;
+  distancia_m?: number | null;
+  duracion_s?: number | null;
+  calidad?: number | null;
+  peso_kg?: number | null;
+  rpe?: number | null;
+  dolor_lumbar?: boolean;
+};
+
 export function useCrearSesion(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -307,15 +341,7 @@ export function useCrearSesion(fecha: string) {
       duracion_min: number;
       rpe: number;
       nota?: string | null;
-      series: Array<{
-        ejercicio_id: number;
-        orden: number;
-        series: number;
-        reps: number;
-        peso_kg: number | null;
-        rpe: number | null;
-        dolor_lumbar?: boolean;
-      }>;
+      bloques: BloqueBorradorPayload[];
     }) =>
       api.post<Sesion>("/sesiones", { fecha, ...cuerpo }),
     onSuccess: () => {
