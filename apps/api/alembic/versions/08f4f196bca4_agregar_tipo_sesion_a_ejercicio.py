@@ -36,7 +36,10 @@ def upgrade() -> None:
     )
 
     conexion = op.get_bind()
-    for nombre, _patron, _carga_lumbar, tipo_codigo in EJERCICIOS:
+    # El seed de EJERCICIOS tiene 5 campos por tupla (Fase 4 sumo
+    # tipo_medicion al final). Esta migracion es anterior y solo necesita
+    # los primeros 4, asi que descartamos el quinto.
+    for nombre, _patron, _carga_lumbar, tipo_codigo, *_ in EJERCICIOS:
         conexion.execute(
             sa.text(
                 "UPDATE ejercicio SET tipo_sesion_id = "
