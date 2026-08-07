@@ -102,3 +102,38 @@ hábito desactivado y nadie lo busque. En la práctica eso ya pasó (la
 checklist de hábitos no incluye `activo = false`), así que esta nota
 es por si alguien mira la base y se pregunta por qué hay un hábito
 desactivado.
+
+---
+
+## `serie` se renombró a `bloque` en Fase 4
+
+El modelo de `serie` era "N series × M reps" y no describía trabajo no-fuerza
+(sprints a distancia, controles tecnicos). En la ultima entrega de Fase 4
+se renombro la tabla a `bloque` via `ALTER TABLE ... RENAME` (no drop+create:
+la data se preserva), y se sumo `tipo_medicion` (`carga` | `distancia` |
+`tiempo` | `tecnica`) en `ejercicio` para determinar que campos acepta
+cada bloque.
+
+**Por qué quedó asi:** ya estaban migradas 7 sesiones de prueba al
+momento del rename, y la migracion `a09181f1ca0e` preserva los datos.
+Busquedas en codigo viejo que digan `serie` (en commits previos, en
+documentacion desactualizada, en chats) no van a matchear nada en la
+base. Si alguien lee docs viejos y busca `serie.rpe` por ejemplo, tiene
+que migrar mentalmente a `bloque.rpe`.
+
+**Cuando dejar de lado:** cuando los commits previos a Fase 4 queden
+fuera del historial activo (release de v1.0). Mientras tanto, esta
+nota documenta que el rename es intencional.
+
+## `ejercicio.tipo_sesion_id` ahora es nullable
+
+Antes de Fase 4: `ejercicio.tipo_sesion_id` era NOT NULL y se usaba para
+filtrar el selector ("solo ejercicios de fuerza cuando el tipo de sesion
+es fuerza"). Con la llegada de `tipo_medicion`, ese filtro dejo de tener
+sentido: la categoria "fuerza" ya no se fija por el tipo de sesion sino
+por el `tipo_medicion` del ejercicio individual.
+
+**Estado:** la columna sigue ahi como nullable (no se borro para no romper
+referencias en el seed y en busquedas historicas), pero la UI ya no la
+expone ni la usa. Si en algun momento se decide que tampoco sirve como
+categorizacion de referencia, se migra a una tabla aparte de tags.
