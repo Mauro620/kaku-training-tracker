@@ -45,6 +45,18 @@ class CargaLumbar(StrEnum):
     baja = "baja"
 
 
+class TipoMedicion(StrEnum):
+    """Determina que campos acepta un bloque de este ejercicio
+    (REGLAS_NEGOCIO §15): carga->series/reps/peso_kg,
+    distancia->reps/distancia_m, tiempo->duracion_s,
+    tecnica->reps o duracion_s + calidad."""
+
+    carga = "carga"
+    distancia = "distancia"
+    tiempo = "tiempo"
+    tecnica = "tecnica"
+
+
 class OrigenDato(StrEnum):
     manual = "manual"
     health_kit = "health_kit"

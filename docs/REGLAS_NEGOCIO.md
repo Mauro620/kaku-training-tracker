@@ -259,10 +259,103 @@ reciente. Se muestra como referencia, **no como meta a perseguir**.
 
 ---
 
-## 13. Redondeo y nulos
+## 13. Cumplimiento de ciclo y espaciado
+
+### 13.1 Rango de fechas de una semana
+
+```
+semana_inicio = ciclo.fecha_inicio + (ciclo_semana.numero − 1) × 7
+semana_fin    = semana_inicio + 6
+```
+
+No es una columna: se deriva de `ciclo.fecha_inicio` y `ciclo_semana.numero`
+en el momento de calcular. Guardarla aparte sería una segunda fuente de
+verdad que puede divergir si `fecha_inicio` cambia.
+
+### 13.2 Cumplimiento
+
+Para cada fila de `ciclo_semana_composicion` (un `tipo_sesion_id` con su
+`cantidad_objetivo`):
+
+```
+hecho = cantidad de `sesion` reales de ese tipo_sesion_id
+        con fecha entre semana_inicio y semana_fin (inclusive)
+cumplimiento = hecho, objetivo (cantidad_objetivo), y hecho ≥ objetivo
+```
+
+No se compara contra fecha exacta ni contra `sesion_plan.dia_sugerido`: el
+día es sugerencia, no compromiso (§13.3). Un parcial cambiado de día no
+genera un tipo de sesión "incumplido" mientras la cantidad de la semana se
+cumpla.
+
+### 13.3 Espaciado al sugerir día
+
+Umbrales en `parametro`, no en código:
+
+```
+fuerza_separacion_min_horas   = 48
+partido_ventana_previa_horas  = 24
+```
+
+**Separación entre sesiones de fuerza.** Al sugerir un día para una sesión
+de tipo `fuerza`, ninguna otra sesión de fuerza (real, o planificada con
+`dia_sugerido` dentro del mismo ciclo) puede caer a menos de
+`fuerza_separacion_min_horas` de la fecha candidata. Como no hay hora del
+día en el modelo (`sesion.fecha` y `dia_sugerido` son granularidad de día),
+la distancia se aproxima a días completos:
+
+```
+distancia_minima_dias = ceil(fuerza_separacion_min_horas / 24)
+```
+
+Con la semilla (48h), `distancia_minima_dias = 2`: fuerza el lunes y fuerza
+el miércoles cumple: fuerza el lunes y el martes, no.
+
+**Ventana previa a un partido.** Al sugerir un día para una sesión de tipo
+`partido`, ninguna sesión de demanda `alta` (real o planificada) puede caer
+en las `partido_ventana_previa_horas` inmediatamente anteriores. Misma
+aproximación a días completos que arriba. Es unidireccional: protege al
+partido, no exige lo mismo entre dos sesiones de fuerza entre sí (eso ya lo
+cubre la regla anterior).
+
+Ninguna de las dos reglas se evalúa si `dia_sugerido` es `NULL`: un plan sin
+día sugerido no compromete nada, no hay fecha candidata que validar.
+
+---
+
+## 14. Redondeo y nulos
 
 - Los cálculos internos usan `Decimal` o `float` sin redondear.
 - El redondeo ocurre solo al serializar: 3 decimales para ACWR y monotonía,
   1 para horas y porcentajes, entero para el Estado.
 - Un dato faltante es NULL y se propaga como NULL. **Nunca se sustituye por
   cero.** Un día sin registro de sueño no es un día de cero horas.
+
+---
+
+## 15. Medición de bloque por tipo de ejercicio
+
+`bloque` (antes `serie`) registra una unidad de trabajo dentro de una sesión
+o un plan. "N series × M reps" no describe un sprint de 20 m ni un control
+técnico: cada `ejercicio` declara su `tipo_medicion`, y eso determina qué
+campos acepta el bloque. La validación vive en el service (un `CHECK` de
+Postgres no puede consultar otra tabla).
+
+| `tipo_medicion` | Campos permitidos | Ejemplo |
+|---|---|---|
+| `carga` | `series`, `reps`, `peso_kg` | Sentadilla explosiva: 4×6 @ 80kg |
+| `distancia` | `reps`, `distancia_m` | Sprint acelerativo: 6 reps de 20m |
+| `tiempo` | `duracion_s` | Plancha Copenhague: 40s |
+| `tecnica` | `reps` o `duracion_s`, + `calidad` (1-5) | Control con muro: 20 reps, calidad 4 |
+
+Todos los `tipo_medicion` aceptan `rpe` y `dolor_lumbar` (el real; el
+objetivo en `bloque_plan` no tiene ni `dolor_lumbar` ni `calidad`, ver
+`docs/schema.dbml`). Un campo fuera de la lista permitida para el
+`tipo_medicion` del `ejercicio_id` del bloque es un
+`InvarianteDeNegocioError` (422), no un `CHECK` de tabla.
+
+**Catálogo de ejercicio, caso especial**: a diferencia de `tipo_sesion` o
+`zona_corporal`, `ejercicio` es el único catálogo que el usuario puede
+ampliar (`POST /catalogos/ejercicios`). El universo de ejercicios de una
+rutina real es abierto; los demás catálogos son taxonomías fijas del
+negocio.

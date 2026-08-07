@@ -108,4 +108,8 @@ export const api = {
     llamar<T>(path, { ...opciones, metodo: "GET" }),
   post: <T>(path: string, cuerpo: unknown, opciones?: Omit<Opciones, "metodo" | "cuerpo">) =>
     llamar<T>(path, { ...opciones, metodo: "POST", cuerpo }),
+  put: <T>(path: string, cuerpo: unknown, opciones?: Omit<Opciones, "metodo" | "cuerpo">) =>
+    llamar<T>(path, { ...opciones, metodo: "PUT", cuerpo }),
+  delete: <T>(path: string, opciones?: Omit<Opciones, "metodo" | "cuerpo">) =>
+    llamar<T>(path, { ...opciones, metodo: "DELETE" }),
 };

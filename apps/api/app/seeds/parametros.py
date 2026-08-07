@@ -158,4 +158,17 @@ PARAMETROS: tuple[tuple[str, Decimal, str | None, str], ...] = (
         "h",
         "Deuda de sueño de 7 días máxima para el verde",
     ),
+    # ---------- Espaciado de plan (REGLAS_NEGOCIO §13.3) ----------
+    (
+        "fuerza_separacion_min_horas",
+        Decimal("48"),
+        "h",
+        "Separación mínima entre dos sesiones de fuerza al sugerir día",
+    ),
+    (
+        "partido_ventana_previa_horas",
+        Decimal("24"),
+        "h",
+        "Horas previas a un partido sin sesión de demanda alta",
+    ),
 )

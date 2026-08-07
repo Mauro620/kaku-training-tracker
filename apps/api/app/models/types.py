@@ -56,3 +56,4 @@ IdempotencyKey = Annotated[uuid.UUID, mapped_column(Uuid, nullable=False, unique
 Peso = Annotated[Decimal, mapped_column(Numeric(5, 2))]
 Gramos = Annotated[Decimal, mapped_column(Numeric(7, 2))]
 Macro = Annotated[Decimal, mapped_column(Numeric(5, 2))]
+Distancia = Annotated[Decimal, mapped_column(Numeric(5, 1))]

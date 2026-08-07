@@ -1,4 +1,5 @@
 from app.schemas.catalogo.catalogo import (
+    EjercicioCreate,
     EjercicioRead,
     ParametroRead,
     TipoSesionRead,
@@ -7,6 +8,7 @@ from app.schemas.catalogo.catalogo import (
 )
 
 __all__ = [
+    "EjercicioCreate",
     "EjercicioRead",
     "ParametroRead",
     "TipoSesionRead",

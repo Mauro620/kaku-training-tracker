@@ -79,7 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Devuelve el usuario autenticado. Solo para smoke-test del token. */
+        /** Devuelve el perfil del usuario autenticado. */
         get: operations["me_api_v1_auth_me_get"];
         put?: never;
         post?: never;
@@ -157,6 +157,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/molestias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las molestias de una fecha. */
+        get: operations["listar_molestias_api_v1_molestias_get"];
+        put?: never;
+        /** Registra una molestia. Upsert por (fecha, zona). */
+        post: operations["crear_molestia_api_v1_molestias_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/habitos": {
         parameters: {
             query?: never;
@@ -208,10 +226,539 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hidratacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suma una cantidad de agua al total del día. */
+        post: operations["registrar_hidratacion_api_v1_hidratacion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hidratacion/{fecha}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve el total de agua registrado en una fecha. */
+        get: operations["leer_hidratacion_api_v1_hidratacion__fecha__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/parametros/{clave}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve el valor vigente de un parámetro de negocio. */
+        get: operations["leer_parametro_api_v1_parametros__clave__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sesiones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sesiones del usuario en una fecha, con sus bloques. */
+        get: operations["listar_sesiones_api_v1_sesiones_get"];
+        put?: never;
+        /** Crea sesion con sus bloques (opcional). Idempotente por idempotency_key. */
+        post: operations["crear_sesion_api_v1_sesiones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sesiones/{sesion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una sesion, con sus bloques. */
+        get: operations["obtener_sesion_api_v1_sesiones__sesion_id__get"];
+        /** Reemplaza cabecera y bloques de la sesion (completo, no incremental). */
+        put: operations["actualizar_sesion_api_v1_sesiones__sesion_id__put"];
+        post?: never;
+        /** Elimina la sesion y sus bloques. */
+        delete: operations["eliminar_sesion_api_v1_sesiones__sesion_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogos/tipos-sesion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los tipos de sesion sembrados. */
+        get: operations["listar_tipos_sesion_api_v1_catalogos_tipos_sesion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogos/ejercicios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los ejercicios sembrados. */
+        get: operations["listar_ejercicios_api_v1_catalogos_ejercicios_get"];
+        put?: never;
+        /** Crea un ejercicio. Unico catalogo que el usuario puede ampliar. */
+        post: operations["crear_ejercicio_api_v1_catalogos_ejercicios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogos/zonas-corporales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las zonas corporales sembradas. */
+        get: operations["listar_zonas_corporales_api_v1_catalogos_zonas_corporales_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los ciclos del usuario. */
+        get: operations["listar_ciclos_api_v1_ciclos_get"];
+        put?: never;
+        /** Crea un ciclo. */
+        post: operations["crear_ciclo_api_v1_ciclos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos/{ciclo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve un ciclo. */
+        get: operations["obtener_ciclo_api_v1_ciclos__ciclo_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos/{ciclo_id}/cerrar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cierra el ciclo. fecha_cierre_real default hoy. */
+        post: operations["cerrar_ciclo_api_v1_ciclos__ciclo_id__cerrar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos/{ciclo_id}/semanas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las semanas del ciclo. */
+        get: operations["listar_semanas_api_v1_ciclos__ciclo_id__semanas_get"];
+        put?: never;
+        /** Crea una semana dentro del ciclo. */
+        post: operations["crear_semana_api_v1_ciclos__ciclo_id__semanas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos/semanas/{semana_id}/composicion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lee la composicion objetivo de la semana. */
+        get: operations["obtener_composicion_api_v1_ciclos_semanas__semana_id__composicion_get"];
+        /** Reemplaza la composición objetivo de la semana (completa, no incremental) */
+        put: operations["reemplazar_composicion_api_v1_ciclos_semanas__semana_id__composicion_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos/semanas/{semana_id}/cumplimiento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cumplimiento de la semana: objetivo vs hecho por tipo de sesión. */
+        get: operations["obtener_cumplimiento_api_v1_ciclos_semanas__semana_id__cumplimiento_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Planes de una fecha: fecha_prevista exacta o dia_sugerido resuelto. */
+        get: operations["listar_planes_api_v1_planes_get"];
+        put?: never;
+        /** Crea un plan de sesión. Valida espaciado si trae dia_sugerido. */
+        post: operations["crear_plan_api_v1_planes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BloquePlanRead */
+        BloquePlanRead: {
+            /** Id */
+            id: number;
+            /** Sesion Plan Id */
+            sesion_plan_id: number;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series: number | null;
+            /** Reps Min */
+            reps_min: number | null;
+            /** Reps Max */
+            reps_max: number | null;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg: string | null;
+            /** Distancia Objetivo M */
+            distancia_objetivo_m: string | null;
+            /** Duracion Objetivo S */
+            duracion_objetivo_s: number | null;
+        };
+        /**
+         * BloquePlanSinPlanCreate
+         * @description Un bloque objetivo dentro del body de POST /planes: el
+         *     `sesion_plan_id` lo completa el server con el id del plan recien creado.
+         */
+        BloquePlanSinPlanCreate: {
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series?: number | null;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg?: number | string | null;
+            /** Distancia Objetivo M */
+            distancia_objetivo_m?: number | string | null;
+            /** Duracion Objetivo S */
+            duracion_objetivo_s?: number | null;
+        };
+        /** BloqueRead */
+        BloqueRead: {
+            /** Id */
+            id: number;
+            /**
+             * Sesion Id
+             * Format: uuid
+             */
+            sesion_id: string;
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series: number | null;
+            /** Reps */
+            reps: number | null;
+            /** Distancia M */
+            distancia_m: string | null;
+            /** Duracion S */
+            duracion_s: number | null;
+            /** Calidad */
+            calidad: number | null;
+            /** Peso Kg */
+            peso_kg: string | null;
+            /** Rpe */
+            rpe: number | null;
+            /** Dolor Lumbar */
+            dolor_lumbar: boolean;
+        };
+        /**
+         * BloqueSinSesionCreate
+         * @description Un bloque dentro del body de POST /sesiones: el `sesion_id` lo
+         *     completa el server con el id de la sesion que se acaba de crear.
+         */
+        BloqueSinSesionCreate: {
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Orden */
+            orden: number;
+            /** Series */
+            series?: number | null;
+            /** Reps */
+            reps?: number | null;
+            /** Distancia M */
+            distancia_m?: number | string | null;
+            /** Duracion S */
+            duracion_s?: number | null;
+            /** Calidad */
+            calidad?: number | null;
+            /** Peso Kg */
+            peso_kg?: number | string | null;
+            /** Rpe */
+            rpe?: number | null;
+            /**
+             * Dolor Lumbar
+             * @default false
+             */
+            dolor_lumbar: boolean;
+        };
+        /**
+         * CargaLumbar
+         * @enum {string}
+         */
+        CargaLumbar: "alta" | "media" | "baja";
+        /**
+         * CicloCerrarRequest
+         * @description Sin body obligatorio: `fecha_cierre_real` default hoy. El service
+         *     setea `estado=cerrado` junto con la fecha, atómico — el cliente no
+         *     tiene que conocer el CHECK que los mantiene coherentes.
+         */
+        CicloCerrarRequest: {
+            /** Fecha Cierre Real */
+            fecha_cierre_real?: string | null;
+        };
+        /** CicloCreate */
+        CicloCreate: {
+            /** Numero */
+            numero: number;
+            /** Objetivo */
+            objetivo: string;
+            /**
+             * Fecha Inicio
+             * Format: date
+             */
+            fecha_inicio: string;
+            /**
+             * Semanas
+             * @default 4
+             */
+            semanas: number;
+            /** @default planificado */
+            estado: components["schemas"]["EstadoCiclo"];
+        };
+        /** CicloRead */
+        CicloRead: {
+            /** Id */
+            id: number;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /** Numero */
+            numero: number;
+            /** Objetivo */
+            objetivo: string;
+            /**
+             * Fecha Inicio
+             * Format: date
+             */
+            fecha_inicio: string;
+            /** Semanas */
+            semanas: number;
+            estado: components["schemas"]["EstadoCiclo"];
+            /**
+             * Fecha Fin Prevista
+             * Format: date
+             */
+            fecha_fin_prevista: string;
+            /** Fecha Cierre Real */
+            fecha_cierre_real: string | null;
+        };
+        /** CicloSemanaCreate */
+        CicloSemanaCreate: {
+            /** Rpe Objetivo Min */
+            rpe_objetivo_min?: number | null;
+            /** Rpe Objetivo Max */
+            rpe_objetivo_max?: number | null;
+            /** Numero */
+            numero: number;
+            fase: components["schemas"]["FaseCiclo"];
+            /**
+             * Volumen Pct
+             * @default 100
+             */
+            volumen_pct: number;
+        };
+        /** CicloSemanaRead */
+        CicloSemanaRead: {
+            /** Id */
+            id: number;
+            /** Ciclo Id */
+            ciclo_id: number;
+            /** Numero */
+            numero: number;
+            fase: components["schemas"]["FaseCiclo"];
+            /** Rpe Objetivo Min */
+            rpe_objetivo_min: number | null;
+            /** Rpe Objetivo Max */
+            rpe_objetivo_max: number | null;
+            /** Volumen Pct */
+            volumen_pct: number;
+        };
+        /**
+         * ComposicionItem
+         * @description Un tipo de sesión con su cantidad objetivo en la semana.
+         */
+        ComposicionItem: {
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Cantidad Objetivo */
+            cantidad_objetivo: number;
+        };
+        /** ComposicionItemRead */
+        ComposicionItemRead: {
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Cantidad Objetivo */
+            cantidad_objetivo: number;
+        };
+        /** CumplimientoItem */
+        CumplimientoItem: {
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Tipo Sesion Codigo */
+            tipo_sesion_codigo: string;
+            /** Tipo Sesion Nombre */
+            tipo_sesion_nombre: string;
+            /** Objetivo */
+            objetivo: number;
+            /** Hecho */
+            hecho: number;
+            /** Cumplido */
+            cumplido: boolean;
+        };
+        /**
+         * Demanda
+         * @enum {string}
+         */
+        Demanda: "alta" | "media" | "baja";
+        /** EjercicioCreate */
+        EjercicioCreate: {
+            /** Nombre */
+            nombre: string;
+            tipo_medicion: components["schemas"]["TipoMedicion"];
+        };
+        /** EjercicioRead */
+        EjercicioRead: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            /** Patron */
+            patron: string | null;
+            carga_lumbar: components["schemas"]["CargaLumbar"];
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number | null;
+            tipo_medicion: components["schemas"]["TipoMedicion"];
+        };
+        /**
+         * EstadoCiclo
+         * @enum {string}
+         */
+        EstadoCiclo: "planificado" | "activo" | "cerrado";
+        /**
+         * FaseCiclo
+         * @enum {string}
+         */
+        FaseCiclo: "readaptacion" | "carga" | "descarga";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -286,10 +833,69 @@ export interface components {
             password: string;
         };
         /**
+         * MolestiaCreate
+         * @description Sin molestia no hay fila: no existe un Create con intensidad 0.
+         */
+        MolestiaCreate: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Zona Id */
+            zona_id: number;
+            /** Intensidad */
+            intensidad: number;
+            /** Nota */
+            nota?: string | null;
+        };
+        /** MolestiaRead */
+        MolestiaRead: {
+            /** Id */
+            id: number;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Zona Id */
+            zona_id: number;
+            /** Intensidad */
+            intensidad: number;
+            /** Nota */
+            nota: string | null;
+        };
+        /**
          * OrigenDato
          * @enum {string}
          */
         OrigenDato: "manual" | "health_kit" | "notion_backfill";
+        /** ParametroRead */
+        ParametroRead: {
+            /** Clave */
+            clave: string;
+            /** Valor */
+            valor: string;
+            /** Unidad */
+            unidad: string | null;
+            /** Descripcion */
+            descripcion: string;
+        };
+        /**
+         * ReemplazarComposicionRequest
+         * @description Reemplaza TODA la composición de la semana (no upsert incremental):
+         *     declarar la semana completa de una vez evita composiciones a medias
+         *     con filas viejas colgando.
+         */
+        ReemplazarComposicionRequest: {
+            /** Items */
+            items: components["schemas"]["ComposicionItem"][];
+        };
         /**
          * RefreshRequest
          * @description El refresh token es opaco: el cliente lo manda tal cual lo recibio,
@@ -342,6 +948,37 @@ export interface components {
             estres: number;
             /** Hooper */
             hooper: number;
+        };
+        /**
+         * RegistroHidratacionCreate
+         * @description `cantidad_ml` es lo que se toma en ESTE tap (ej. un termo de 750ml),
+         *     no el total del día: se suma a lo ya registrado.
+         */
+        RegistroHidratacionCreate: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Cantidad Ml */
+            cantidad_ml: number;
+        };
+        /** RegistroHidratacionRead */
+        RegistroHidratacionRead: {
+            /** Id */
+            id: number;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Ml Totales */
+            ml_totales: number;
         };
         /**
          * RegistroSuenoCreate
@@ -399,6 +1036,169 @@ export interface components {
             horas_sueno: string;
         };
         /**
+         * SesionCreate
+         * @description `id` e `idempotency_key` los genera el cliente antes de tener red.
+         *
+         *     Repetir una `idempotency_key` tiene que devolver el recurso existente, no
+         *     crear un duplicado ni fallar (fase 5).
+         */
+        SesionCreate: {
+            /** Id */
+            id?: string | null;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Sesion Plan Id */
+            sesion_plan_id?: number | null;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Duracion Min */
+            duracion_min: number;
+            /** Rpe */
+            rpe: number;
+            /** Nota */
+            nota?: string | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueSinSesionCreate"][] | null;
+        };
+        /**
+         * SesionPlanCreate
+         * @description `dia_sugerido` (0=lunes..6=domingo) es sugerencia de UI, no
+         *     compromiso: si se envía, el service valida el espaciado (REGLAS_NEGOCIO
+         *     §13.3) contra sesiones reales y otros planes del mismo ciclo.
+         */
+        SesionPlanCreate: {
+            /** Ciclo Semana Id */
+            ciclo_semana_id?: number | null;
+            /** Fecha Prevista */
+            fecha_prevista?: string | null;
+            /** Dia Sugerido */
+            dia_sugerido?: number | null;
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Objetivo */
+            objetivo?: string | null;
+            /** Duracion Min Est */
+            duracion_min_est?: number | null;
+            /** Rpe Objetivo */
+            rpe_objetivo?: number | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloquePlanSinPlanCreate"][] | null;
+        };
+        /** SesionPlanRead */
+        SesionPlanRead: {
+            /** Id */
+            id: number;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /** Ciclo Semana Id */
+            ciclo_semana_id: number | null;
+            /** Fecha Prevista */
+            fecha_prevista: string | null;
+            /** Dia Sugerido */
+            dia_sugerido: number | null;
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Objetivo */
+            objetivo: string | null;
+            /** Duracion Min Est */
+            duracion_min_est: number | null;
+            /** Rpe Objetivo */
+            rpe_objetivo: number | null;
+            /** Bloques Planeados */
+            bloques_planeados?: components["schemas"]["BloquePlanRead"][];
+        };
+        /** SesionRead */
+        SesionRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /** Sesion Plan Id */
+            sesion_plan_id: number | null;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Duracion Min */
+            duracion_min: number;
+            /** Rpe */
+            rpe: number;
+            /** Nota */
+            nota: string | null;
+            /** Carga Srpe */
+            carga_srpe: number;
+            /**
+             * Registrado En
+             * Format: date-time
+             */
+            registrado_en: string;
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueRead"][];
+        };
+        /**
+         * SesionUpdate
+         * @description PUT reemplaza la sesion completa (cabecera + bloques), igual que
+         *     ciclo_semana_composicion: declarar todo de una vez evita bloques
+         *     viejos de un `orden` que ya no existe. `sesion_plan_id` no se
+         *     reasigna por acá: el link nace en la creación, no en la edición.
+         */
+        SesionUpdate: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tipo Sesion Id */
+            tipo_sesion_id: number;
+            /** Duracion Min */
+            duracion_min: number;
+            /** Rpe */
+            rpe: number;
+            /** Nota */
+            nota?: string | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueSinSesionCreate"][] | null;
+        };
+        /**
+         * TipoMedicion
+         * @description Determina que campos acepta un bloque de este ejercicio
+         *     (REGLAS_NEGOCIO §15): carga->series/reps/peso_kg,
+         *     distancia->reps/distancia_m, tiempo->duracion_s,
+         *     tecnica->reps o duracion_s + calidad.
+         * @enum {string}
+         */
+        TipoMedicion: "carga" | "distancia" | "tiempo" | "tecnica";
+        /** TipoSesionRead */
+        TipoSesionRead: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            demanda: components["schemas"]["Demanda"];
+        };
+        /**
          * TokenResponse
          * @description Respuesta de login y refresh. `expires_in` es en segundos (900 = 15 min)
          *     para que el cliente pueda programar la renovacion sin parsear el JWT.
@@ -417,6 +1217,22 @@ export interface components {
             /** Expires In */
             expires_in: number;
         };
+        /** UsuarioRead */
+        UsuarioRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Nombre */
+            nombre: string;
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg: string | null;
+            /** Agua Objetivo Ml Min */
+            agua_objetivo_ml_min: number | null;
+            /** Agua Objetivo Ml Max */
+            agua_objetivo_ml_max: number | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -429,6 +1245,13 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** ZonaCorporalRead */
+        ZonaCorporalRead: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
         };
     };
     responses: never;
@@ -571,9 +1394,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["UsuarioRead"];
                 };
             };
         };
@@ -706,6 +1527,71 @@ export interface operations {
             };
         };
     };
+    listar_molestias_api_v1_molestias_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local del registro */
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MolestiaRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_molestia_api_v1_molestias_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MolestiaCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MolestiaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listar_habitos_api_v1_habitos_get: {
         parameters: {
             query?: never;
@@ -777,6 +1663,701 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HabitoRegistroRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registrar_hidratacion_api_v1_hidratacion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistroHidratacionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistroHidratacionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leer_hidratacion_api_v1_hidratacion__fecha__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fecha: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistroHidratacionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leer_parametro_api_v1_parametros__clave__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clave: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParametroRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_sesiones_api_v1_sesiones_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local del registro */
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_sesion_api_v1_sesiones_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SesionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_sesion_api_v1_sesiones__sesion_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sesion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_sesion_api_v1_sesiones__sesion_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sesion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SesionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_sesion_api_v1_sesiones__sesion_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sesion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_tipos_sesion_api_v1_catalogos_tipos_sesion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TipoSesionRead"][];
+                };
+            };
+        };
+    };
+    listar_ejercicios_api_v1_catalogos_ejercicios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EjercicioRead"][];
+                };
+            };
+        };
+    };
+    crear_ejercicio_api_v1_catalogos_ejercicios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EjercicioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EjercicioRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_zonas_corporales_api_v1_catalogos_zonas_corporales_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZonaCorporalRead"][];
+                };
+            };
+        };
+    };
+    listar_ciclos_api_v1_ciclos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloRead"][];
+                };
+            };
+        };
+    };
+    crear_ciclo_api_v1_ciclos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CicloCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_ciclo_api_v1_ciclos__ciclo_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ciclo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cerrar_ciclo_api_v1_ciclos__ciclo_id__cerrar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ciclo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CicloCerrarRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_semanas_api_v1_ciclos__ciclo_id__semanas_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ciclo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloSemanaRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_semana_api_v1_ciclos__ciclo_id__semanas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ciclo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CicloSemanaCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloSemanaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_composicion_api_v1_ciclos_semanas__semana_id__composicion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComposicionItemRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reemplazar_composicion_api_v1_ciclos_semanas__semana_id__composicion_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReemplazarComposicionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComposicionItemRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_cumplimiento_api_v1_ciclos_semanas__semana_id__cumplimiento_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CumplimientoItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_planes_api_v1_planes_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local del registro */
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionPlanRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_plan_api_v1_planes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SesionPlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionPlanRead"];
                 };
             };
             /** @description Validation Error */

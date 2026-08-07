@@ -95,6 +95,21 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
     usuario_id = await _sembrar_usuario(session, nombre_usuario)
     password_hash = hashear_password(settings.seed_usuario_password)
 
+    conteo_tipo_sesion = await _upsert(
+        session,
+        TipoSesion,
+        [
+            {"codigo": codigo, "nombre": nombre, "demanda": demanda}
+            for codigo, nombre, demanda in TIPOS_SESION
+        ],
+        ["codigo"],
+    )
+    # EJERCICIOS referencia tipo_sesion por codigo, no por id: necesita el
+    # catalogo ya sembrado (arriba) para resolverlo antes de armar sus filas.
+    tipo_sesion_id_por_codigo: dict[str, int] = dict(
+        (await session.execute(select(TipoSesion.codigo, TipoSesion.id))).tuples().all()
+    )
+
     conteo = {
         "usuario": 1,
         "auth_usuario": await _upsert(
@@ -124,15 +139,7 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
             ],
             ["clave", "vigente_desde"],
         ),
-        "tipo_sesion": await _upsert(
-            session,
-            TipoSesion,
-            [
-                {"codigo": codigo, "nombre": nombre, "demanda": demanda}
-                for codigo, nombre, demanda in TIPOS_SESION
-            ],
-            ["codigo"],
-        ),
+        "tipo_sesion": conteo_tipo_sesion,
         "zona_corporal": await _upsert(
             session,
             ZonaCorporal,
@@ -157,8 +164,14 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
             session,
             Ejercicio,
             [
-                {"nombre": nombre, "patron": patron, "carga_lumbar": carga_lumbar}
-                for nombre, patron, carga_lumbar in EJERCICIOS
+                {
+                    "nombre": nombre,
+                    "patron": patron,
+                    "carga_lumbar": carga_lumbar,
+                    "tipo_sesion_id": tipo_sesion_id_por_codigo[tipo_codigo],
+                    "tipo_medicion": tipo_medicion,
+                }
+                for nombre, patron, carga_lumbar, tipo_codigo, tipo_medicion in EJERCICIOS  # noqa: E501
             ],
             ["nombre"],
         ),

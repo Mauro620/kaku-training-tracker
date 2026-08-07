@@ -111,19 +111,41 @@ de 40 segundos, con los datos persistidos.
 
 ---
 
-## Fase 4 — Sesiones de entrenamiento
+## Fase 4 — Sesiones de entrenamiento ✅
 
 **Entregables**
-- Backend: `ciclo`, `ciclo_semana`, `sesion_plan`, `serie_plan`, `sesion`,
-  `serie`, `molestia`.
-- Endpoint que devuelve el plan del día y otro que registra el resultado.
-- Cálculo del delta plan contra real.
-- Frontend: pestaña **Entreno** con plan, registro de resultado e historial.
+- Backend ✅: `ciclo`, `ciclo_semana`, `sesion_plan`, `sesion`, `bloque`
+  (antes `serie`, renombrado via ALTER TABLE para preservar la data),
+  `bloque_plan` (antes `serie_plan`), `molestia`.
+- `ejercicio.tipo_medicion` (carga/distancia/tiempo/tecnica): cada
+  ejercicio declara cómo se mide, eso determina qué campos acepta cada
+  bloque. La validación de campos según `tipo_medicion` vive en el
+  service porque un CHECK de Postgres no puede consultar otra tabla.
+- Endpoints de plan: `GET /ciclos`, `GET /ciclos/{id}`, `GET /ciclos/{id}/semanas`,
+  `PUT /ciclos/semanas/{id}/composicion`, `GET /ciclos/semanas/{id}/composicion`,
+  `GET /ciclos/semanas/{id}/cumplimiento`.
+- Endpoints de sesion: `POST /sesiones` (idempotente, con bloques anidados),
+  `GET /sesiones?fecha=`, `GET /sesiones/{id}`, `PUT /sesiones/{id}`, `DELETE /sesiones/{id}`
+  (cascade a bloques via `ON DELETE CASCADE`).
+- Endpoints de catalogo: `POST /catalogos/ejercicios` (crear inline desde el
+  form), `POST /molestias`/`GET /molestias?fecha=`.
+- Cálculo del delta plan contra real server-side: el componente
+  `SesionCard` matchea cada bloque real con el bloque planeado por
+  `ejercicio_id` y muestra el delta de RPE, duracion, peso, distancia y
+  duracion en segundos segun los campos que trae cada bloque.
+- Frontend ✅: pestaña **Entreno** con ciclo activo, plan pendiente del
+  día, formulario de captura con buscador de ejercicios (creación inline),
+  detalle/edición/eliminación/duplicación de sesion, formulario de
+  ciclo/semanas/composicion, formulario de molestias.
 
 **Aceptación:** planear una sesión, ejecutarla, registrarla y ver el delta.
-`carga_srpe` se calcula sola.
+`carga_srpe` se calcula sola. ✅
 
-**No hacer:** ACWR, monotonía, Estado. Solo captura.
+**No hacer:** ACWR, monotonía, Estado. Solo captura. ✅
+
+**Deuda de organización pendiente:** `ciclo-detalle-screen.tsx` quedó en
+1117 líneas con planes (R3b) y cumplimiento (R3c) embebidos. Cuando se
+quiera partir, sale a `plan-screen.tsx` y `cumplimiento-screen.tsx`.
 
 ---
 

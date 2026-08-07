@@ -35,6 +35,13 @@ enum carga_lumbar {
 	baja
 }
 
+enum tipo_medicion {
+	carga
+	distancia
+	tiempo
+	tecnica
+}
+
 enum origen_dato {
 	manual
 	health_kit
@@ -78,8 +85,10 @@ Table ejercicio [headercolor: #175e7a] {
 	nombre varchar(80) [ not null, unique ]
 	patron varchar(40)
 	carga_lumbar carga_lumbar [ not null, default: baja ]
+	tipo_sesion_id smallint [ not null ]
+	tipo_medicion tipo_medicion [ not null ]
 
-	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa'
+	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §14): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→duracion_s, tecnica→reps o duracion_s + calidad. Unico catalogo con creacion de usuario (POST /catalogos/ejercicios): a diferencia de tipo_sesion o zona_corporal, el universo de ejercicios es abierto y personal.'
 }
 
 Table zona_corporal [headercolor: #53177a] {
@@ -134,10 +143,14 @@ Table ciclo [headercolor: #175e7a] {
 	fecha_inicio date [ not null ]
 	semanas smallint [ not null, default: 4 ]
 	estado estado_ciclo [ not null, default: planificado ]
+	fecha_fin_prevista date [ not null ]
+	fecha_cierre_real date
 
 	indexes {
 		(usuario_id, numero) [ unique ]
 	}
+
+	Note: 'fecha_fin_prevista = fecha_inicio + (semanas×7 − 1) días, columna GENERATED (Postgres calcula, nunca se captura). fecha_cierre_real es NULL hasta que el ciclo se cierra; CHECK fecha_cierre_real IS NULL OR estado = cerrado — evita un ciclo cerrado sin fecha o una fecha en un ciclo que sigue activo. La distancia entre fecha_fin_prevista y fecha_cierre_real es la señal de "se cortó antes/después de lo planeado" que Fase 8 necesita para no comparar ciclos completos contra interrumpidos como si fueran iguales.'
 }
 
 Table ciclo_semana [headercolor: #175e7a] {
@@ -154,32 +167,50 @@ Table ciclo_semana [headercolor: #175e7a] {
 	}
 }
 
+Table ciclo_semana_composicion [headercolor: #175e7a] {
+	id integer [ pk, increment ]
+	ciclo_semana_id integer [ not null ]
+	tipo_sesion_id smallint [ not null ]
+	cantidad_objetivo smallint [ not null ]
+
+	indexes {
+		(ciclo_semana_id, tipo_sesion_id) [ unique ]
+	}
+
+	Note: 'Composición objetivo de la semana por tipo de sesión (ej. fuerza: 2, resistencia: 1). Cuelga de ciclo_semana, no de ciclo: la semana de descarga puede llevar 1 de fuerza en vez de 2 sin lógica especial, cada semana declara la suya. Cumplimiento = contar sesion reales de ese tipo dentro del rango de fechas de la semana (derivado de ciclo.fecha_inicio + numero, no una columna nueva) contra cantidad_objetivo. CHECK cantidad_objetivo > 0.'
+}
+
 Table sesion_plan [headercolor: #175e7a] {
 	id integer [ pk, increment ]
 	usuario_id uuid [ not null ]
 	ciclo_semana_id integer
-	fecha_prevista date [ not null ]
+	fecha_prevista date
+	dia_sugerido smallint
 	tipo_sesion_id smallint [ not null ]
 	objetivo text
 	duracion_min_est smallint
 	rpe_objetivo smallint
 
-	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga.'
+	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga. fecha_prevista es NULLABLE desde que el cumplimiento pasó a medirse por composición semanal, no por fecha exacta (REGLAS_NEGOCIO §13): un plan puede vivir solo dentro de una ciclo_semana sin comprometerse a un día. dia_sugerido (0=lunes..6=domingo) es sugerencia de UI, no obligación — CHECK dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6.'
 }
 
-Table serie_plan [headercolor: #175e7a] {
+Table bloque_plan [headercolor: #175e7a] {
 	id integer [ pk, increment ]
 	sesion_plan_id integer [ not null ]
 	ejercicio_id integer [ not null ]
 	orden smallint [ not null ]
-	series smallint [ not null ]
+	series smallint
 	reps_min smallint
 	reps_max smallint
 	peso_objetivo_kg numeric(5,2)
+	distancia_objetivo_m numeric(5,1)
+	duracion_objetivo_s integer
 
 	indexes {
 		(sesion_plan_id, orden) [ unique ]
 	}
+
+	Note: 'Objetivo del bloque real (REGLAS_NEGOCIO §14). series/reps_min/reps_max quedaron nullable desde que existen distancia_objetivo_m y duracion_objetivo_s: cual aplica lo determina ejercicio.tipo_medicion. Sin calidad_objetivo a proposito: la calidad es una medida de ejecucion real, no algo que se planifique de antemano.'
 }
 
 Table sesion [headercolor: #175e7a] {
@@ -201,13 +232,16 @@ Table sesion [headercolor: #175e7a] {
 	Note: 'carga_srpe = rpe * duracion_min → columna GENERATED ALWAYS AS (rpe * duracion_min) STORED. Nunca se captura. idempotency_key hace la cola de sync offline segura ante reintentos.'
 }
 
-Table serie [headercolor: #175e7a] {
+Table bloque [headercolor: #175e7a] {
 	id bigint [ pk, increment ]
 	sesion_id uuid [ not null ]
 	ejercicio_id integer [ not null ]
 	orden smallint [ not null ]
-	series smallint [ not null ]
-	reps smallint [ not null ]
+	series smallint
+	reps smallint
+	distancia_m numeric(5,1)
+	duracion_s integer
+	calidad smallint [ note: 'Nullable, pero si viene: CHECK entre 1 y 5' ]
 	peso_kg numeric(5,2)
 	rpe smallint [ note: 'Nullable, pero si viene: CHECK entre 1 y 10' ]
 	dolor_lumbar boolean [ not null, default: false ]
@@ -215,6 +249,8 @@ Table serie [headercolor: #175e7a] {
 	indexes {
 		(sesion_id, orden) [ unique ]
 	}
+
+	Note: 'Antes se llamaba serie: mide "N series x M reps", pero un bloque de tecnica o distancia no tiene series ni reps en ese sentido (REGLAS_NEGOCIO §14). series/reps son nullable: cuales de los 5 campos de medicion aplican los determina ejercicio.tipo_medicion, validado en el service (no hay CHECK cruzando a otra tabla).'
 }
 
 Table partido [headercolor: #175e7a] {
@@ -425,6 +461,10 @@ Table test_intento [headercolor: #175e7a] {
 	Note: 'Un modelo para todos los tests: RSA son 6 intentos, CMJ es mejor de 3, Yo-Yo es 1. Mejor, media y %decremento se calculan en el mart, no se almacenan. En Yo-Yo IR1 se almacena SOLO la distancia en valor; el nivel se deriva de la distancia con la tabla del protocolo, no se captura.'
 }
 
+Ref fk_ejercicio_tipo_sesion_id_tipo_sesion {
+	ejercicio.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
+}
+
 Ref fk_habito_usuario_id_usuario {
 	habito.usuario_id > usuario.id [ delete: no action, update: no action ]
 }
@@ -435,6 +475,14 @@ Ref fk_ciclo_usuario_id_usuario {
 
 Ref fk_ciclo_semana_ciclo_id_ciclo {
 	ciclo_semana.ciclo_id > ciclo.id [ delete: no action, update: no action ]
+}
+
+Ref fk_ciclo_semana_composicion_ciclo_semana_id_ciclo_semana {
+	ciclo_semana_composicion.ciclo_semana_id > ciclo_semana.id [ delete: no action, update: no action ]
+}
+
+Ref fk_ciclo_semana_composicion_tipo_sesion_id_tipo_sesion {
+	ciclo_semana_composicion.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
 }
 
 Ref fk_sesion_plan_usuario_id_usuario {
@@ -449,12 +497,12 @@ Ref fk_sesion_plan_tipo_sesion_id_tipo_sesion {
 	sesion_plan.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
 }
 
-Ref fk_serie_plan_sesion_plan_id_sesion_plan {
-	serie_plan.sesion_plan_id > sesion_plan.id [ delete: no action, update: no action ]
+Ref fk_bloque_plan_sesion_plan_id_sesion_plan {
+	bloque_plan.sesion_plan_id > sesion_plan.id [ delete: no action, update: no action ]
 }
 
-Ref fk_serie_plan_ejercicio_id_ejercicio {
-	serie_plan.ejercicio_id > ejercicio.id [ delete: no action, update: no action ]
+Ref fk_bloque_plan_ejercicio_id_ejercicio {
+	bloque_plan.ejercicio_id > ejercicio.id [ delete: no action, update: no action ]
 }
 
 Ref fk_sesion_usuario_id_usuario {
@@ -469,12 +517,12 @@ Ref fk_sesion_tipo_sesion_id_tipo_sesion {
 	sesion.tipo_sesion_id > tipo_sesion.id [ delete: no action, update: no action ]
 }
 
-Ref fk_serie_sesion_id_sesion {
-	serie.sesion_id > sesion.id [ delete: no action, update: no action ]
+Ref fk_bloque_sesion_id_sesion {
+	bloque.sesion_id > sesion.id [ delete: cascade, update: no action ]
 }
 
-Ref fk_serie_ejercicio_id_ejercicio {
-	serie.ejercicio_id > ejercicio.id [ delete: no action, update: no action ]
+Ref fk_bloque_ejercicio_id_ejercicio {
+	bloque.ejercicio_id > ejercicio.id [ delete: no action, update: no action ]
 }
 
 Ref fk_partido_sesion_id_sesion {

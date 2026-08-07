@@ -1,8 +1,19 @@
 import uuid
 from datetime import date, datetime
 
+from pydantic import Field
+
 from app.schemas.base import ReadBase, SchemaBase
-from app.schemas.types import DuracionMin, NoNegativo, Peso, Positivo, Rpe
+from app.schemas.types import (
+    Calidad,
+    Distancia,
+    DuracionMin,
+    DuracionSeg,
+    NoNegativo,
+    Peso,
+    Positivo,
+    Rpe,
+)
 
 
 class SesionCreate(SchemaBase):
@@ -20,14 +31,24 @@ class SesionCreate(SchemaBase):
     duracion_min: DuracionMin
     rpe: Rpe
     nota: str | None = None
+    # Bloques opcionales en el mismo body. Si se mandan, se crean con el
+    # `sesion_id` que el server asigna a la sesion. Si no, se crean via
+    # POST /bloques/{sesion_id} por separado.
+    bloques: list["BloqueSinSesionCreate"] | None = None
 
 
 class SesionUpdate(SchemaBase):
-    sesion_plan_id: int | None = None
-    tipo_sesion_id: int | None = None
-    duracion_min: DuracionMin | None = None
-    rpe: Rpe | None = None
+    """PUT reemplaza la sesion completa (cabecera + bloques), igual que
+    ciclo_semana_composicion: declarar todo de una vez evita bloques
+    viejos de un `orden` que ya no existe. `sesion_plan_id` no se
+    reasigna por acá: el link nace en la creación, no en la edición."""
+
+    fecha: date
+    tipo_sesion_id: int
+    duracion_min: DuracionMin
+    rpe: Rpe
     nota: str | None = None
+    bloques: list["BloqueSinSesionCreate"] | None = None
 
 
 class SesionRead(ReadBase):
@@ -42,36 +63,74 @@ class SesionRead(ReadBase):
     # Derivada, nunca se captura: carga_srpe = rpe * duracion_min.
     carga_srpe: int
     registrado_en: datetime
+    # Bloques de la sesion, ordenados. El router los carga via selectinload
+    # para evitar N+1 cuando se listan varias sesiones.
+    bloques: list["BloqueRead"] = Field(default_factory=list)
 
 
-class SerieCreate(SchemaBase):
+class BloqueCreate(SchemaBase):
+    """Que campos aplican los determina `ejercicio.tipo_medicion`
+    (REGLAS_NEGOCIO §15): el service valida, acá todo es opcional salvo lo
+    estructural (ejercicio, orden)."""
+
     sesion_id: uuid.UUID
     ejercicio_id: int
     orden: NoNegativo
-    series: Positivo
-    reps: Positivo
+    series: Positivo | None = None
+    reps: Positivo | None = None
+    distancia_m: Distancia | None = None
+    duracion_s: DuracionSeg | None = None
+    calidad: Calidad | None = None
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool = False
 
 
-class SerieUpdate(SchemaBase):
+class BloqueSinSesionCreate(SchemaBase):
+    """Un bloque dentro del body de POST /sesiones: el `sesion_id` lo
+    completa el server con el id de la sesion que se acaba de crear."""
+
+    ejercicio_id: int
+    orden: NoNegativo
+    series: Positivo | None = None
+    reps: Positivo | None = None
+    distancia_m: Distancia | None = None
+    duracion_s: DuracionSeg | None = None
+    calidad: Calidad | None = None
+    peso_kg: Peso | None = None
+    rpe: Rpe | None = None
+    dolor_lumbar: bool = False
+
+
+class BloqueUpdate(SchemaBase):
     ejercicio_id: int | None = None
     orden: NoNegativo | None = None
     series: Positivo | None = None
     reps: Positivo | None = None
+    distancia_m: Distancia | None = None
+    duracion_s: DuracionSeg | None = None
+    calidad: Calidad | None = None
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool | None = None
 
 
-class SerieRead(ReadBase):
+class BloqueRead(ReadBase):
     id: int
     sesion_id: uuid.UUID
     ejercicio_id: int
     orden: int
-    series: int
-    reps: int
+    series: int | None
+    reps: int | None
+    distancia_m: Distancia | None
+    duracion_s: int | None
+    calidad: int | None
     peso_kg: Peso | None
     rpe: int | None
     dolor_lumbar: bool
+
+
+# Resuelve las forward refs.
+SesionCreate.model_rebuild()
+SesionUpdate.model_rebuild()
+SesionRead.model_rebuild()
