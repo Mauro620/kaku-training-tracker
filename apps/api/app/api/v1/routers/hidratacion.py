@@ -29,7 +29,11 @@ async def registrar_hidratacion(
     sesion: AsyncSession = Depends(get_session),
 ) -> RegistroHidratacion:
     return await service.registrar(
-        sesion, usuario.id, payload.fecha, payload.cantidad_ml
+        sesion,
+        usuario.id,
+        payload.fecha,
+        payload.cantidad_ml,
+        idempotency_key=payload.idempotency_key,
     )
 
 

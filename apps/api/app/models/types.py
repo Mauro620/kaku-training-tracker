@@ -48,8 +48,13 @@ UsuarioFk = Annotated[
 # ---------- Sincronización ----------
 
 # Hace la cola de salida segura ante reintentos: repetir la clave devuelve el
-# recurso existente en vez de crear un duplicado.
-IdempotencyKey = Annotated[uuid.UUID, mapped_column(Uuid, nullable=False, unique=True)]
+# recurso existente en vez de crear un duplicado. Nullable por defecto:
+# la deduplicacion la hace la PK o unicidad natural de la tabla; el key
+# es metadata para la cola de Fase 5, no una segunda unicidad. Nullable
+# tambien para admitir backfill historico (Fase 9, Notion) sin UUID.
+# Las entidades que requieren NOT NULL (Sesion, TestFisico) lo declaran
+# explicitamente con un mapped_column nullable=False adicional.
+IdempotencyKey = Annotated[uuid.UUID, mapped_column(Uuid, unique=True)]
 
 # ---------- Numéricos del dominio ----------
 

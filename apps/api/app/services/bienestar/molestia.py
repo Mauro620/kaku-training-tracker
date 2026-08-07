@@ -24,6 +24,7 @@ async def registrar(
     zona_id: int,
     intensidad: int,
     nota: str | None,
+    idempotency_key: uuid.UUID | None = None,
 ) -> Molestia:
     molestia = await repo.upsert(
         session,
@@ -32,6 +33,7 @@ async def registrar(
         zona_id=zona_id,
         intensidad=intensidad,
         nota=nota,
+        idempotency_key=idempotency_key,
     )
     await session.commit()
     await session.refresh(molestia)

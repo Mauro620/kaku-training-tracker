@@ -25,7 +25,11 @@ async def registrar(
         raise RecursoNoEncontradoError(f"hábito {payload.habito_id} no encontrado")
 
     registro = await repo.upsert_registro(
-        session, payload.habito_id, payload.fecha, payload.valor
+        session,
+        payload.habito_id,
+        payload.fecha,
+        payload.valor,
+        idempotency_key=payload.idempotency_key,
     )
     await session.commit()
     return registro

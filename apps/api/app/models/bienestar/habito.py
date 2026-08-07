@@ -1,6 +1,15 @@
+import uuid
 from datetime import date
 
-from sqlalchemy import Boolean, Date, ForeignKey, SmallInteger, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    ForeignKey,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -24,13 +33,18 @@ class Habito(Base):
 
 class HabitoRegistro(Base):
     """PK compuesta `(habito_id, fecha)`: un hábito tiene como máximo un
-    registro por día. Esa PK es también la deduplicación natural de la cola de
-    sync, por eso no lleva `idempotency_key`."""
+    registro por día.
+
+    `idempotency_key` es metadata para la cola de Fase 5: la deduplicacion
+    real sigue siendo la PK compuesta. Nullable para admitir backfill
+    historico (Fase 9, Notion).
+    """
 
     __tablename__ = "habito_registro"
 
     habito_id: Mapped[int] = mapped_column(ForeignKey("habito.id"), primary_key=True)
     fecha: Mapped[date] = mapped_column(Date, primary_key=True)
     valor: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    idempotency_key: Mapped[uuid.UUID | None] = mapped_column(Uuid, unique=True)
 
     habito: Mapped[Habito] = relationship(back_populates="registros")

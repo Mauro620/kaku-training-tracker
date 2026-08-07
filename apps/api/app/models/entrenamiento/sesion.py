@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,7 +23,6 @@ from app.db.base import Base
 from app.models.types import (
     BigIntPk,
     Distancia,
-    IdempotencyKey,
     Peso,
     UsuarioFk,
     UuidPk,
@@ -58,7 +58,9 @@ class Sesion(Base):
         Integer, Computed("rpe * duracion_min", persisted=True)
     )
 
-    idempotency_key: Mapped[IdempotencyKey]
+    idempotency_key: Mapped[uuid.UUID] = mapped_column(
+        Uuid, nullable=False, unique=True
+    )
     registrado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )

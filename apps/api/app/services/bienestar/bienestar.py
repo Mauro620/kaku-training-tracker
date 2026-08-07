@@ -26,6 +26,7 @@ async def registrar(
         fatiga=payload.fatiga,
         dolor_muscular=payload.dolor_muscular,
         estres=payload.estres,
+        idempotency_key=payload.idempotency_key,
     )
     await session.commit()
     return registro

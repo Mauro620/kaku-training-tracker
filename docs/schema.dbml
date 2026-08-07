@@ -276,12 +276,14 @@ Table registro_sueno [headercolor: #53177a] {
 	fin timestamptz [ not null, note: 'CHECK fin > inicio' ]
 	celular_fuera boolean [ note: 'Unico lugar donde vive este dato. NO existe como habito: se llena en el mismo formulario de sueno.' ]
 	origen origen_dato [ not null, default: manual ]
+	idempotency_key uuid [ unique ]
 
 	indexes {
 		(usuario_id, fecha) [ unique ]
 	}
 
-	Note: 'timestamptz en vez de time: cruzar medianoche con dos campos time obliga a lógica condicional en cada consulta. horas_sueno = EXTRACT(EPOCH FROM fin - inicio)/3600, generada. La fecha es la del despertar. INVARIANTE DE SERVICIO: fecha debe coincidir con la fecha local de fin. No se puede imponer con CHECK ni con columna generada porque la conversion de zona horaria no es IMMUTABLE en Postgres.'
+	Note: 'timestamptz en vez de time: cruzar medianoche con dos campos time obliga a lógica condicional en cada consulta. horas_sueno = EXTRACT(EPOCH FROM fin - inicio)/3600, generada. La fecha es la del despertar. INVARIANTE DE SERVICIO: fecha debe coincidir con la fecha local de fin. No se puede imponer con CHECK ni con columna generada porque la conversion de zona horaria no es IMMUTABLE en Postgres. idempotency_key es nullable para admitir backfill historico (Fase 9) sin UUID; la deduplicacion la hace la PK (usuario_id, fecha), el key lo genera la cola de Fase 5 para distinguir reintentos de requests distintas.'
+}
 }
 
 Table registro_bienestar [headercolor: #53177a] {
@@ -292,12 +294,13 @@ Table registro_bienestar [headercolor: #53177a] {
 	fatiga smallint [ not null ]
 	dolor_muscular smallint [ not null ]
 	estres smallint [ not null ]
+	idempotency_key uuid [ unique ]
 
 	indexes {
 		(usuario_id, fecha) [ unique ]
 	}
 
-	Note: 'Cuatro ítems 1-5. hooper = suma de los cuatro, columna generada. CHECK entre 1 y 5 en cada uno. Direccion: 1 es bueno, 5 es malo en los cuatro. El campo se llama sueno_pobre y no sueno_calidad para que el nombre apunte en la misma direccion que el valor.'
+	Note: 'Cuatro ítems 1-5. hooper = suma de los cuatro, columna generada. CHECK entre 1 y 5 en cada uno. Direccion: 1 es bueno, 5 es malo en los cuatro. El campo se llama sueno_pobre y no sueno_calidad para que el nombre apunte en la misma direccion que el valor. idempotency_key nullable (ver registro_sueno).'
 }
 
 Table registro_hidratacion [headercolor: #53177a] {
@@ -305,24 +308,26 @@ Table registro_hidratacion [headercolor: #53177a] {
 	usuario_id uuid [ not null ]
 	fecha date [ not null ]
 	ml_totales integer [ not null, default: 0 ]
+	idempotency_key uuid [ unique ]
 
 	indexes {
 		(usuario_id, fecha) [ unique ]
 	}
 
-	Note: 'A diferencia de registro_sueno/registro_bienestar, cada registro SUMA a ml_totales en vez de reemplazarlo (un termo de 750ml es un tap, no la cantidad total del día). CHECK ml_totales >= 0.'
+	Note: 'A diferencia de registro_sueno/registro_bienestar, cada registro SUMA a ml_totales en vez de reemplazarlo (un termo de 750ml es un tap, no la cantidad total del día). CHECK ml_totales >= 0. idempotency_key nullable (ver registro_sueno).'
 }
 
 Table habito_registro [headercolor: #34eb7a] {
 	habito_id integer [ not null ]
 	fecha date [ not null ]
 	valor boolean [ not null ]
+	idempotency_key uuid [ unique ]
 
 	indexes {
 		(habito_id, fecha) [ pk ]
 	}
 
-	Note: 'PK compuesta (habito_id, fecha): un habito tiene como maximo un registro por dia. Esa PK es tambien la deduplicacion natural de la cola de sync, por eso no lleva idempotency_key.'
+	Note: 'PK compuesta (habito_id, fecha): un habito tiene como maximo un registro por dia. Esa PK es la deduplicacion natural de la fila. idempotency_key (nullable) lo agrega la cola de Fase 5 para distinguir reintentos del mismo POST de dos requests distintas con la misma PK (ej. el usuario cambia el valor del habito en la misma fecha). Nullable para backfill historico (Fase 9).'
 }
 
 Table molestia [headercolor: #53177a] {
@@ -332,13 +337,14 @@ Table molestia [headercolor: #53177a] {
 	zona_id smallint [ not null ]
 	intensidad smallint [ not null, note: 'CHECK entre 1 y 10. El 0 es imposible por definicion: sin molestia no hay fila.' ]
 	nota text
+	idempotency_key uuid [ unique ]
 
 	indexes {
 		(usuario_id, fecha, zona_id) [ unique ]
 		(usuario_id, zona_id, fecha)
 	}
 
-	Note: 'Sin molestia no hay fila. No se pregunta a diario. El segundo índice sirve la consulta de frecuencia por zona en 14 días.'
+	Note: 'Sin molestia no hay fila. No se pregunta a diario. El segundo índice sirve la consulta de frecuencia por zona en 14 días. idempotency_key nullable (ver registro_sueno).'
 }
 
 Table medida_corporal [headercolor: #53177a] {

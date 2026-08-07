@@ -6,12 +6,17 @@ from app.schemas.types import Intensidad
 
 
 class MolestiaCreate(SchemaBase):
-    """Sin molestia no hay fila: no existe un Create con intensidad 0."""
+    """Sin molestia no hay fila: no existe un Create con intensidad 0.
+
+    `idempotency_key` lo genera el cliente (Fase 5, offline-first). Nullable
+    para admitir backfill historico (Fase 9, Notion).
+    """
 
     fecha: date
     zona_id: int
     intensidad: Intensidad
     nota: str | None = None
+    idempotency_key: uuid.UUID | None = None
 
 
 class MolestiaUpdate(SchemaBase):
@@ -26,3 +31,4 @@ class MolestiaRead(ReadBase):
     zona_id: int
     intensidad: int
     nota: str | None
+    idempotency_key: uuid.UUID | None
