@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 from typing import cast
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -64,6 +64,18 @@ async def agregar_items(
     session.add_all(nuevos)
     await session.flush()
     return nuevos
+
+
+async def contar_items(session: AsyncSession, comida_log_id: uuid.UUID) -> int:
+    """Cuenta via query, no via `comida.items`: un objeto recien devuelto
+    por `crear()` (INSERT...RETURNING u ON CONFLICT) no trae la coleccion
+    cargada, y accederla fuera del greenlet async rompe con MissingGreenlet."""
+    total = await session.scalar(
+        select(func.count())
+        .select_from(ComidaItem)
+        .where(ComidaItem.comida_log_id == comida_log_id)
+    )
+    return total or 0
 
 
 async def obtener_por_id(

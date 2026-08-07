@@ -56,11 +56,15 @@ async def registrar_comida(
         receta_id=receta_id,
         nota=nota,
     )
-    # `items` solo se persisten si la comida es improvisada (sin receta).
-    # Si tuviera receta, los ingredientes se resuelven via `receta_item` y
-    # se duplicarian aca.
+    # `items` solo se persisten si la comida es improvisada (sin receta) Y
+    # todavia no los tiene: si `crear_comida` devolvio una fila existente
+    # (retry con la misma idempotency_key), agregar de nuevo duplicaria los
+    # items. Se cuenta via query, no via `comida.items` (el objeto recien
+    # devuelto no trae la coleccion cargada).
     if receta_id is None and items:
-        await repo.agregar_items_comida(session, comida.id, items)
+        existentes = await repo.contar_items_comida(session, comida.id)
+        if existentes == 0:
+            await repo.agregar_items_comida(session, comida.id, items)
     await session.commit()
 
     comida_completa = await repo.obtener_comida_por_id(session, comida.id)

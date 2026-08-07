@@ -16,6 +16,7 @@ eliminar_receta = _receta.eliminar
 
 crear_comida = _comida.crear
 agregar_items_comida = _comida.agregar_items
+contar_items_comida = _comida.contar_items
 eliminar_items_de_comida = _comida.eliminar_items_de_comida
 obtener_comida_por_id = _comida.obtener_por_id
 listar_comidas_por_fecha = _comida.listar_por_fecha
@@ -30,6 +31,7 @@ __all__ = [
     "actualizar_receta_cabecera",
     "agregar_items_comida",
     "agregar_items_receta",
+    "contar_items_comida",
     "crear_comida",
     "crear_receta",
     "eliminar_comida",

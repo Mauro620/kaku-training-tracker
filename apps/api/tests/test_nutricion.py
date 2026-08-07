@@ -279,6 +279,9 @@ async def test_idempotency_key_repetida_devuelve_misma_fila(
         r = await cliente.post("/api/v1/comidas", json=payload)
         assert r.status_code == 201
         ids.add(r.json()["id"])
+        # Regresion: los items solo se agregan si la comida es nueva. Antes
+        # del fix, cada retry volvia a insertar el mismo item suelto.
+        assert len(r.json()["items"]) == 1
     assert len(ids) == 1
 
 
