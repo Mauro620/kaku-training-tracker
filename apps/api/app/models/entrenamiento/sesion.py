@@ -63,8 +63,14 @@ class Sesion(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
+    # passive_deletes="all": al borrar la sesion, confia en el ON DELETE
+    # CASCADE de la FK en vez de que el ORM intente poner sesion_id=NULL en
+    # cada bloque antes (fallaria: la columna es NOT NULL). "all" en vez de
+    # True: la coleccion suele venir precargada via selectinload
+    # (obtener_sesion), y solo "all" desactiva la sincronizacion tambien
+    # para colecciones ya cargadas, no solo las lazy.
     bloques: Mapped[list["Bloque"]] = relationship(
-        back_populates="sesion", order_by="Bloque.orden"
+        back_populates="sesion", order_by="Bloque.orden", passive_deletes="all"
     )
     partido: Mapped["Partido | None"] = relationship(back_populates="sesion")
 
@@ -92,8 +98,10 @@ class Bloque(Base):
     )
 
     id: Mapped[BigIntPk]
+    # ondelete=CASCADE: borrar una sesion borra sus bloques con ella, no
+    # tienen existencia propia sin la sesion (eliminar sesion, ROADMAP §4).
     sesion_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("sesion.id"), nullable=False
+        ForeignKey("sesion.id", ondelete="CASCADE"), nullable=False
     )
     ejercicio_id: Mapped[int] = mapped_column(
         ForeignKey("ejercicio.id"), nullable=False

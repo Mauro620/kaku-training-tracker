@@ -38,11 +38,17 @@ class SesionCreate(SchemaBase):
 
 
 class SesionUpdate(SchemaBase):
-    sesion_plan_id: int | None = None
-    tipo_sesion_id: int | None = None
-    duracion_min: DuracionMin | None = None
-    rpe: Rpe | None = None
+    """PUT reemplaza la sesion completa (cabecera + bloques), igual que
+    ciclo_semana_composicion: declarar todo de una vez evita bloques
+    viejos de un `orden` que ya no existe. `sesion_plan_id` no se
+    reasigna por acá: el link nace en la creación, no en la edición."""
+
+    fecha: date
+    tipo_sesion_id: int
+    duracion_min: DuracionMin
+    rpe: Rpe
     nota: str | None = None
+    bloques: list["BloqueSinSesionCreate"] | None = None
 
 
 class SesionRead(ReadBase):
@@ -126,4 +132,5 @@ class BloqueRead(ReadBase):
 
 # Resuelve las forward refs.
 SesionCreate.model_rebuild()
+SesionUpdate.model_rebuild()
 SesionRead.model_rebuild()

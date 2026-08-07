@@ -5,6 +5,7 @@ GET /sesiones?fecha=YYYY-MM-DD devuelve las sesiones del usuario en esa
 fecha con sus bloques via selectinload.
 """
 
+import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
@@ -17,6 +18,7 @@ from app.schemas.entrenamiento.sesion import (
     BloqueSinSesionCreate,
     SesionCreate,
     SesionRead,
+    SesionUpdate,
 )
 from app.services.entrenamiento import sesion as service
 
@@ -55,3 +57,43 @@ async def listar_sesiones(
     sesion: AsyncSession = Depends(get_session),
 ) -> list[Sesion]:
     return await service.listar_sesiones_de_fecha(sesion, usuario.id, fecha)
+
+
+@router.get(
+    "/{sesion_id}",
+    response_model=SesionRead,
+    summary="Detalle de una sesion, con sus bloques.",
+)
+async def obtener_sesion(
+    sesion_id: uuid.UUID,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> Sesion:
+    return await service.obtener_sesion(sesion, usuario.id, sesion_id)
+
+
+@router.put(
+    "/{sesion_id}",
+    response_model=SesionRead,
+    summary="Reemplaza cabecera y bloques de la sesion (completo, no incremental).",
+)
+async def actualizar_sesion(
+    sesion_id: uuid.UUID,
+    payload: SesionUpdate,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> Sesion:
+    return await service.actualizar_sesion(sesion, usuario.id, sesion_id, payload)
+
+
+@router.delete(
+    "/{sesion_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Elimina la sesion y sus bloques.",
+)
+async def eliminar_sesion(
+    sesion_id: uuid.UUID,
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> None:
+    await service.eliminar_sesion(sesion, usuario.id, sesion_id)

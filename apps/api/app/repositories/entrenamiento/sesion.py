@@ -67,8 +67,37 @@ async def crear(
 async def obtener_por_id(session: AsyncSession, sesion_id: uuid.UUID) -> Sesion | None:
     return cast(
         "Sesion | None",
-        await session.scalar(select(Sesion).where(Sesion.id == sesion_id)),
+        await session.scalar(
+            select(Sesion)
+            .where(Sesion.id == sesion_id)
+            .options(selectinload(Sesion.bloques))
+        ),
     )
+
+
+async def actualizar(
+    session: AsyncSession,
+    sesion: Sesion,
+    *,
+    fecha: date,
+    tipo_sesion_id: int,
+    duracion_min: int,
+    rpe: int,
+    nota: str | None,
+) -> Sesion:
+    sesion.fecha = fecha
+    sesion.tipo_sesion_id = tipo_sesion_id
+    sesion.duracion_min = duracion_min
+    sesion.rpe = rpe
+    sesion.nota = nota
+    await session.flush()
+    return sesion
+
+
+async def eliminar(session: AsyncSession, sesion: Sesion) -> None:
+    # Los bloques se van solos: FK ondelete=CASCADE (REGLAS_NEGOCIO §15).
+    await session.delete(sesion)
+    await session.flush()
 
 
 async def listar_por_fecha(

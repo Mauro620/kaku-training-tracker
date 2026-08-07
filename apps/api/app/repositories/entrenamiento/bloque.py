@@ -2,6 +2,7 @@
 
 import uuid
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Bloque
@@ -42,3 +43,11 @@ async def crear(
     session.add(bloque)
     await session.flush()
     return bloque
+
+
+async def eliminar_por_sesion(session: AsyncSession, sesion_id: uuid.UUID) -> None:
+    """Borra todos los bloques de la sesion, para reemplazarlos completos en
+    un PUT (mismo patron que ciclo_semana_composicion.reemplazar: declarar
+    todo de una vez evita bloques viejos colgando de un orden que ya no
+    existe)."""
+    await session.execute(delete(Bloque).where(Bloque.sesion_id == sesion_id))

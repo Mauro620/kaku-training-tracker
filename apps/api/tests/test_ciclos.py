@@ -89,6 +89,110 @@ async def test_crear_sesion_es_idempotente_y_no_duplica_bloques(
     assert len(listado.json()) == 1
 
 
+async def test_obtener_sesion_inexistente_devuelve_404(cliente: AsyncClient) -> None:
+    respuesta = await cliente.get(f"/api/v1/sesiones/{uuid.uuid4()}")
+    assert respuesta.status_code == 404
+
+
+async def test_actualizar_sesion_reemplaza_cabecera_y_bloques(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    tipo_id = await _tipo_sesion_id(sesion, "resistencia")
+    ejercicio_carga = await _ejercicio_de_medicion(sesion, TipoMedicion.carga)
+    ejercicio_distancia = await _ejercicio_de_medicion(sesion, TipoMedicion.distancia)
+
+    creada = await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": str(uuid.uuid4()),
+            "idempotency_key": str(uuid.uuid4()),
+            "fecha": "2026-08-04",
+            "tipo_sesion_id": tipo_id,
+            "duracion_min": 60,
+            "rpe": 5,
+            "bloques": [
+                {"ejercicio_id": ejercicio_carga, "orden": 0, "series": 3, "reps": 10},
+            ],
+        },
+    )
+    sesion_id = creada.json()["id"]
+
+    actualizada = await cliente.put(
+        f"/api/v1/sesiones/{sesion_id}",
+        json={
+            "fecha": "2026-08-05",
+            "tipo_sesion_id": tipo_id,
+            "duracion_min": 45,
+            "rpe": 7,
+            "bloques": [
+                {
+                    "ejercicio_id": ejercicio_distancia,
+                    "orden": 0,
+                    "reps": 6,
+                    "distancia_m": 20,
+                },
+            ],
+        },
+    )
+    assert actualizada.status_code == 200
+    assert actualizada.json()["fecha"] == "2026-08-05"
+    assert actualizada.json()["duracion_min"] == 45
+    assert len(actualizada.json()["bloques"]) == 1
+    assert actualizada.json()["bloques"][0]["ejercicio_id"] == ejercicio_distancia
+
+    releida = await cliente.get(f"/api/v1/sesiones/{sesion_id}")
+    assert len(releida.json()["bloques"]) == 1
+
+
+async def test_actualizar_sesion_inexistente_devuelve_404(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    tipo_id = await _tipo_sesion_id(sesion, "resistencia")
+    respuesta = await cliente.put(
+        f"/api/v1/sesiones/{uuid.uuid4()}",
+        json={
+            "fecha": "2026-08-04",
+            "tipo_sesion_id": tipo_id,
+            "duracion_min": 45,
+            "rpe": 7,
+        },
+    )
+    assert respuesta.status_code == 404
+
+
+async def test_eliminar_sesion_borra_sus_bloques(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    tipo_id = await _tipo_sesion_id(sesion, "resistencia")
+    ejercicio_id = await _ejercicio_de_medicion(sesion, TipoMedicion.carga)
+    creada = await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": str(uuid.uuid4()),
+            "idempotency_key": str(uuid.uuid4()),
+            "fecha": "2026-08-04",
+            "tipo_sesion_id": tipo_id,
+            "duracion_min": 60,
+            "rpe": 5,
+            "bloques": [
+                {"ejercicio_id": ejercicio_id, "orden": 0, "series": 3, "reps": 10},
+            ],
+        },
+    )
+    sesion_id = creada.json()["id"]
+
+    eliminada = await cliente.delete(f"/api/v1/sesiones/{sesion_id}")
+    assert eliminada.status_code == 204
+
+    releida = await cliente.get(f"/api/v1/sesiones/{sesion_id}")
+    assert releida.status_code == 404
+
+
+async def test_eliminar_sesion_inexistente_devuelve_404(cliente: AsyncClient) -> None:
+    respuesta = await cliente.delete(f"/api/v1/sesiones/{uuid.uuid4()}")
+    assert respuesta.status_code == 404
+
+
 # --------------------------------------------------------------- molestia --
 
 

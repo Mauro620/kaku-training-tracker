@@ -518,7 +518,7 @@ Ref fk_sesion_tipo_sesion_id_tipo_sesion {
 }
 
 Ref fk_bloque_sesion_id_sesion {
-	bloque.sesion_id > sesion.id [ delete: no action, update: no action ]
+	bloque.sesion_id > sesion.id [ delete: cascade, update: no action ]
 }
 
 Ref fk_bloque_ejercicio_id_ejercicio {
