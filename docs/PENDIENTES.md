@@ -187,11 +187,16 @@ con rate limiting por key), se vuelve a la decision original.
 **Estado:** aceptado en Fase 5, race condition documentada.
 
 `registro_hidratacion` hace `SELECT WHERE idempotency_key = ?` y si
-no encuentra, hace `INSERT ... ON CONFLICT (usuario_id, fecha) DO
-UPDATE SET ml_totales = ml_totales + cantidad_ml`. Dos POSTs
-simultaneos con la misma key pueden pasar el SELECT previo y sumar
-dos veces: la cola de Fase 5 reintenta con delays (1s, 2s, ...), no
-concurrencia, asi que el riesgo es bajo. La forma atomica exigiria
+no encuentra, `INSERT ... ON CONFLICT (usuario_id, fecha) DO NOTHING`
+y despues, si no creo nada, `UPDATE ... SET ml_totales = ml_totales +
+cantidad_ml, idempotency_key = ?` (mismo patron de 3 pasos que
+Sueno/Habito: guarda la key en cada paso, no solo en el primer tap del
+dia — bug encontrado y corregido el 2026-08-07, antes la key solo
+quedaba en el primer tap y un reintento de cualquier tap posterior
+sumaba de nuevo). Dos POSTs simultaneos con la misma key pueden pasar
+el SELECT previo y sumar dos veces: la cola de Fase 5 reintenta con
+delays (1s, 2s, ...), no concurrencia, asi que el riesgo es bajo. La
+forma atomica exigiria
 una tabla de eventos `hidratacion_tap (idempotency_key pk, ...)` y
 calcular `ml_totales = SUM(cantidad_ml)` por fecha. Eso cambia el
 modelo (y entra en conflicto con el SPEC §2.4 que dice "cada tap

@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,9 +20,11 @@ async def sumar(
 ) -> RegistroHidratacion:
     """Cada tap SUMA a `ml_totales`, no lo reemplaza.
 
-    Fase 5: si llega `idempotency_key` y la cola repite, devolvemos la fila
-    existente en vez de sumar dos veces. Patron del repo de Sesion: SELECT
-    previo por key + ON CONFLICT DO UPDATE sumando solo si la key es nueva.
+    Fase 5: patron de 3 pasos igual al repo de Sueno/Habito. Con key:
+    SELECT previo (idempotente) -> INSERT ON CONFLICT DO NOTHING -> si no
+    creo nada, UPDATE que suma Y persiste la key nueva. Guardar la key en
+    cada paso (no solo en el primer tap del dia) es lo que hace que un
+    reintento de CUALQUIER tap, no solo el primero, sea idempotente.
 
     Nota de concurrencia: dos POSTs simultaneos con la misma key pueden
     pasar el SELECT previo y sumar dos veces. La cola de Fase 5 reintenta
@@ -38,6 +40,39 @@ async def sumar(
         )
         if existente is not None:
             return existente
+
+        stmt = (
+            pg_insert(RegistroHidratacion)
+            .values(
+                usuario_id=usuario_id,
+                fecha=fecha,
+                ml_totales=cantidad_ml,
+                idempotency_key=idempotency_key,
+            )
+            .on_conflict_do_nothing()
+            .returning(RegistroHidratacion)
+        )
+        creada = await session.scalar(stmt)
+        if creada is not None:
+            return creada
+
+        actualizado = await session.scalar(
+            update(RegistroHidratacion)
+            .where(
+                RegistroHidratacion.usuario_id == usuario_id,
+                RegistroHidratacion.fecha == fecha,
+            )
+            .values(
+                ml_totales=RegistroHidratacion.ml_totales + cantidad_ml,
+                idempotency_key=idempotency_key,
+            )
+            .returning(RegistroHidratacion)
+        )
+        if actualizado is None:
+            raise RuntimeError(
+                "registro_hidratacion no encontrado despues de on_conflict_do_nothing"
+            )
+        return actualizado
 
     stmt = (
         pg_insert(RegistroHidratacion)

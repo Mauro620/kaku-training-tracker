@@ -263,6 +263,30 @@ async def test_hidratacion_con_misma_idempotency_key_no_suma_dos_veces(
     assert otro.json()["ml_totales"] == 1250
 
 
+async def test_hidratacion_reintento_de_segundo_tap_no_suma_dos_veces(
+    cliente: AsyncClient,
+) -> None:
+    """Regresion: la key de un tap que NO es el primero del dia tambien
+    tiene que persistirse, si no un reintento de ESE tap especifico vuelve
+    a sumar (bug real: la key solo quedaba grabada en el primer tap)."""
+    fecha = "2026-08-06"
+    await cliente.post(
+        "/api/v1/hidratacion",
+        json={"fecha": fecha, "cantidad_ml": 750, "idempotency_key": str(uuid4())},
+    )
+
+    key_segundo_tap = str(uuid4())
+    payload_segundo_tap = {
+        "fecha": fecha,
+        "cantidad_ml": 500,
+        "idempotency_key": key_segundo_tap,
+    }
+    for _ in range(3):
+        respuesta = await cliente.post("/api/v1/hidratacion", json=payload_segundo_tap)
+        assert respuesta.status_code == 200
+    assert respuesta.json()["ml_totales"] == 1250
+
+
 async def test_molestia_con_misma_idempotency_key_devuelve_misma_fila(
     cliente: AsyncClient,
 ) -> None:
