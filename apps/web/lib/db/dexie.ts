@@ -92,6 +92,23 @@ export interface CapturaBloque {
   dolor_lumbar: boolean;
 }
 
+/** Comida (Fase 6). `receta_id` XOR `items`: si hay receta, los ingredientes
+ * los resuelve el server via `receta_item`. Si no, el cliente manda items
+ * sueltos con su alimento_id y cantidad_g. */
+export interface CapturaComidaItem {
+  alimento_id: number;
+  cantidad_g: number;
+}
+
+export interface CapturaComida {
+  fecha: string;
+  momento: string;
+  receta_id: number | null;
+  nota: string | null;
+  items: CapturaComidaItem[];
+  idempotency_key: string;
+}
+
 export class DexieCapturas extends Dexie {
   sueno!: Table<CapturaSueno, string>;
   bienestar!: Table<CapturaBienestar, string>;
@@ -99,6 +116,7 @@ export class DexieCapturas extends Dexie {
   habito_registro!: Table<CapturaHabitoRegistro, string>;
   molestia!: Table<CapturaMolestia, string>;
   sesion!: Table<CapturaSesion, string>;
+  comida!: Table<CapturaComida, string>;
   outbox!: Table<ItemOutbox, string>;
 
   constructor() {
@@ -120,6 +138,12 @@ export class DexieCapturas extends Dexie {
       molestia: "&idempotency_key, fecha, zona_id",
       sesion: "&id, idempotency_key, fecha",
       outbox: "&id, estado, creado_en",
+    });
+    // Fase 6: agregar `comida`. Dexie detecta tablas nuevas dentro de una
+    // version posterior y migra sin perder las anteriores (siempre que no
+    // se renombren indices existentes).
+    this.version(2).stores({
+      comida: "&idempotency_key, fecha",
     });
   }
 }

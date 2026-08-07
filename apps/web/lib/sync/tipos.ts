@@ -18,9 +18,13 @@ export type EstadoOutbox = "pendiente" | "enviando" | "sincronizado" | "fallido"
 export type { CapturaBloque, CapturaSesion };
 
 /**
- * Las 6 mutaciones que van a la cola. El switch de envio esta en
+ * Las 7 mutaciones que van a la cola. El switch de envio esta en
  * `endpointDesdeApi` (en outbox.ts). Si se agrega una entidad nueva con
  * outbox, hay que sumar el caso aca y en el switch.
+ *
+ * Nutricion (Fase 6): solo `comida` va a la cola. `receta` y `despensa`
+ * son CRUD de setup, no registro diario: el usuario las calibra con red,
+ * no es critico que funcione en modo avion.
  */
 export type EventoOutbox =
   | { tipo: "sueno"; cuerpo: CapturaSuenoBody }
@@ -28,7 +32,8 @@ export type EventoOutbox =
   | { tipo: "hidratacion"; cuerpo: CapturaHidratacionBody }
   | { tipo: "habito_registro"; cuerpo: CapturaHabitoBody }
   | { tipo: "molestia"; cuerpo: CapturaMolestiaBody }
-  | { tipo: "sesion"; cuerpo: CapturaSesionBody };
+  | { tipo: "sesion"; cuerpo: CapturaSesionBody }
+  | { tipo: "comida"; cuerpo: CapturaComidaBody };
 
 export type CapturaSuenoBody = {
   fecha: string;
@@ -85,6 +90,23 @@ export type CapturaSesionBody = {
   bloques: CapturaBloque[];
 };
 
+/** Comida (Fase 6, ROADMAP §6). El backend acepta `receta_id` xor `items`
+ * (validacion XOR en el schema). Si hay receta, los ingredientes se
+ * resuelven via `receta_item` y NO se envian items sueltos. */
+export type CapturaComidaItemBody = {
+  alimento_id: number;
+  cantidad_g: number;
+};
+
+export type CapturaComidaBody = {
+  fecha: string;
+  momento: string;
+  receta_id: number | null;
+  nota: string | null;
+  items: CapturaComidaItemBody[];
+  idempotency_key: string;
+};
+
 /** Item persistido en la tabla `outbox` de Dexie. */
 export interface ItemOutbox {
   /** UUID del item. No confundir con la key del cuerpo. */
@@ -120,5 +142,7 @@ export function tipoEvento(item: Pick<ItemOutbox, "evento">): string {
       return "Molestia";
     case "sesion":
       return "Sesión de entrenamiento";
+    case "comida":
+      return "Comida";
   }
 }

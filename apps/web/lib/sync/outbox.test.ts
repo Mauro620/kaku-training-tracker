@@ -104,4 +104,21 @@ describe("endpointDesdeApi", () => {
       bloques: evento.cuerpo.bloques,
     });
   });
+
+  it("comida pega a /comidas con el cuerpo tal cual", async () => {
+    const api = mockApi();
+    const evento: EventoOutbox = {
+      tipo: "comida",
+      cuerpo: {
+        fecha: "2026-08-07",
+        momento: "almuerzo",
+        receta_id: 5,
+        nota: null,
+        items: [],
+        idempotency_key: "key-6",
+      },
+    };
+    await endpointDesdeApi(api)(evento);
+    expect(api.post).toHaveBeenCalledWith("/comidas", evento.cuerpo);
+  });
 });

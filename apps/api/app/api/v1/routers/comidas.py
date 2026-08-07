@@ -21,8 +21,8 @@ from app.schemas.nutricion.comida import (
     ComidasDelDiaRead,
 )
 from app.schemas.nutricion.receta import MacroTotalRead
-from app.services.nutricion.calculo import MacroTotal
 from app.services.nutricion import comida as service
+from app.services.nutricion.calculo import MacroTotal
 
 router = APIRouter(prefix="/comidas", tags=["nutricion"])
 

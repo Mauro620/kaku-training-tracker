@@ -726,3 +726,266 @@ export function useEliminarMolestia(fecha: string) {
     },
   });
 }
+
+// ---------- Fase 6: nutricion ----------
+
+export type GrupoAlimento =
+  | "proteina_animal"
+  | "lacteo"
+  | "cereal"
+  | "leguminosa"
+  | "tuberculo"
+  | "verdura"
+  | "fruta"
+  | "grasa"
+  | "procesado";
+
+export type EstadoPesaje = "crudo" | "cocido";
+
+export type Alimento = {
+  id: number;
+  nombre: string;
+  grupo: GrupoAlimento;
+  estado_pesaje: EstadoPesaje;
+  kcal_100g: string;
+  proteina_100g: string;
+  carbo_100g: string;
+  grasa_100g: string;
+  fibra_100g: string | null;
+  fuente: string | null;
+};
+
+export type MomentoComida =
+  | "desayuno"
+  | "media_manana"
+  | "almuerzo"
+  | "merienda"
+  | "cena";
+
+export type RecetaItem = {
+  id: number;
+  alimento_id: number;
+  cantidad_g: string;
+};
+
+export type Receta = {
+  id: number;
+  nombre: string;
+  momento_default: MomentoComida | null;
+  activa: boolean;
+  items: RecetaItem[];
+};
+
+export type MacroTotal = {
+  kcal: string;
+  proteina: string;
+  carbo: string;
+  grasa: string;
+  fibra: string;
+};
+
+export type ComidaItem = {
+  id: number;
+  alimento_id: number;
+  cantidad_g: string;
+};
+
+export type Comida = {
+  id: string;
+  fecha: string;
+  momento: MomentoComida;
+  receta_id: number | null;
+  nota: string | null;
+  idempotency_key: string;
+  items: ComidaItem[];
+};
+
+export type ComidaConMacros = Comida & { macros: MacroTotal };
+
+export type ComidasDelDia = {
+  comidas: Comida[];
+  macros_del_dia: MacroTotal;
+};
+
+export type DespensaItem = {
+  alimento_id: number;
+  alimento_nombre: string;
+  imprescindible: boolean;
+  en_stock: boolean;
+};
+
+// Catalogo sembrado: staleTime infinito.
+export function useAlimentos() {
+  return useQuery({
+    queryKey: ["alimentos"],
+    queryFn: () => api.get<Alimento[]>("/alimentos"),
+    staleTime: Infinity,
+  });
+}
+
+// Recetas del usuario. staleTime corto (5 min): cuando agrega/edita una,
+// invalida la query; mientras tanto, no refetchea en cada navegacion.
+export function useRecetas() {
+  return useQuery({
+    queryKey: ["recetas"],
+    queryFn: () => api.get<Receta[]>("/recetas"),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useReceta(id: number | null) {
+  return useQuery({
+    queryKey: ["receta", id],
+    queryFn: () => api.get<Receta>(`/recetas/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export function useMacrosDeReceta(id: number | null) {
+  return useQuery({
+    queryKey: ["receta", id, "macros"],
+    queryFn: () => api.get<MacroTotal>(`/recetas/${id}/macros`),
+    enabled: id !== null,
+  });
+}
+
+// El POST de comida SI va a la cola (es el registro diario del usuario,
+// offline-first). El resto de mutaciones de nutricion (CRUD receta,
+// upsert despensa, eliminar) NO: son setup con red.
+export function useRegistrarComida(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (cuerpo: {
+      momento: MomentoComida;
+      receta_id: number | null;
+      nota?: string | null;
+      items?: { alimento_id: number; cantidad_g: number }[];
+    }) => {
+      const evento: EventoOutbox = {
+        tipo: "comida",
+        cuerpo: {
+          fecha,
+          momento: cuerpo.momento,
+          receta_id: cuerpo.receta_id,
+          nota: cuerpo.nota ?? null,
+          items: cuerpo.items ?? [],
+          idempotency_key: crypto.randomUUID(),
+        },
+      };
+      await encolar(evento);
+      sincronizarYRefrescar(qc, [["comidas", fecha]]);
+    },
+  });
+}
+
+export function useEliminarComida(fecha: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/comidas/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["comidas", fecha] });
+    },
+  });
+}
+
+export function useCrearReceta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: {
+      nombre: string;
+      momento_default: MomentoComida | null;
+      items: { alimento_id: number; cantidad_g: number }[];
+    }) => api.post<Receta>("/recetas", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["recetas"] });
+    },
+  });
+}
+
+export function useActualizarReceta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...cuerpo
+    }: {
+      id: number;
+      nombre: string;
+      momento_default: MomentoComida | null;
+      items: { alimento_id: number; cantidad_g: number }[];
+    }) => api.put<Receta>(`/recetas/${id}`, cuerpo),
+    onSuccess: (_data, variables) => {
+      void qc.invalidateQueries({ queryKey: ["recetas"] });
+      void qc.invalidateQueries({ queryKey: ["receta", variables.id] });
+    },
+  });
+}
+
+export function useEliminarReceta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete<void>(`/recetas/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["recetas"] });
+    },
+  });
+}
+
+export function useComidasDelDia(fecha: string) {
+  return useQuery({
+    queryKey: ["comidas", fecha],
+    queryFn: () => api.get<ComidasDelDia>(`/comidas?fecha=${fecha}`),
+  });
+}
+
+export function useComida(id: string | null) {
+  return useQuery({
+    queryKey: ["comida", id],
+    queryFn: () => api.get<ComidaConMacros>(`/comidas/${id}`),
+    enabled: id !== null,
+  });
+}
+
+export function useDespensa() {
+  return useQuery({
+    queryKey: ["despensa"],
+    queryFn: () => api.get<DespensaItem[]>("/despensa"),
+  });
+}
+
+export function useListaDeMercado() {
+  return useQuery({
+    queryKey: ["despensa", "lista-de-mercado"],
+    queryFn: () =>
+      api.get<{ items: DespensaItem[] }>("/despensa/lista-de-mercado"),
+  });
+}
+
+export function useUpsertDespensa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      alimento_id,
+      ...cuerpo
+    }: {
+      alimento_id: number;
+      imprescindible: boolean;
+      en_stock: boolean;
+    }) =>
+      api.put<void>(`/despensa/${alimento_id}`, cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["despensa"] });
+    },
+  });
+}
+
+export function useEliminarDeDespensa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (alimento_id: number) =>
+      api.delete<void>(`/despensa/${alimento_id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["despensa"] });
+    },
+  });
+}

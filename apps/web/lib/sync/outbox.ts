@@ -172,6 +172,9 @@ export function endpointDesdeApi(api: {
           bloques: evento.cuerpo.bloques,
         });
         return;
+      case "comida":
+        await api.post("/comidas", evento.cuerpo);
+        return;
     }
   };
 }
