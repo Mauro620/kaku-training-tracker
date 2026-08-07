@@ -16,6 +16,17 @@ class MacroTotal:
     fibra: Decimal
 
 
+# Dos decimales: la precision de los macros que ve la UI. Si dejamos que
+# el resultado salga con 4+ decimales (porque cantidad_g es Numeric(7,2)
+# y la division por 100 amplifica la escala), la UI tendria que formatear
+# en cada render. Mejor cerrar aca, una sola vez.
+_PRECISION = Decimal("0.01")
+
+
+def _q(valor: Decimal) -> Decimal:
+    return valor.quantize(_PRECISION)
+
+
 def calcular_macros(items: list[tuple[Alimento, Decimal]]) -> MacroTotal:
     """macro_total = Σ (macro_alimento_por_100g * cantidad_g / 100).
 
@@ -36,15 +47,27 @@ def calcular_macros(items: list[tuple[Alimento, Decimal]]) -> MacroTotal:
         if alimento.fibra_100g is not None:
             fibra += alimento.fibra_100g * factor
     return MacroTotal(
-        kcal=kcal, proteina=proteina, carbo=carbo, grasa=grasa, fibra=fibra
+        kcal=_q(kcal),
+        proteina=_q(proteina),
+        carbo=_q(carbo),
+        grasa=_q(grasa),
+        fibra=_q(fibra),
     )
 
 
 def sumar_macros(totales: list[MacroTotal]) -> MacroTotal:
+    """Suma totales que ya vienen cuantizados de `calcular_macros`. La suma
+    puede arrastrar un error de redondeo del ultimo digito: la cuantizamos
+    una vez al final."""
+    kcal = sum((t.kcal for t in totales), Decimal("0"))
+    proteina = sum((t.proteina for t in totales), Decimal("0"))
+    carbo = sum((t.carbo for t in totales), Decimal("0"))
+    grasa = sum((t.grasa for t in totales), Decimal("0"))
+    fibra = sum((t.fibra for t in totales), Decimal("0"))
     return MacroTotal(
-        kcal=sum((t.kcal for t in totales), Decimal("0")),
-        proteina=sum((t.proteina for t in totales), Decimal("0")),
-        carbo=sum((t.carbo for t in totales), Decimal("0")),
-        grasa=sum((t.grasa for t in totales), Decimal("0")),
-        fibra=sum((t.fibra for t in totales), Decimal("0")),
+        kcal=_q(kcal),
+        proteina=_q(proteina),
+        carbo=_q(carbo),
+        grasa=_q(grasa),
+        fibra=_q(fibra),
     )

@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -92,6 +92,16 @@ async def listar_por_fecha(
         .order_by(ComidaLog.momento, ComidaLog.id)
     )
     return list(resultado.all())
+
+
+async def eliminar_items_de_comida(
+    session: AsyncSession, comida_log_id: uuid.UUID
+) -> None:
+    """Usado por el servicio antes de borrar una comida_log: el FK no
+    tiene ON DELETE CASCADE."""
+    await session.execute(
+        delete(ComidaItem).where(ComidaItem.comida_log_id == comida_log_id)
+    )
 
 
 async def eliminar(session: AsyncSession, comida: ComidaLog) -> None:

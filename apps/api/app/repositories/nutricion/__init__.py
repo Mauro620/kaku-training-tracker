@@ -16,11 +16,13 @@ eliminar_receta = _receta.eliminar
 
 crear_comida = _comida.crear
 agregar_items_comida = _comida.agregar_items
+eliminar_items_de_comida = _comida.eliminar_items_de_comida
 obtener_comida_por_id = _comida.obtener_por_id
 listar_comidas_por_fecha = _comida.listar_por_fecha
 eliminar_comida = _comida.eliminar
 
 upsert_despensa = _despensa.upsert
+obtener_despensa = _despensa.obtener
 listar_despensa_por_usuario = _despensa.listar_por_usuario
 lista_de_mercado = _despensa.lista_de_mercado
 
@@ -40,6 +42,7 @@ __all__ = [
     "listar_despensa_por_usuario",
     "listar_recetas_por_usuario",
     "obtener_comida_por_id",
+    "obtener_despensa",
     "obtener_receta_por_id",
     "upsert_despensa",
 ]

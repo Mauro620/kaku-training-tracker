@@ -75,18 +75,25 @@ async def actualizar_receta(
     receta = await obtener_receta(session, usuario_id, receta_id)
     await _validar_alimentos(session, items)
 
+    # Capturamos el id antes de expirar: si no, el siguiente uso de
+    # `receta.id` (despues del DELETE) dispara una recarga lazy que no
+    # puede resolverse dentro de un sync block async.
+    rid = receta.id
+
     await repo.actualizar_receta_cabecera(
         session, receta, nombre=nombre, momento_default=momento_default
     )
-    await repo.eliminar_items_receta(session, receta.id)
-    # El DELETE de arriba es a nivel Core: el ORM todavia tiene los items
-    # viejos cargados via selectinload de obtener_receta_por_id. Sin
-    # expirar, el flush los ve "todavia asociados" y falla.
-    session.expire(receta, ["items"])
-    await repo.agregar_items_receta(session, receta.id, items)
+    await repo.eliminar_items_receta(session, rid)
+    # El DELETE fue via Core: el ORM todavia tiene los items viejos en la
+    # coleccion `receta.items` (cargados por obtener_receta -> selectinload).
+    # session.expire_all() descarta TODA la identidad cargada de la sesion,
+    # no solo la relacion, asi evitamos que el proximo flush intente UPDATE
+    # sobre filas que ya no existen en la DB.
+    session.expire_all()
+    await repo.agregar_items_receta(session, rid, items)
     await session.commit()
 
-    receta_completa = await repo.obtener_receta_por_id(session, receta.id)
+    receta_completa = await repo.obtener_receta_por_id(session, rid)
     assert receta_completa is not None
     return receta_completa
 
@@ -95,6 +102,11 @@ async def eliminar_receta(
     session: AsyncSession, usuario_id: uuid.UUID, receta_id: int
 ) -> None:
     receta = await obtener_receta(session, usuario_id, receta_id)
+    # El FK de receta_item.receta_id NO tiene ON DELETE CASCADE (el DBML lo
+    # deja no action a proposito: una receta borrada no deberia arrastrar
+    # registros silenciosamente). Borramos los items primero para que el
+    # commit no rebote con un FK violation.
+    await repo.eliminar_items_receta(session, receta.id)
     await repo.eliminar_receta(session, receta)
     await session.commit()
 

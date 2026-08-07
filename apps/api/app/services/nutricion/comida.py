@@ -56,7 +56,10 @@ async def registrar_comida(
         receta_id=receta_id,
         nota=nota,
     )
-    if items and not comida.items:
+    # `items` solo se persisten si la comida es improvisada (sin receta).
+    # Si tuviera receta, los ingredientes se resuelven via `receta_item` y
+    # se duplicarian aca.
+    if receta_id is None and items:
         await repo.agregar_items_comida(session, comida.id, items)
     await session.commit()
 
@@ -78,6 +81,10 @@ async def eliminar_comida(
     session: AsyncSession, usuario_id: uuid.UUID, comida_id: uuid.UUID
 ) -> None:
     comida = await obtener_comida(session, usuario_id, comida_id)
+    # El FK de comida_item.comida_log_id NO tiene ON DELETE CASCADE (mismo
+    # motivo que receta_item): borramos los items manualmente para que el
+    # commit no rebote con un FK violation.
+    await repo.eliminar_items_de_comida(session, comida.id)
     await repo.eliminar_comida(session, comida)
     await session.commit()
 
