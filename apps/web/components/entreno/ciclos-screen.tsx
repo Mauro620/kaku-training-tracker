@@ -140,7 +140,7 @@ export function CiclosScreen(_: Props = {}) {
 
           <button
             type="submit"
-            disabled={!objetivo || crear.isPending}
+            disabled={!objetivo || numero < 1 || semanas < 1 || crear.isPending}
             className="mt-2 w-full bg-text-primary text-canvas rounded-pill py-3 text-[14px] font-semibold disabled:opacity-50"
           >
             {crear.isPending ? "Creando..." : "Crear ciclo"}

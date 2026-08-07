@@ -14,6 +14,7 @@ import {
   type CicloSemana,
   type ComposicionItem,
 } from "@/lib/api/hooks";
+import { useFechaDeRegistro } from "@/lib/fecha";
 
 type Props = { cicloId: number };
 
@@ -298,7 +299,11 @@ function ComposicionForm({
 
       <button
         type="button"
-        disabled={items.length === 0 || reemplazar.isPending}
+        disabled={
+          items.length === 0 ||
+          items.some((it) => it.cantidad_objetivo < 1) ||
+          reemplazar.isPending
+        }
         onClick={async () => {
           await reemplazar.mutateAsync(items);
         }}
@@ -415,7 +420,7 @@ function CrearSemanaForm({ cicloId }: { cicloId: number }) {
       </div>
       <button
         type="submit"
-        disabled={crear.isPending}
+        disabled={numero < 1 || volumen < 1 || crear.isPending}
         className="rounded-pill bg-canvas py-2 text-[14px] font-semibold text-text-primary disabled:opacity-50"
       >
         {crear.isPending ? "Creando..." : "Crear semana"}
@@ -425,17 +430,6 @@ function CrearSemanaForm({ cicloId }: { cicloId: number }) {
 }
 
 // ---------- Helpers ----------
-
-function useFechaDeRegistro(): string {
-  // Mismo corte que lib/fecha.ts pero copiado para evitar el ciclo de
-  // hooks (este archivo ya importa sus tipos de ahi).
-  const d = new Date();
-  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 function calcularNumeroSemana(
   fechaInicio: string,

@@ -423,7 +423,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Lee la composicion objetivo de la semana. */
+        get: operations["obtener_composicion_api_v1_ciclos_semanas__semana_id__composicion_get"];
         /** Reemplaza la composición objetivo de la semana (completa, no incremental) */
         put: operations["reemplazar_composicion_api_v1_ciclos_semanas__semana_id__composicion_put"];
         post?: never;
@@ -541,8 +542,6 @@ export interface components {
             rpe_objetivo_min?: number | null;
             /** Rpe Objetivo Max */
             rpe_objetivo_max?: number | null;
-            /** Ciclo Id */
-            ciclo_id: number;
             /** Numero */
             numero: number;
             fase: components["schemas"]["FaseCiclo"];
@@ -1989,6 +1988,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CicloSemanaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_composicion_api_v1_ciclos_semanas__semana_id__composicion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComposicionItemRead"][];
                 };
             };
             /** @description Validation Error */

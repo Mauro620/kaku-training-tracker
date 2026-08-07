@@ -147,6 +147,13 @@ async def reemplazar_composicion(
     return creadas
 
 
+async def obtener_composicion(
+    session: AsyncSession, usuario_id: uuid.UUID, semana_id: int
+) -> list[CicloSemanaComposicion]:
+    await obtener_semana(session, usuario_id, semana_id)  # valida dueño
+    return await repo.listar_composicion_por_semana(session, semana_id)
+
+
 async def calcular_cumplimiento(
     session: AsyncSession, usuario_id: uuid.UUID, semana_id: int
 ) -> list[CumplimientoItem]:

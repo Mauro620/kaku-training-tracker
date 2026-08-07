@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.models import Ciclo, CicloSemana, CicloSemanaComposicion, Usuario
-from app.repositories.entrenamiento import composicion as repo_composicion
 from app.schemas.entrenamiento.ciclo import (
     CicloCerrarRequest,
     CicloCreate,
@@ -128,11 +127,7 @@ async def obtener_composicion(
     usuario: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
 ) -> list[CicloSemanaComposicion]:
-    # Reusamos el servicio para validar la pertenencia: si la semana no
-    # es del usuario, 404. La lista se sirve vacia si la composicion no
-    # fue declarada todavia.
-    await service.obtener_semana(sesion, usuario.id, semana_id)
-    return await repo_composicion.listar_por_semana(sesion, semana_id)
+    return await service.obtener_composicion(sesion, usuario.id, semana_id)
 
 
 @router.get(

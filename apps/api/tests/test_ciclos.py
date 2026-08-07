@@ -202,6 +202,16 @@ async def test_reemplazar_composicion_reemplaza_todo(
     assert len(segundo_reemplazo.json()) == 1
     assert segundo_reemplazo.json()[0]["tipo_sesion_id"] == resistencia_id
 
+    leida = await cliente.get(f"/api/v1/ciclos/semanas/{semana_id}/composicion")
+    assert leida.json() == segundo_reemplazo.json()
+
+
+async def test_obtener_composicion_de_semana_inexistente_devuelve_404(
+    cliente: AsyncClient,
+) -> None:
+    respuesta = await cliente.get("/api/v1/ciclos/semanas/999999/composicion")
+    assert respuesta.status_code == 404
+
 
 async def test_cumplimiento_cuenta_sesiones_reales_no_sesion_plan(
     cliente: AsyncClient, sesion: AsyncSession
