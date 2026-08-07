@@ -76,14 +76,16 @@ function SesionCard({
         <p className="text-[20px] font-bold tabular text-text-primary">{sesion.carga_srpe}</p>
       </div>
       <p className="text-[11px] uppercase tracking-widest text-text-secondary">
-        {sesion.duracion_min} min · RPE {sesion.rpe} · {sesion.series.length} serie
-        {sesion.series.length === 1 ? "" : "s"}
+        {sesion.duracion_min} min · RPE {sesion.rpe}
+        {sesion.series.length > 0
+          ? ` · ${sesion.series.length} serie${sesion.series.length === 1 ? "" : "s"}`
+          : " · sin series"}
       </p>
       {plan && <DeltaPlan sesion={sesion} plan={plan} />}
       {sesion.nota && (
         <p className="mt-2 text-[13px] text-text-secondary">{sesion.nota}</p>
       )}
-      {sesion.series.length > 0 && (
+      {sesion.series.length > 0 ? (
         <ul className="mt-3 flex flex-col gap-1 border-t border-border-subtle pt-2">
           {sesion.series.map((se) => {
             // Match por ejercicio: el orden de la serie real no tiene por
@@ -113,6 +115,10 @@ function SesionCard({
             );
           })}
         </ul>
+      ) : (
+        <p className="mt-3 text-[12px] text-text-secondary">
+          Sesion sin ejercicios (no es de tipo fuerza).
+        </p>
       )}
     </div>
   );

@@ -99,10 +99,20 @@ export function SesionForm({ fecha, planes }: Props) {
 
   // `serie` es propio de fuerza (REGLAS_NEGOCIO): en el resto de los tipos
   // no hay bloque de series que llenar, y por lo tanto nada que exigir acá.
+  const serieInvalida = (s: SerieBorrador) =>
+    s.ejercicio_id === null ||
+    !Number.isFinite(s.series) ||
+    s.series < 1 ||
+    !Number.isFinite(s.reps) ||
+    s.reps < 1 ||
+    (s.peso_kg !== null && (!Number.isFinite(s.peso_kg) || s.peso_kg < 0)) ||
+    (s.rpe !== null && (!Number.isFinite(s.rpe) || s.rpe < 1 || s.rpe > 10));
+
   const puedeGuardar =
     tipoSesionId !== null &&
-    (!esFuerza ||
-      (series.length > 0 && series.every((s) => s.ejercicio_id !== null)));
+    (esFuerza
+      ? series.length > 0 && !series.some(serieInvalida)
+      : true);
 
   return (
     <BentoCard>
@@ -200,7 +210,13 @@ export function SesionForm({ fecha, planes }: Props) {
               type="number"
               min={1}
               value={duracionMin}
-              onChange={(e) => setDuracionMin(Math.max(1, Number(e.target.value)))}
+              // Sin clamp en el onChange: clamp en el onChange pisa el valor
+              // mientras el usuario esta editando (escribir "16" para llegar
+              // al "6" intermedio quedaba fijado en 10). El min/max del HTML
+              // ya limita el browser, y el backend valida si pasa.
+              onChange={(e) =>
+                setDuracionMin(e.target.value === "" ? 0 : Number(e.target.value))
+              }
               className="w-full bg-transparent text-center text-[16px] font-bold tabular text-text-primary outline-none"
             />
             <span className="px-2 text-[11px] text-text-secondary">min</span>
@@ -222,7 +238,7 @@ export function SesionForm({ fecha, planes }: Props) {
             min={1}
             max={10}
             value={rpe}
-            onChange={(e) => setRpe(Math.max(1, Math.min(10, Number(e.target.value))))}
+            onChange={(e) => setRpe(Number(e.target.value))}
             className="bg-surface-secondary rounded-pill px-4 py-2 text-center text-[16px] font-bold tabular text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
           />
         </label>
@@ -278,6 +294,7 @@ export function SesionForm({ fecha, planes }: Props) {
         disabled={!puedeGuardar || crear.isPending}
         onClick={async () => {
           if (!tipoSesionId) return;
+          if (esFuerza && series.some(serieInvalida)) return;
           await crear.mutateAsync({
             // crypto.randomUUID requiere contexto seguro (https o localhost).
             // El dev server corre en localhost asi que funciona.
@@ -388,7 +405,9 @@ function SerieBorradorCard({
             type="number"
             min={1}
             value={serie.series}
-            onChange={(e) => onChange({ series: Math.max(1, Number(e.target.value)) })}
+            onChange={(e) =>
+              onChange({ series: e.target.value === "" ? 0 : Number(e.target.value) })
+            }
             className="bg-canvas rounded-pill px-3 py-1.5 text-center text-[14px] font-bold tabular text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
           />
         </label>
@@ -398,7 +417,9 @@ function SerieBorradorCard({
             type="number"
             min={1}
             value={serie.reps}
-            onChange={(e) => onChange({ reps: Math.max(1, Number(e.target.value)) })}
+            onChange={(e) =>
+              onChange({ reps: e.target.value === "" ? 0 : Number(e.target.value) })
+            }
             className="bg-canvas rounded-pill px-3 py-1.5 text-center text-[14px] font-bold tabular text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
           />
         </label>

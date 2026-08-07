@@ -279,7 +279,7 @@ function ComposicionForm({
               value={it.cantidad_objetivo}
               onChange={(e) =>
                 actualizar(idx, {
-                  cantidad_objetivo: Math.max(1, Number(e.target.value)),
+                  cantidad_objetivo: e.target.value === "" ? 0 : Number(e.target.value),
                 })
               }
               className="w-16 bg-canvas rounded-pill px-3 py-2 text-center text-[14px] font-bold tabular text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
@@ -344,7 +344,9 @@ function CrearSemanaForm({ cicloId }: { cicloId: number }) {
             type="number"
             min={1}
             value={numero}
-            onChange={(e) => setNumero(Math.max(1, Number(e.target.value)))}
+            onChange={(e) =>
+              setNumero(e.target.value === "" ? 0 : Number(e.target.value))
+            }
             className="bg-canvas rounded-pill px-3 py-2 text-center text-[14px] font-bold tabular text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
           />
         </label>
@@ -404,7 +406,9 @@ function CrearSemanaForm({ cicloId }: { cicloId: number }) {
             type="number"
             min={1}
             value={volumen}
-            onChange={(e) => setVolumen(Math.max(1, Number(e.target.value)))}
+            onChange={(e) =>
+              setVolumen(e.target.value === "" ? 0 : Number(e.target.value))
+            }
             className="bg-canvas rounded-pill px-3 py-2 text-center text-[14px] font-bold tabular text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
           />
         </label>

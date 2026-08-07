@@ -88,7 +88,9 @@ export function CiclosScreen(_: Props = {}) {
               type="number"
               min={1}
               value={numero}
-              onChange={(e) => setNumero(Math.max(1, Number(e.target.value)))}
+              onChange={(e) =>
+                setNumero(e.target.value === "" ? 0 : Number(e.target.value))
+              }
               className="bg-surface-secondary rounded-pill px-4 py-2 text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
             />
           </label>
@@ -128,7 +130,9 @@ export function CiclosScreen(_: Props = {}) {
                 type="number"
                 min={1}
                 value={semanas}
-                onChange={(e) => setSemanas(Math.max(1, Number(e.target.value)))}
+                onChange={(e) =>
+                  setSemanas(e.target.value === "" ? 0 : Number(e.target.value))
+                }
                 className="bg-surface-secondary rounded-pill px-4 py-2 text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
               />
             </label>

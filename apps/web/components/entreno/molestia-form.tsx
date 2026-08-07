@@ -115,10 +115,17 @@ export function MolestiaForm({ fecha, existentes }: Props) {
                 return (
                   <li
                     key={m.id}
-                    className="flex items-center justify-between bg-surface-secondary rounded-pill px-5 py-2 text-[14px]"
+                    className="flex items-center justify-between gap-2 bg-surface-secondary rounded-pill px-5 py-2 text-[14px]"
                   >
                     <span className="capitalize">{z?.nombre ?? `zona ${m.zona_id}`}</span>
-                    <span className="tabular text-text-secondary">{m.intensidad}/10</span>
+                    <span className="flex items-center gap-2 tabular text-text-secondary">
+                      {m.nota && (
+                        <span className="max-w-[140px] truncate text-text-secondary">
+                          {m.nota}
+                        </span>
+                      )}
+                      <span>{m.intensidad}/10</span>
+                    </span>
                   </li>
                 );
               })}
