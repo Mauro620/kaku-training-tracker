@@ -13,6 +13,7 @@ from app.api.v1.routers import (
     comidas_router,
     despensa_router,
     entrenamiento_router,
+    evaluacion_router,
     habitos_router,
     health_router,
     hidratacion_router,
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     v1.include_router(recetas_router)
     v1.include_router(comidas_router)
     v1.include_router(despensa_router)
+    v1.include_router(evaluacion_router)
     app.include_router(v1)
 
     return app

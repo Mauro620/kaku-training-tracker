@@ -32,3 +32,6 @@ DuracionSeg = Annotated[int, Field(gt=0)]
 Calidad = Annotated[int, Field(ge=1, le=5)]
 """Calidad de ejecucion de un bloque tecnica. 1 malo, 5 excelente
 (REGLAS_NEGOCIO §15)."""
+
+ValorTest = Annotated[Decimal, Field(gt=0, max_digits=7, decimal_places=3)]
+"""Un intento de test_fisico: segundos, cm o metros segun tipo_test.unidad."""

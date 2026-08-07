@@ -9,10 +9,11 @@ es abierto."""
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvarianteDeNegocioError
-from app.models import Ejercicio, TipoSesion, ZonaCorporal
+from app.models import Ejercicio, TipoSesion, TipoTest, ZonaCorporal
 from app.models.enums import TipoMedicion
 from app.repositories.catalogo import ejercicio as repo_ejercicio
 from app.repositories.catalogo import tipo_sesion as repo_tipo_sesion
+from app.repositories.catalogo import tipo_test as repo_tipo_test
 from app.repositories.catalogo import zona_corporal as repo_zona_corporal
 
 
@@ -40,3 +41,7 @@ async def crear_ejercicio(
 
 async def listar_zonas_corporales(session: AsyncSession) -> list[ZonaCorporal]:
     return await repo_zona_corporal.listar(session)
+
+
+async def listar_tipos_test(session: AsyncSession) -> list[TipoTest]:
+    return await repo_tipo_test.listar(session)

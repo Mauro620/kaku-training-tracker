@@ -50,6 +50,14 @@ class ZonaCorporalRead(ReadBase):
     nombre: str
 
 
+class TipoTestRead(ReadBase):
+    id: int
+    codigo: str
+    nombre: str
+    unidad: str
+    mejor_es_mayor: bool
+
+
 class ParametroRead(ReadBase):
     clave: str
     valor: Decimal

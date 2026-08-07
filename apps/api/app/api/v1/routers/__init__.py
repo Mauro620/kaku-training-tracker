@@ -16,6 +16,7 @@ from app.api.v1.routers.ciclos import router as ciclos_router
 from app.api.v1.routers.comidas import router as comidas_router
 from app.api.v1.routers.despensa import router as despensa_router
 from app.api.v1.routers.entrenamiento import router as entrenamiento_router
+from app.api.v1.routers.evaluacion import router as evaluacion_router
 from app.api.v1.routers.habitos import router as habitos_router
 from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.hidratacion import router as hidratacion_router
@@ -34,6 +35,7 @@ __all__ = [
     "comidas_router",
     "despensa_router",
     "entrenamiento_router",
+    "evaluacion_router",
     "habitos_router",
     "health_router",
     "hidratacion_router",

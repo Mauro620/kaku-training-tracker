@@ -15,11 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
-from app.models import Ejercicio, TipoSesion, Usuario, ZonaCorporal
+from app.models import Ejercicio, TipoSesion, TipoTest, Usuario, ZonaCorporal
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
     EjercicioRead,
     TipoSesionRead,
+    TipoTestRead,
     ZonaCorporalRead,
 )
 from app.services.catalogo import entrenamiento as service
@@ -75,3 +76,15 @@ async def listar_zonas_corporales(
     sesion: AsyncSession = Depends(get_session),
 ) -> list[ZonaCorporal]:
     return await service.listar_zonas_corporales(sesion)
+
+
+@router.get(
+    "/tipos-test",
+    response_model=list[TipoTestRead],
+    summary="Lista los tipos de test fisico sembrados.",
+)
+async def listar_tipos_test(
+    _: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> list[TipoTest]:
+    return await service.listar_tipos_test(sesion)
