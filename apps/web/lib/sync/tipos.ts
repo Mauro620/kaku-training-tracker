@@ -104,3 +104,21 @@ export interface ItemOutbox {
   // misma `idempotency_key`. Guardamos el id para borrar de ahi al sync.
   sesion_local_id?: string;
 }
+
+/** Etiqueta legible del tipo de evento, para mostrar en la UI. */
+export function tipoEvento(item: Pick<ItemOutbox, "evento">): string {
+  switch (item.evento.tipo) {
+    case "sueno":
+      return "Sueño";
+    case "bienestar":
+      return "Bienestar";
+    case "hidratacion":
+      return "Hidratación";
+    case "habito_registro":
+      return "Hábito";
+    case "molestia":
+      return "Molestia";
+    case "sesion":
+      return "Sesión de entrenamiento";
+  }
+}

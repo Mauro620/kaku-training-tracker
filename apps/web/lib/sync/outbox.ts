@@ -25,7 +25,13 @@ export {
   type EndpointOutbox,
   type ProcesarOpciones,
 } from "@/lib/sync/nucleo";
-export { MAX_INTENTOS, type EventoOutbox, type ItemOutbox, type EstadoOutbox } from "@/lib/sync/tipos";
+export {
+  MAX_INTENTOS,
+  tipoEvento,
+  type EventoOutbox,
+  type ItemOutbox,
+  type EstadoOutbox,
+} from "@/lib/sync/tipos";
 
 // Adaptador Dexie -> StoreOutbox. La cola lee/escribe via este objeto.
 const adaptador = {
