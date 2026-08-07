@@ -62,11 +62,14 @@ export interface CapturaMolestia {
   idempotency_key: string;
 }
 
-/** Sesion de entrenamiento con bloques. Espejo de `sesion` + `bloque`. */
+/** Sesion de entrenamiento con bloques. Espejo de `sesion` + `bloque`.
+ * Mismo shape que `SesionCreate`/`BloqueSinSesionCreate` (backend): los
+ * bloques van anidados en un solo POST, no hay endpoint separado. */
 export interface CapturaSesion {
   /** UUID generado por el cliente. */
   id: string;
   fecha: string;
+  sesion_plan_id: number | null;
   tipo_sesion_id: number;
   duracion_min: number;
   rpe: number;
@@ -76,19 +79,17 @@ export interface CapturaSesion {
 }
 
 export interface CapturaBloque {
-  id: string;
-  sesion_id: string;
   ejercicio_id: number;
-  /** 1-based; se calcula en el cliente al armar la sesion. */
-  numero: number;
+  orden: number;
+  series: number | null;
+  reps: number | null;
   /** Carga | Distancia | Tiempo | Tecnica, segun `ejercicio.tipo_medicion`. */
-  peso_kg: number | null;
   distancia_m: number | null;
-  tiempo_s: number | null;
-  repeticiones: number | null;
-  /** Solo para tipos tecnica: texto libre. */
-  nota: string | null;
+  duracion_s: number | null;
+  calidad: number | null;
+  peso_kg: number | null;
   rpe: number | null;
+  dolor_lumbar: boolean;
 }
 
 export class DexieCapturas extends Dexie {

@@ -1,5 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api/client";
+import { encolar, endpointDesdeApi, procesarCola } from "@/lib/sync/outbox";
+import type { EventoOutbox } from "@/lib/sync/outbox";
+
+// ---------- Fase 5: captura offline-first ----------
+// Las 6 mutaciones de captura (sueno, bienestar, hidratacion, habito,
+// molestia, sesion) escriben primero a la cola local (Dexie, siempre
+// instantaneo, nunca falla sin red) y recien devuelven exito: el dato ya
+// esta a salvo aunque no haya conexion. El envio real pasa en background;
+// cuando termina (typicamente <1s si hay red), recien ahi se invalidan
+// las queries para traer el valor autoritativo del server (ej. el total
+// de hidratacion, que es una suma que solo el server puede calcular).
+function sincronizarYRefrescar(qc: QueryClient, keys: (string | number | null)[][]): void {
+  void procesarCola(endpointDesdeApi(api)).then(() => {
+    for (const key of keys) void qc.invalidateQueries({ queryKey: key });
+  });
+}
 
 // ---------- Tipos espejo del backend ----------
 // Mantengo los tipos cerca del hook en vez de importarlos del OpenAPI
@@ -222,10 +238,17 @@ export function useHidratacionDeHoy(fecha: string) {
 export function useUpsertSueno(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: { inicio: string; fin: string; celular_fuera: boolean | null }) =>
-      api.post<RegistroSueno>("/sueno", { fecha, ...cuerpo }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["sueno", fecha] });
+    mutationFn: async (cuerpo: {
+      inicio: string;
+      fin: string;
+      celular_fuera: boolean | null;
+    }) => {
+      const evento: EventoOutbox = {
+        tipo: "sueno",
+        cuerpo: { fecha, ...cuerpo, origen: "manual", idempotency_key: crypto.randomUUID() },
+      };
+      await encolar(evento);
+      sincronizarYRefrescar(qc, [["sueno", fecha]]);
     },
   });
 }
@@ -233,14 +256,18 @@ export function useUpsertSueno(fecha: string) {
 export function useUpsertBienestar(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: {
+    mutationFn: async (cuerpo: {
       sueno_pobre: number;
       fatiga: number;
       dolor_muscular: number;
       estres: number;
-    }) => api.post<RegistroBienestar>("/bienestar", { fecha, ...cuerpo }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["bienestar", fecha] });
+    }) => {
+      const evento: EventoOutbox = {
+        tipo: "bienestar",
+        cuerpo: { fecha, ...cuerpo, idempotency_key: crypto.randomUUID() },
+      };
+      await encolar(evento);
+      sincronizarYRefrescar(qc, [["bienestar", fecha]]);
     },
   });
 }
@@ -248,10 +275,13 @@ export function useUpsertBienestar(fecha: string) {
 export function useMarcarHabito(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: { habito_id: number; valor: boolean }) =>
-      api.post<HabitoRegistro>("/habitos/registro", { fecha, ...cuerpo }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["habitos", "registro", fecha] });
+    mutationFn: async (cuerpo: { habito_id: number; valor: boolean }) => {
+      const evento: EventoOutbox = {
+        tipo: "habito_registro",
+        cuerpo: { fecha, ...cuerpo, idempotency_key: crypto.randomUUID() },
+      };
+      await encolar(evento);
+      sincronizarYRefrescar(qc, [["habitos", "registro", fecha]]);
     },
   });
 }
@@ -259,12 +289,15 @@ export function useMarcarHabito(fecha: string) {
 export function useSumarHidratacion(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: { cantidad_ml: number }) =>
-      api.post<RegistroHidratacion>("/hidratacion", { fecha, ...cuerpo }),
-    // El endpoint ya devuelve el total nuevo: no hace falta invalidar y
-    // esperar un segundo round-trip para ver el número actualizado.
-    onSuccess: (data) => {
-      qc.setQueryData(["hidratacion", fecha], data);
+    mutationFn: async (cuerpo: { cantidad_ml: number }) => {
+      const evento: EventoOutbox = {
+        tipo: "hidratacion",
+        cuerpo: { fecha, ...cuerpo, idempotency_key: crypto.randomUUID() },
+      };
+      await encolar(evento);
+      // El total es una suma que solo el server calcula bien: hay que
+      // esperar el sync (no hay valor optimista correcto sin red).
+      sincronizarYRefrescar(qc, [["hidratacion", fecha]]);
     },
   });
 }
@@ -333,7 +366,7 @@ export type BloqueBorradorPayload = {
 export function useCrearSesion(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: {
+    mutationFn: async (cuerpo: {
       id?: string;
       idempotency_key: string;
       sesion_plan_id?: number | null;
@@ -342,12 +375,38 @@ export function useCrearSesion(fecha: string) {
       rpe: number;
       nota?: string | null;
       bloques: BloqueBorradorPayload[];
-    }) =>
-      api.post<Sesion>("/sesiones", { fecha, ...cuerpo }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["sesiones", fecha] });
+    }) => {
+      const { bloques, ...cabecera } = cuerpo;
+      const evento: EventoOutbox = {
+        tipo: "sesion",
+        cuerpo: {
+          sesion: {
+            id: cabecera.id ?? crypto.randomUUID(),
+            idempotency_key: cabecera.idempotency_key,
+            sesion_plan_id: cabecera.sesion_plan_id ?? null,
+            fecha,
+            tipo_sesion_id: cabecera.tipo_sesion_id,
+            duracion_min: cabecera.duracion_min,
+            rpe: cabecera.rpe,
+            nota: cabecera.nota ?? null,
+          },
+          bloques: bloques.map((b) => ({
+            ejercicio_id: b.ejercicio_id,
+            orden: b.orden,
+            series: b.series ?? null,
+            reps: b.reps ?? null,
+            distancia_m: b.distancia_m ?? null,
+            duracion_s: b.duracion_s ?? null,
+            calidad: b.calidad ?? null,
+            peso_kg: b.peso_kg ?? null,
+            rpe: b.rpe ?? null,
+            dolor_lumbar: b.dolor_lumbar ?? false,
+          })),
+        },
+      };
+      await encolar(evento);
       // Una sesion vinculada a un plan lo saca de "pendiente".
-      void qc.invalidateQueries({ queryKey: ["planes", fecha] });
+      sincronizarYRefrescar(qc, [["sesiones", fecha], ["planes", fecha]]);
     },
   });
 }
@@ -637,10 +696,23 @@ export function useMolestiasDeFecha(fecha: string) {
 export function useCrearMolestia(fecha: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: { zona_id: number; intensidad: number; nota?: string | null }) =>
-      api.post<Molestia>("/molestias", { fecha, ...cuerpo }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["molestias", fecha] });
+    mutationFn: async (cuerpo: {
+      zona_id: number;
+      intensidad: number;
+      nota?: string | null;
+    }) => {
+      const evento: EventoOutbox = {
+        tipo: "molestia",
+        cuerpo: {
+          fecha,
+          zona_id: cuerpo.zona_id,
+          intensidad: cuerpo.intensidad,
+          nota: cuerpo.nota ?? null,
+          idempotency_key: crypto.randomUUID(),
+        },
+      };
+      await encolar(evento);
+      sincronizarYRefrescar(qc, [["molestias", fecha]]);
     },
   });
 }

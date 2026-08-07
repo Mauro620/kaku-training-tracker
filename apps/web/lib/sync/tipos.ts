@@ -69,13 +69,13 @@ export type CapturaMolestiaBody = {
   idempotency_key: string;
 };
 
-/** Sesion con bloques. El backend espera POST sesion + POST bloques
- * separados (no hay endpoint anidado). La cola lo maneja como "un
- * evento = N envios" en `endpointDesdeApi`. */
+/** Sesion con bloques. El backend acepta los bloques anidados en el mismo
+ * POST (`SesionCreate.bloques`), no hay endpoint separado. */
 export type CapturaSesionBody = {
   sesion: {
     id: string;
     fecha: string;
+    sesion_plan_id: number | null;
     tipo_sesion_id: number;
     duracion_min: number;
     rpe: number;

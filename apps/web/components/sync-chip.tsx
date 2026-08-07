@@ -3,15 +3,34 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, CloudOff, Loader2 } from "lucide-react";
 
+import { api } from "@/lib/api/client";
 import {
   contarFallidos,
   contarPendientes,
+  endpointDesdeApi,
+  procesarCola,
   reintentar,
   descartar,
   tipoEvento,
 } from "@/lib/sync/outbox";
 
 import type { ItemOutbox } from "@/lib/sync/tipos";
+
+/**
+ * Dispara el envio de la cola: al montar (por si quedo algo pendiente de
+ * una sesion anterior) y cada vez que el navegador recupera la red. Dos
+ * disparos concurrentes en el peor caso reintentan el mismo item dos
+ * veces, pero el backend es idempotente por `idempotency_key`, asi que no
+ * hace falta coordinarlos.
+ */
+function useDispararSincronizacion(): void {
+  useEffect(() => {
+    const disparar = () => void procesarCola(endpointDesdeApi(api));
+    disparar();
+    window.addEventListener("online", disparar);
+    return () => window.removeEventListener("online", disparar);
+  }, []);
+}
 
 /**
  * Chip de sincronizacion (Fase 5, ROADMAP §5).
@@ -32,6 +51,8 @@ import type { ItemOutbox } from "@/lib/sync/tipos";
  * migrar.
  */
 export function SyncChip() {
+  useDispararSincronizacion();
+
   const [pendientes, setPendientes] = useState(0);
   const [fallidos, setFallidos] = useState(0);
   const [mostrarFallidos, setMostrarFallidos] = useState(false);

@@ -5,9 +5,9 @@
  * sin IndexedDB). Este archivo es la cara que la app usa: persistir en
  * Dexie, exponer helpers para la UI, construir el endpoint desde `api`.
  *
- * Sesion requiere dos pasos (POST sesion + POST bloques por cada bloque).
- * Lo manejamos en `endpointDesdeApi` para que la cola siga viendo "un
- * evento = un envio".
+ * Sesion lleva sus bloques anidados en el mismo POST (no hay endpoint
+ * separado para bloques), asi que la cola ve "un evento = un envio" para
+ * las 6 entidades por igual.
  */
 
 import { db } from "@/lib/db/dexie";
@@ -138,7 +138,11 @@ export async function enviarUnaVez(
 
 /**
  * Construye el `EndpointOutbox` para la app real, usando `api` del cliente
- * HTTP. La cola queda desacoplada del cliente: tests pasan un mock.
+ * HTTP (`apps/web/lib/api/client.ts`). Ese cliente ya arma la URL completa
+ * a partir de `NEXT_PUBLIC_API_URL` (que incluye `/api/v1`), asi que las
+ * rutas de aca son relativas, iguales a las que usan los hooks de
+ * `lib/api/hooks.ts`. La cola queda desacoplada del cliente: tests pasan
+ * un mock.
  */
 export function endpointDesdeApi(api: {
   post: <T>(path: string, cuerpo: unknown) => Promise<T>;
@@ -146,33 +150,28 @@ export function endpointDesdeApi(api: {
   return async (evento) => {
     switch (evento.tipo) {
       case "sueno":
-        await api.post("/api/v1/sueno", evento.cuerpo);
+        await api.post("/sueno", evento.cuerpo);
         return;
       case "bienestar":
-        await api.post("/api/v1/bienestar", evento.cuerpo);
+        await api.post("/bienestar", evento.cuerpo);
         return;
       case "hidratacion":
-        await api.post("/api/v1/hidratacion", evento.cuerpo);
+        await api.post("/hidratacion", evento.cuerpo);
         return;
       case "habito_registro":
-        await api.post("/api/v1/habitos/registro", evento.cuerpo);
+        await api.post("/habitos/registro", evento.cuerpo);
         return;
       case "molestia":
-        await api.post("/api/v1/molestias", evento.cuerpo);
+        await api.post("/molestias", evento.cuerpo);
         return;
-      case "sesion": {
-        const sesion = await api.post<{ id: string }>(
-          "/api/v1/entrenamiento/sesiones",
-          evento.cuerpo.sesion,
-        );
-        for (const bloque of evento.cuerpo.bloques) {
-          await api.post(
-            `/api/v1/entrenamiento/sesiones/${sesion.id}/bloques`,
-            { ...bloque, sesion_id: sesion.id },
-          );
-        }
+      case "sesion":
+        // Bloques anidados en el mismo POST (SesionCreate.bloques): no hay
+        // endpoint separado para crearlos.
+        await api.post("/sesiones", {
+          ...evento.cuerpo.sesion,
+          bloques: evento.cuerpo.bloques,
+        });
         return;
-      }
     }
   };
 }

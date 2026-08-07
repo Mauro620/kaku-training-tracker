@@ -167,8 +167,9 @@ red se sincroniza sola y sin duplicados.
 
 **No hacer:** resolución de conflictos multiusuario. Hay un solo usuario.
 
-**Estado: ✅ completa en `feat/fase-5-offline` (commits
-`9df3b9d`, `9b49f5a`, `d1e852e`, `80e54c6`, `960794d`, `137b938`).**
+**Estado: ✅ completa (commits `9df3b9d`, `9b49f5a`, `d1e852e`,
+`80e54c6`, `960794d`, `137b938`, más el cableado real y los fixes del
+2026-08-07: ver notas).**
 
 Notas:
 - `idempotency_key` se agrego a las 6 mutaciones del cliente
@@ -178,12 +179,29 @@ Notas:
 - Patron de 3 pasos en repos: SELECT previo por key (idempotente),
   INSERT ON CONFLICT DO NOTHING, UPDATE por la unicidad natural
   (edicion).
-- Hidratacion usa variante SELECT previo + ON CONFLICT DO UPDATE
-  sumando `ml_totales`. Race condition de doble suma bajo concurrencia
-  documentada en PENDIENTES; la cola reintenta con delays.
+- Hidratacion usa el mismo patron de 3 pasos (bug corregido el
+  2026-08-07: la version anterior solo grababa la key en el primer
+  tap del dia, asi que reintentar cualquier tap posterior sumaba de
+  nuevo — ver PENDIENTES). Race condition de doble suma bajo
+  concurrencia (no reintento secuencial) sigue documentada ahi.
 - JWT queda en localStorage (deuda de seguridad, ver PENDIENTES).
-- 86 tests backend + 8 tests frontend pasan. Ruff + mypy + typecheck
+- 87 tests backend + 13 tests frontend pasan. Ruff + mypy + typecheck
   limpios.
+- **Cableado real (2026-08-07):** la primera entrega dejaba el
+  esquema Dexie, la cola (`nucleo.ts`/`outbox.ts`) y el chip de UI
+  construidos y testeados, pero SIN conectar a los 6 hooks de
+  mutacion reales — seguian pegando directo a la API, sin generar
+  `idempotency_key`, sin pasar por la cola. En modo avion los datos
+  se perdian, no se cumplia el criterio de aceptacion. Se corrigio:
+  los 6 hooks ahora escriben a la cola (`encolar`) en vez de llamar a
+  la API directo; `SyncChip` dispara `procesarCola` al montar y en
+  el evento `online` del navegador. De paso se encontraron y
+  corrigieron dos bugs mas en `endpointDesdeApi` (nunca antes
+  ejercitado end-to-end): todas las rutas tenian `/api/v1` duplicado
+  (el cliente HTTP ya lo agrega), y el caso "sesion" le pegaba a un
+  endpoint `/bloques` que no existe (el backend acepta los bloques
+  anidados en el mismo POST). Test nuevo (`outbox.test.ts`) cubre los
+  6 tipos de evento contra sus rutas reales.
 
 ---
 
