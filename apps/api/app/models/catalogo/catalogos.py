@@ -4,7 +4,7 @@ from sqlalchemy import Boolean, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.models.enums import CargaLumbar, Demanda
+from app.models.enums import CargaLumbar, Demanda, TipoMedicion
 from app.models.types import IntPk, SmallIntPk
 
 
@@ -31,10 +31,14 @@ class Ejercicio(Base):
         nullable=False,
         server_default=CargaLumbar.baja.value,
     )
-    # `serie` es propio de sesiones de fuerza: sin esto el selector de
-    # ejercicio de cualquier tipo de sesion mostraba el catalogo entero.
-    tipo_sesion_id: Mapped[int] = mapped_column(
-        ForeignKey("tipo_sesion.id"), nullable=False
+    # Nullable: el ejercicio que el usuario crea inline (POST
+    # /catalogos/ejercicios) solo pide nombre + tipo_medicion. Ya no filtra
+    # el selector de ejercicio (eso lo decide tipo_medicion, REGLAS_NEGOCIO
+    # §15) — queda como categorizacion de referencia.
+    tipo_sesion_id: Mapped[int | None] = mapped_column(ForeignKey("tipo_sesion.id"))
+    # Determina que campos acepta cada bloque de este ejercicio.
+    tipo_medicion: Mapped[TipoMedicion] = mapped_column(
+        Enum(TipoMedicion, name="tipo_medicion"), nullable=False
     )
 
 

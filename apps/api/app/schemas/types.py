@@ -26,3 +26,9 @@ Peso = Annotated[Decimal, Field(gt=0, max_digits=5, decimal_places=2)]
 
 DiaSemana = Annotated[int, Field(ge=0, le=6)]
 """0=lunes..6=domingo (REGLAS_NEGOCIO §13.3)."""
+
+Distancia = Annotated[Decimal, Field(gt=0, max_digits=5, decimal_places=1)]
+DuracionSeg = Annotated[int, Field(gt=0)]
+Calidad = Annotated[int, Field(ge=1, le=5)]
+"""Calidad de ejecucion de un bloque tecnica. 1 malo, 5 excelente
+(REGLAS_NEGOCIO §15)."""

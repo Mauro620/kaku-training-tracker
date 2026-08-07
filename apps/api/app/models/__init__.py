@@ -25,12 +25,12 @@ from app.models.catalogo import (
     ZonaCorporal,
 )
 from app.models.entrenamiento import (
+    Bloque,
+    BloquePlan,
     Ciclo,
     CicloSemana,
     CicloSemanaComposicion,
     Partido,
-    Serie,
-    SeriePlan,
     Sesion,
     SesionPlan,
 )
@@ -48,6 +48,8 @@ __all__ = [
     "Alimento",
     "AuthUsuario",
     "Base",
+    "Bloque",
+    "BloquePlan",
     "Ciclo",
     "CicloSemana",
     "CicloSemanaComposicion",
@@ -66,8 +68,6 @@ __all__ = [
     "RegistroBienestar",
     "RegistroHidratacion",
     "RegistroSueno",
-    "Serie",
-    "SeriePlan",
     "Sesion",
     "SesionPlan",
     "TestFisico",

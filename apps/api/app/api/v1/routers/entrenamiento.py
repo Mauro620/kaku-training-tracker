@@ -1,8 +1,8 @@
-"""Endpoints de sesion y serie (Fase 4, ROADMAP §4).
+"""Endpoints de sesion y bloque (Fase 4, ROADMAP §4).
 
-POST /sesiones crea una sesion con sus series opcionales en el mismo body.
+POST /sesiones crea una sesion con sus bloques opcionales en el mismo body.
 GET /sesiones?fecha=YYYY-MM-DD devuelve las sesiones del usuario en esa
-fecha con sus series via selectinload.
+fecha con sus bloques via selectinload.
 """
 
 from datetime import date
@@ -14,7 +14,7 @@ from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.models import Sesion, Usuario
 from app.schemas.entrenamiento.sesion import (
-    SerieSinSesionCreate,
+    BloqueSinSesionCreate,
     SesionCreate,
     SesionRead,
 )
@@ -27,19 +27,19 @@ router = APIRouter(prefix="/sesiones", tags=["entrenamiento"])
     "",
     response_model=SesionRead,
     status_code=status.HTTP_200_OK,
-    summary="Crea sesion con sus series (opcional). Idempotente por idempotency_key.",
+    summary="Crea sesion con sus bloques (opcional). Idempotente por idempotency_key.",
 )
 async def crear_sesion(
     payload: SesionCreate,
     usuario: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
 ) -> Sesion:
-    series_payload: list[SerieSinSesionCreate] = payload.series or []
-    sesion_creada, _ = await service.crear_sesion_con_series(
+    bloques_payload: list[BloqueSinSesionCreate] = payload.bloques or []
+    sesion_creada, _ = await service.crear_sesion_con_bloques(
         sesion,
         usuario_id=usuario.id,
         sesion=payload,
-        series_payload=series_payload,
+        bloques_payload=bloques_payload,
     )
     return sesion_creada
 
@@ -47,7 +47,7 @@ async def crear_sesion(
 @router.get(
     "",
     response_model=list[SesionRead],
-    summary="Sesiones del usuario en una fecha, con sus series.",
+    summary="Sesiones del usuario en una fecha, con sus bloques.",
 )
 async def listar_sesiones(
     fecha: date = Query(..., description="Fecha local del registro"),

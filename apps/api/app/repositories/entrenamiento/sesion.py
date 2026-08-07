@@ -74,12 +74,12 @@ async def obtener_por_id(session: AsyncSession, sesion_id: uuid.UUID) -> Sesion 
 async def listar_por_fecha(
     session: AsyncSession, usuario_id: uuid.UUID, fecha: date
 ) -> list[Sesion]:
-    """`selectinload` evita N+1: SesionRead siempre incluye `series`, así que
-    cualquier consumidor de esta función las necesita cargadas."""
+    """`selectinload` evita N+1: SesionRead siempre incluye `bloques`, así
+    que cualquier consumidor de esta función los necesita cargados."""
     resultado = await session.scalars(
         select(Sesion)
         .where(Sesion.usuario_id == usuario_id, Sesion.fecha == fecha)
-        .options(selectinload(Sesion.series))
+        .options(selectinload(Sesion.bloques))
         .order_by(Sesion.registrado_en)
     )
     return list(resultado.all())

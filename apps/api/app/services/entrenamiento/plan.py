@@ -10,6 +10,7 @@ from app.core.exceptions import RecursoNoEncontradoError
 from app.models import CicloSemana, SesionPlan
 from app.repositories import entrenamiento as repo
 from app.schemas.entrenamiento.plan import SesionPlanCreate
+from app.services.entrenamiento.bloque import validar_campos
 from app.services.entrenamiento.ciclo import (
     calcular_rango_semana,
     obtener_ciclo,
@@ -42,6 +43,27 @@ async def crear_sesion_plan(
             dia_sugerido=payload.dia_sugerido,
         )
 
+    bloques_payload = payload.bloques or []
+    ejercicios = {
+        e.id: e
+        for e in await repo.listar_ejercicios_por_ids(
+            session, [b.ejercicio_id for b in bloques_payload]
+        )
+    }
+    for b in bloques_payload:
+        ejercicio = ejercicios.get(b.ejercicio_id)
+        if ejercicio is None:
+            raise RecursoNoEncontradoError(f"ejercicio {b.ejercicio_id} no encontrado")
+        validar_campos(
+            ejercicio.tipo_medicion,
+            ejercicio_nombre=ejercicio.nombre,
+            series=b.series,
+            reps=b.reps_min if b.reps_min is not None else b.reps_max,
+            peso=b.peso_objetivo_kg,
+            distancia=b.distancia_objetivo_m,
+            duracion=b.duracion_objetivo_s,
+        )
+
     plan = await repo.crear_sesion_plan(
         session,
         usuario_id=usuario_id,
@@ -53,22 +75,24 @@ async def crear_sesion_plan(
         duracion_min_est=payload.duracion_min_est,
         rpe_objetivo=payload.rpe_objetivo,
     )
-    for idx, sp in enumerate(payload.series or []):
-        await repo.crear_serie_plan(
+    for idx, b in enumerate(bloques_payload):
+        await repo.crear_bloque_plan(
             session,
             sesion_plan_id=plan.id,
-            ejercicio_id=sp.ejercicio_id,
+            ejercicio_id=b.ejercicio_id,
             orden=idx + 1,
-            series=sp.series,
-            reps_min=sp.reps_min,
-            reps_max=sp.reps_max,
-            peso_objetivo_kg=sp.peso_objetivo_kg,
+            series=b.series,
+            reps_min=b.reps_min,
+            reps_max=b.reps_max,
+            peso_objetivo_kg=b.peso_objetivo_kg,
+            distancia_objetivo_m=b.distancia_objetivo_m,
+            duracion_objetivo_s=b.duracion_objetivo_s,
         )
 
     await session.commit()
-    # attribute_names: SesionPlanRead siempre incluye series_planeadas, asi
-    # que el service es quien las deja cargadas antes de devolver.
-    await session.refresh(plan, attribute_names=["series_planeadas"])
+    # attribute_names: SesionPlanRead siempre incluye bloques_planeados, asi
+    # que el service es quien los deja cargados antes de devolver.
+    await session.refresh(plan, attribute_names=["bloques_planeados"])
     return plan
 
 

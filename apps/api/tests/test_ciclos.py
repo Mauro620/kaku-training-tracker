@@ -19,6 +19,7 @@ from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.main import app
 from app.models import Ejercicio, TipoSesion, Usuario
+from app.models.enums import TipoMedicion
 
 
 @pytest.fixture
@@ -46,9 +47,11 @@ async def _tipo_sesion_id(sesion: AsyncSession, codigo: str) -> int:
     return tipo_id
 
 
-async def _ejercicio_de_tipo(sesion: AsyncSession, tipo_sesion_id: int) -> int:
+async def _ejercicio_de_medicion(
+    sesion: AsyncSession, tipo_medicion: TipoMedicion
+) -> int:
     ejercicio_id = await sesion.scalar(
-        select(Ejercicio.id).where(Ejercicio.tipo_sesion_id == tipo_sesion_id)
+        select(Ejercicio.id).where(Ejercicio.tipo_medicion == tipo_medicion)
     )
     assert ejercicio_id is not None
     return ejercicio_id
@@ -57,11 +60,11 @@ async def _ejercicio_de_tipo(sesion: AsyncSession, tipo_sesion_id: int) -> int:
 # ------------------------------------------------------------------ sesion --
 
 
-async def test_crear_sesion_es_idempotente_y_no_duplica_series(
+async def test_crear_sesion_es_idempotente_y_no_duplica_bloques(
     cliente: AsyncClient, sesion: AsyncSession
 ) -> None:
     tipo_id = await _tipo_sesion_id(sesion, "resistencia")
-    ejercicio_id = await sesion.scalar(select(Ejercicio.id))
+    ejercicio_id = await _ejercicio_de_medicion(sesion, TipoMedicion.carga)
     payload = {
         "id": str(uuid.uuid4()),
         "idempotency_key": str(uuid.uuid4()),
@@ -69,18 +72,18 @@ async def test_crear_sesion_es_idempotente_y_no_duplica_series(
         "tipo_sesion_id": tipo_id,
         "duracion_min": 60,
         "rpe": 5,
-        "series": [
+        "bloques": [
             {"ejercicio_id": ejercicio_id, "orden": 0, "series": 3, "reps": 10},
         ],
     }
     primera = await cliente.post("/api/v1/sesiones", json=payload)
     assert primera.status_code == 200
-    assert len(primera.json()["series"]) == 1
+    assert len(primera.json()["bloques"]) == 1
 
     segunda = await cliente.post("/api/v1/sesiones", json=payload)
     assert segunda.status_code == 200
     assert segunda.json()["id"] == primera.json()["id"]
-    assert len(segunda.json()["series"]) == 1
+    assert len(segunda.json()["bloques"]) == 1
 
     listado = await cliente.get("/api/v1/sesiones", params={"fecha": "2026-08-04"})
     assert len(listado.json()) == 1
@@ -431,18 +434,18 @@ async def test_listar_planes_de_fecha_resuelve_dia_sugerido_y_fecha_prevista(
     assert sin_planes.json() == []
 
 
-async def test_crear_plan_con_series_objetivo(
+async def test_crear_plan_con_bloques_objetivo(
     cliente: AsyncClient, sesion: AsyncSession
 ) -> None:
     fuerza_id = await _tipo_sesion_id(sesion, "fuerza")
-    ejercicio_id = await _ejercicio_de_tipo(sesion, fuerza_id)
+    ejercicio_id = await _ejercicio_de_medicion(sesion, TipoMedicion.carga)
 
     creado = await cliente.post(
         "/api/v1/planes",
         json={
             "tipo_sesion_id": fuerza_id,
             "fecha_prevista": "2026-08-10",
-            "series": [
+            "bloques": [
                 {
                     "ejercicio_id": ejercicio_id,
                     "orden": 0,
@@ -455,8 +458,101 @@ async def test_crear_plan_con_series_objetivo(
         },
     )
     assert creado.status_code == 200
-    assert len(creado.json()["series_planeadas"]) == 1
-    assert creado.json()["series_planeadas"][0]["peso_objetivo_kg"] == "80.00"
+    assert len(creado.json()["bloques_planeados"]) == 1
+    assert creado.json()["bloques_planeados"][0]["peso_objetivo_kg"] == "80.00"
 
     listado = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-10"})
-    assert len(listado.json()[0]["series_planeadas"]) == 1
+    assert len(listado.json()[0]["bloques_planeados"]) == 1
+
+
+# -------------------------------------------------------------- ejercicio --
+
+
+async def test_crear_ejercicio_inline_aparece_en_catalogo(cliente: AsyncClient) -> None:
+    creado = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Pase progresivo 15-20-25m", "tipo_medicion": "distancia"},
+    )
+    assert creado.status_code == 200
+    assert creado.json()["tipo_medicion"] == "distancia"
+    assert creado.json()["tipo_sesion_id"] is None
+
+    listado = await cliente.get("/api/v1/catalogos/ejercicios")
+    assert any(e["id"] == creado.json()["id"] for e in listado.json())
+
+
+async def test_crear_ejercicio_con_nombre_repetido_devuelve_422(
+    cliente: AsyncClient,
+) -> None:
+    payload = {"nombre": "Pases con cada pierna", "tipo_medicion": "tecnica"}
+    await cliente.post("/api/v1/catalogos/ejercicios", json=payload)
+    repetido = await cliente.post("/api/v1/catalogos/ejercicios", json=payload)
+    assert repetido.status_code == 422
+
+
+# ------------------------------------- bloque: matriz por tipo_medicion --
+
+
+async def test_bloque_rechaza_campo_que_no_corresponde_a_tipo_medicion(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    tipo_id = await _tipo_sesion_id(sesion, "balon_distribucion")
+    ejercicio_tecnica = await _ejercicio_de_medicion(sesion, TipoMedicion.tecnica)
+
+    rechazado = await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": str(uuid.uuid4()),
+            "idempotency_key": str(uuid.uuid4()),
+            "fecha": "2026-08-04",
+            "tipo_sesion_id": tipo_id,
+            "duracion_min": 40,
+            "rpe": 5,
+            "bloques": [
+                {
+                    "ejercicio_id": ejercicio_tecnica,
+                    "orden": 0,
+                    "peso_kg": 10,  # tecnica no acepta peso
+                }
+            ],
+        },
+    )
+    assert rechazado.status_code == 422
+
+
+async def test_bloque_acepta_los_campos_de_su_tipo_medicion(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    tipo_id = await _tipo_sesion_id(sesion, "velocidad_salto")
+    ejercicio_distancia = await _ejercicio_de_medicion(sesion, TipoMedicion.distancia)
+    ejercicio_tecnica = await _ejercicio_de_medicion(sesion, TipoMedicion.tecnica)
+
+    creado = await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": str(uuid.uuid4()),
+            "idempotency_key": str(uuid.uuid4()),
+            "fecha": "2026-08-04",
+            "tipo_sesion_id": tipo_id,
+            "duracion_min": 40,
+            "rpe": 6,
+            "bloques": [
+                {
+                    "ejercicio_id": ejercicio_distancia,
+                    "orden": 0,
+                    "reps": 6,
+                    "distancia_m": 20,
+                },
+                {
+                    "ejercicio_id": ejercicio_tecnica,
+                    "orden": 1,
+                    "duracion_s": 90,
+                    "calidad": 4,
+                },
+            ],
+        },
+    )
+    assert creado.status_code == 200
+    bloques = {b["ejercicio_id"]: b for b in creado.json()["bloques"]}
+    assert bloques[ejercicio_distancia]["distancia_m"] == "20.0"
+    assert bloques[ejercicio_tecnica]["calidad"] == 4

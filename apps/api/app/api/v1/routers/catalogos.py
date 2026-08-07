@@ -2,18 +2,22 @@
 solo lee.
 
 Estos endpoints existen para que el frontend pueda poblar los formularios
-de seleccion (tipo de sesion en Entreno, ejercicio en una serie, zona
+de seleccion (tipo de sesion en Entreno, ejercicio en un bloque, zona
 corporal en una molestia). Sin esto el front tendria que hardcodear los
 valores, lo que rompe cuando el seed agrega uno nuevo.
+
+`ejercicio` es la excepcion (REGLAS_NEGOCIO §15): el usuario lo amplia
+inline, el universo de ejercicios de una rutina real es abierto.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.models import Ejercicio, TipoSesion, Usuario, ZonaCorporal
 from app.schemas.catalogo.catalogo import (
+    EjercicioCreate,
     EjercicioRead,
     TipoSesionRead,
     ZonaCorporalRead,
@@ -45,6 +49,20 @@ async def listar_ejercicios(
     sesion: AsyncSession = Depends(get_session),
 ) -> list[Ejercicio]:
     return await service.listar_ejercicios(sesion)
+
+
+@router.post(
+    "/ejercicios",
+    response_model=EjercicioRead,
+    status_code=status.HTTP_200_OK,
+    summary="Crea un ejercicio. Unico catalogo que el usuario puede ampliar.",
+)
+async def crear_ejercicio(
+    payload: EjercicioCreate,
+    _: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> Ejercicio:
+    return await service.crear_ejercicio(sesion, payload.nombre, payload.tipo_medicion)
 
 
 @router.get(

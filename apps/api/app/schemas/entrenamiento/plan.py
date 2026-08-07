@@ -5,7 +5,16 @@ from typing import Self
 from pydantic import Field, model_validator
 
 from app.schemas.base import ReadBase, SchemaBase
-from app.schemas.types import DiaSemana, DuracionMin, NoNegativo, Peso, Positivo, Rpe
+from app.schemas.types import (
+    DiaSemana,
+    Distancia,
+    DuracionMin,
+    DuracionSeg,
+    NoNegativo,
+    Peso,
+    Positivo,
+    Rpe,
+)
 
 
 class SesionPlanCreate(SchemaBase):
@@ -20,9 +29,9 @@ class SesionPlanCreate(SchemaBase):
     objetivo: str | None = None
     duracion_min_est: DuracionMin | None = None
     rpe_objetivo: Rpe | None = None
-    # Series objetivo en el mismo body, igual que sesion/serie: si se
+    # Bloques objetivo en el mismo body, igual que sesion/bloque: si se
     # mandan, se crean con el `sesion_plan_id` que el server acaba de asignar.
-    series: list["SeriePlanSinPlanCreate"] | None = None
+    bloques: list["BloquePlanSinPlanCreate"] | None = None
 
 
 class SesionPlanUpdate(SchemaBase):
@@ -45,7 +54,7 @@ class SesionPlanRead(ReadBase):
     objetivo: str | None
     duracion_min_est: int | None
     rpe_objetivo: int | None
-    series_planeadas: list["SeriePlanRead"] = Field(default_factory=list)
+    bloques_planeados: list["BloquePlanRead"] = Field(default_factory=list)
 
 
 class _RepsOrdenadas(SchemaBase):
@@ -60,40 +69,51 @@ class _RepsOrdenadas(SchemaBase):
         return self
 
 
-class SeriePlanCreate(_RepsOrdenadas):
+class BloquePlanCreate(_RepsOrdenadas):
+    """Objetivo del bloque real (REGLAS_NEGOCIO §15). Sin `calidad`: no se
+    planifica de antemano, es una medida de ejecución."""
+
     sesion_plan_id: int
     ejercicio_id: int
     orden: NoNegativo
-    series: Positivo
+    series: Positivo | None = None
     peso_objetivo_kg: Peso | None = None
+    distancia_objetivo_m: Distancia | None = None
+    duracion_objetivo_s: DuracionSeg | None = None
 
 
-class SeriePlanSinPlanCreate(_RepsOrdenadas):
-    """Una serie objetivo dentro del body de POST /planes: el
+class BloquePlanSinPlanCreate(_RepsOrdenadas):
+    """Un bloque objetivo dentro del body de POST /planes: el
     `sesion_plan_id` lo completa el server con el id del plan recien creado."""
 
     ejercicio_id: int
     orden: NoNegativo
-    series: Positivo
+    series: Positivo | None = None
     peso_objetivo_kg: Peso | None = None
+    distancia_objetivo_m: Distancia | None = None
+    duracion_objetivo_s: DuracionSeg | None = None
 
 
-class SeriePlanUpdate(_RepsOrdenadas):
+class BloquePlanUpdate(_RepsOrdenadas):
     ejercicio_id: int | None = None
     orden: NoNegativo | None = None
     series: Positivo | None = None
     peso_objetivo_kg: Peso | None = None
+    distancia_objetivo_m: Distancia | None = None
+    duracion_objetivo_s: DuracionSeg | None = None
 
 
-class SeriePlanRead(ReadBase):
+class BloquePlanRead(ReadBase):
     id: int
     sesion_plan_id: int
     ejercicio_id: int
     orden: int
-    series: int
+    series: int | None
     reps_min: int | None
     reps_max: int | None
     peso_objetivo_kg: Peso | None
+    distancia_objetivo_m: Distancia | None
+    duracion_objetivo_s: int | None
 
 
 # Resuelve las forward refs.

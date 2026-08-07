@@ -87,6 +87,6 @@ async def listar_candidatos_de_fecha(
                 ),
             ),
         )
-        .options(selectinload(SesionPlan.series_planeadas))
+        .options(selectinload(SesionPlan.bloques_planeados))
     )
     return list(resultado.all())

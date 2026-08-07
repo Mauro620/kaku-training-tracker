@@ -330,3 +330,32 @@ día sugerido no compromete nada, no hay fecha candidata que validar.
   1 para horas y porcentajes, entero para el Estado.
 - Un dato faltante es NULL y se propaga como NULL. **Nunca se sustituye por
   cero.** Un día sin registro de sueño no es un día de cero horas.
+
+---
+
+## 15. Medición de bloque por tipo de ejercicio
+
+`bloque` (antes `serie`) registra una unidad de trabajo dentro de una sesión
+o un plan. "N series × M reps" no describe un sprint de 20 m ni un control
+técnico: cada `ejercicio` declara su `tipo_medicion`, y eso determina qué
+campos acepta el bloque. La validación vive en el service (un `CHECK` de
+Postgres no puede consultar otra tabla).
+
+| `tipo_medicion` | Campos permitidos | Ejemplo |
+|---|---|---|
+| `carga` | `series`, `reps`, `peso_kg` | Sentadilla explosiva: 4×6 @ 80kg |
+| `distancia` | `reps`, `distancia_m` | Sprint acelerativo: 6 reps de 20m |
+| `tiempo` | `duracion_s` | Plancha Copenhague: 40s |
+| `tecnica` | `reps` o `duracion_s`, + `calidad` (1-5) | Control con muro: 20 reps, calidad 4 |
+
+Todos los `tipo_medicion` aceptan `rpe` y `dolor_lumbar` (el real; el
+objetivo en `bloque_plan` no tiene ni `dolor_lumbar` ni `calidad`, ver
+`docs/schema.dbml`). Un campo fuera de la lista permitida para el
+`tipo_medicion` del `ejercicio_id` del bloque es un
+`InvarianteDeNegocioError` (422), no un `CHECK` de tabla.
+
+**Catálogo de ejercicio, caso especial**: a diferencia de `tipo_sesion` o
+`zona_corporal`, `ejercicio` es el único catálogo que el usuario puede
+ampliar (`POST /catalogos/ejercicios`). El universo de ejercicios de una
+rutina real es abierto; los demás catálogos son taxonomías fijas del
+negocio.

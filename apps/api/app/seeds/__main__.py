@@ -169,8 +169,9 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
                     "patron": patron,
                     "carga_lumbar": carga_lumbar,
                     "tipo_sesion_id": tipo_sesion_id_por_codigo[tipo_codigo],
+                    "tipo_medicion": tipo_medicion,
                 }
-                for nombre, patron, carga_lumbar, tipo_codigo in EJERCICIOS
+                for nombre, patron, carga_lumbar, tipo_codigo, tipo_medicion in EJERCICIOS  # noqa: E501
             ],
             ["nombre"],
         ),

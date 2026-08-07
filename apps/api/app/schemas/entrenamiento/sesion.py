@@ -4,7 +4,16 @@ from datetime import date, datetime
 from pydantic import Field
 
 from app.schemas.base import ReadBase, SchemaBase
-from app.schemas.types import DuracionMin, NoNegativo, Peso, Positivo, Rpe
+from app.schemas.types import (
+    Calidad,
+    Distancia,
+    DuracionMin,
+    DuracionSeg,
+    NoNegativo,
+    Peso,
+    Positivo,
+    Rpe,
+)
 
 
 class SesionCreate(SchemaBase):
@@ -22,10 +31,10 @@ class SesionCreate(SchemaBase):
     duracion_min: DuracionMin
     rpe: Rpe
     nota: str | None = None
-    # Series opcionales en el mismo body. Si se mandan, se crean con el
+    # Bloques opcionales en el mismo body. Si se mandan, se crean con el
     # `sesion_id` que el server asigna a la sesion. Si no, se crean via
-    # POST /series/{sesion_id} por separado.
-    series: list["SerieSinSesionCreate"] | None = None
+    # POST /bloques/{sesion_id} por separado.
+    bloques: list["BloqueSinSesionCreate"] | None = None
 
 
 class SesionUpdate(SchemaBase):
@@ -48,52 +57,68 @@ class SesionRead(ReadBase):
     # Derivada, nunca se captura: carga_srpe = rpe * duracion_min.
     carga_srpe: int
     registrado_en: datetime
-    # Series de la sesion, ordenadas. El router las carga via selectinload
+    # Bloques de la sesion, ordenados. El router los carga via selectinload
     # para evitar N+1 cuando se listan varias sesiones.
-    series: list["SerieRead"] = Field(default_factory=list)
+    bloques: list["BloqueRead"] = Field(default_factory=list)
 
 
-class SerieCreate(SchemaBase):
+class BloqueCreate(SchemaBase):
+    """Que campos aplican los determina `ejercicio.tipo_medicion`
+    (REGLAS_NEGOCIO §15): el service valida, acá todo es opcional salvo lo
+    estructural (ejercicio, orden)."""
+
     sesion_id: uuid.UUID
     ejercicio_id: int
     orden: NoNegativo
-    series: Positivo
-    reps: Positivo
+    series: Positivo | None = None
+    reps: Positivo | None = None
+    distancia_m: Distancia | None = None
+    duracion_s: DuracionSeg | None = None
+    calidad: Calidad | None = None
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool = False
 
 
-class SerieSinSesionCreate(SchemaBase):
-    """Una serie dentro del body de POST /sesiones: el `sesion_id` lo
+class BloqueSinSesionCreate(SchemaBase):
+    """Un bloque dentro del body de POST /sesiones: el `sesion_id` lo
     completa el server con el id de la sesion que se acaba de crear."""
 
     ejercicio_id: int
     orden: NoNegativo
-    series: Positivo
-    reps: Positivo
+    series: Positivo | None = None
+    reps: Positivo | None = None
+    distancia_m: Distancia | None = None
+    duracion_s: DuracionSeg | None = None
+    calidad: Calidad | None = None
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool = False
 
 
-class SerieUpdate(SchemaBase):
+class BloqueUpdate(SchemaBase):
     ejercicio_id: int | None = None
     orden: NoNegativo | None = None
     series: Positivo | None = None
     reps: Positivo | None = None
+    distancia_m: Distancia | None = None
+    duracion_s: DuracionSeg | None = None
+    calidad: Calidad | None = None
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool | None = None
 
 
-class SerieRead(ReadBase):
+class BloqueRead(ReadBase):
     id: int
     sesion_id: uuid.UUID
     ejercicio_id: int
     orden: int
-    series: int
-    reps: int
+    series: int | None
+    reps: int | None
+    distancia_m: Distancia | None
+    duracion_s: int | None
+    calidad: int | None
     peso_kg: Peso | None
     rpe: int | None
     dolor_lumbar: bool

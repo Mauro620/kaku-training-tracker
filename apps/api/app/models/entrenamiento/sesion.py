@@ -19,7 +19,14 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.types import BigIntPk, IdempotencyKey, Peso, UsuarioFk, UuidPk
+from app.models.types import (
+    BigIntPk,
+    Distancia,
+    IdempotencyKey,
+    Peso,
+    UsuarioFk,
+    UuidPk,
+)
 
 
 class Sesion(Base):
@@ -56,19 +63,32 @@ class Sesion(Base):
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
 
-    series: Mapped[list["Serie"]] = relationship(
-        back_populates="sesion", order_by="Serie.orden"
+    bloques: Mapped[list["Bloque"]] = relationship(
+        back_populates="sesion", order_by="Bloque.orden"
     )
     partido: Mapped["Partido | None"] = relationship(back_populates="sesion")
 
 
-class Serie(Base):
-    __tablename__ = "serie"
+class Bloque(Base):
+    """Antes `serie`: "N series x M reps" no describe un sprint ni un
+    control tecnico. Que campos aplican los determina
+    `ejercicio.tipo_medicion`, validado en el service (REGLAS_NEGOCIO §15)."""
+
+    __tablename__ = "bloque"
     __table_args__ = (
         UniqueConstraint("sesion_id", "orden"),
         CheckConstraint("rpe IS NULL OR rpe BETWEEN 1 AND 10", name="rpe_rango"),
-        CheckConstraint("series > 0", name="series_positivas"),
-        CheckConstraint("reps > 0", name="reps_positivas"),
+        CheckConstraint("series IS NULL OR series > 0", name="series_positivas"),
+        CheckConstraint("reps IS NULL OR reps > 0", name="reps_positivas"),
+        CheckConstraint(
+            "distancia_m IS NULL OR distancia_m > 0", name="distancia_m_positiva"
+        ),
+        CheckConstraint(
+            "duracion_s IS NULL OR duracion_s > 0", name="duracion_s_positiva"
+        ),
+        CheckConstraint(
+            "calidad IS NULL OR calidad BETWEEN 1 AND 5", name="calidad_rango"
+        ),
     )
 
     id: Mapped[BigIntPk]
@@ -79,15 +99,18 @@ class Serie(Base):
         ForeignKey("ejercicio.id"), nullable=False
     )
     orden: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    series: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    reps: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    series: Mapped[int | None] = mapped_column(SmallInteger)
+    reps: Mapped[int | None] = mapped_column(SmallInteger)
+    distancia_m: Mapped[Distancia | None]
+    duracion_s: Mapped[int | None] = mapped_column(Integer)
+    calidad: Mapped[int | None] = mapped_column(SmallInteger)
     peso_kg: Mapped[Peso | None]
     rpe: Mapped[int | None] = mapped_column(SmallInteger)
     dolor_lumbar: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
 
-    sesion: Mapped[Sesion] = relationship(back_populates="series")
+    sesion: Mapped[Sesion] = relationship(back_populates="bloques")
 
 
 class Partido(Base):
@@ -120,4 +143,4 @@ class Partido(Base):
     sesion: Mapped[Sesion] = relationship(back_populates="partido")
 
 
-__all__ = ["Partido", "Serie", "Sesion"]
+__all__ = ["Bloque", "Partido", "Sesion"]

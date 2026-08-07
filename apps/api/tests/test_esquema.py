@@ -17,13 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     Alimento,
+    Bloque,
     Ejercicio,
     Habito,
     Molestia,
     Parametro,
     RegistroBienestar,
     RegistroSueno,
-    Serie,
     Sesion,
     TipoSesion,
     Usuario,
@@ -252,7 +252,7 @@ async def test_rechaza_intensidad_de_molestia_fuera_de_1_a_10(
         await sesion.commit()
 
 
-async def test_rechaza_rpe_de_serie_fuera_de_rango(sesion: AsyncSession) -> None:
+async def test_rechaza_rpe_de_bloque_fuera_de_rango(sesion: AsyncSession) -> None:
     usuario_id, tipo_sesion_id = await _ids_base(sesion)
     entrenamiento = Sesion(
         usuario_id=usuario_id,
@@ -267,7 +267,7 @@ async def test_rechaza_rpe_de_serie_fuera_de_rango(sesion: AsyncSession) -> None
 
     ejercicio_id = await sesion.scalar(select(Ejercicio.id))
     sesion.add(
-        Serie(
+        Bloque(
             sesion_id=entrenamiento.id,
             ejercicio_id=ejercicio_id,
             orden=1,

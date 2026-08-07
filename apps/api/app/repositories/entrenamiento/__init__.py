@@ -1,12 +1,16 @@
+from app.repositories.catalogo.ejercicio import crear as crear_ejercicio
 from app.repositories.catalogo.ejercicio import listar as listar_ejercicios
+from app.repositories.catalogo.ejercicio import (
+    listar_por_ids as listar_ejercicios_por_ids,
+)
 from app.repositories.catalogo.tipo_sesion import listar as listar_tipos_sesion
 from app.repositories.catalogo.zona_corporal import listar as listar_zonas_corporales
 from app.repositories.entrenamiento import ciclo as _ciclo
 from app.repositories.entrenamiento import ciclo_semana as _ciclo_semana
 from app.repositories.entrenamiento import composicion as _composicion
 from app.repositories.entrenamiento import plan as _plan
-from app.repositories.entrenamiento.serie import crear as crear_serie
-from app.repositories.entrenamiento.serie_plan import crear as crear_serie_plan
+from app.repositories.entrenamiento.bloque import crear as crear_bloque
+from app.repositories.entrenamiento.bloque_plan import crear as crear_bloque_plan
 from app.repositories.entrenamiento.sesion import (
     contar_por_tipo_en_rango as contar_sesiones_por_tipo_en_rango,
 )
@@ -44,16 +48,18 @@ listar_planes_candidatos_de_fecha = _plan.listar_candidatos_de_fecha
 __all__ = [
     "cerrar_ciclo",
     "contar_sesiones_por_tipo_en_rango",
+    "crear_bloque",
+    "crear_bloque_plan",
     "crear_ciclo",
     "crear_ciclo_semana",
-    "crear_serie",
-    "crear_serie_plan",
+    "crear_ejercicio",
     "crear_sesion",
     "crear_sesion_plan",
     "listar_ciclo_semanas_por_ciclo",
     "listar_ciclos_por_usuario",
     "listar_composicion_por_semana",
     "listar_ejercicios",
+    "listar_ejercicios_por_ids",
     "listar_fechas_de_demanda_en_rango",
     "listar_fechas_por_tipo_en_rango",
     "listar_planes_candidatos_de_fecha",
