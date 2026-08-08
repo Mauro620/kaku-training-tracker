@@ -32,6 +32,9 @@ jobs:
       POSTGRES_USER: rendimiento
       POSTGRES_PASSWORD: rendimiento
       SEED_USUARIO_NOMBRE: CI
+      SEED_USUARIO_EMAIL: ci@example.com
+      SEED_USUARIO_PASSWORD: ci-solo-para-ci-no-usar-en-prod
+      JWT_SECRET_KEY: clave-de-ci-no-usar-en-produccion
 
     steps:
       - uses: actions/checkout@v4
