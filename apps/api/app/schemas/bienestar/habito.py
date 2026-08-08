@@ -19,6 +19,15 @@ class HabitoUpdate(SchemaBase):
     orden: NoNegativo | None = None
 
 
+class HabitoReordenar(SchemaBase):
+    """El cliente manda la lista en el orden que quiere. El server
+    actualiza el campo `orden` de cada habito segun la posicion en
+    la lista. Items que no esten en la lista mantienen su orden
+    anterior (no los borramos)."""
+
+    ids: list[int] = Field(min_length=1)
+
+
 class HabitoRead(ReadBase):
     id: int
     usuario_id: uuid.UUID

@@ -12,7 +12,7 @@ export class ApiError extends Error {
 }
 
 type Opciones = {
-  metodo?: "GET" | "POST" | "PUT" | "DELETE";
+  metodo?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   cuerpo?: unknown;
   parametros?: Record<string, string | number | undefined>;
   // Si false, no adjunta el access token (usado para /auth/login).
@@ -110,6 +110,8 @@ export const api = {
     llamar<T>(path, { ...opciones, metodo: "POST", cuerpo }),
   put: <T>(path: string, cuerpo: unknown, opciones?: Omit<Opciones, "metodo" | "cuerpo">) =>
     llamar<T>(path, { ...opciones, metodo: "PUT", cuerpo }),
+  patch: <T>(path: string, cuerpo: unknown, opciones?: Omit<Opciones, "metodo" | "cuerpo">) =>
+    llamar<T>(path, { ...opciones, metodo: "PATCH", cuerpo }),
   delete: <T>(path: string, opciones?: Omit<Opciones, "metodo" | "cuerpo">) =>
     llamar<T>(path, { ...opciones, metodo: "DELETE" }),
 };

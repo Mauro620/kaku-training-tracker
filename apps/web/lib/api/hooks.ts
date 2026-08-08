@@ -281,6 +281,77 @@ export function useHabitosDeHoy(fecha: string) {
   });
 }
 
+// ---------- D4: CRUD de habitos en Ajustes ----------
+// QueryKey distinta de ["habitos"] (que devuelve solo los activos).
+// Ajustes necesita ver archivados para permitir "desarchivar" y
+// mostrar el historial.
+
+export function useHabitosAjustes() {
+  const qc = useQueryClient();
+  const listar = useQuery({
+    queryKey: ["habitos", "all"],
+    queryFn: () => api.get<Habito[]>("/habitos/all"),
+  });
+
+  const crear = useMutation({
+    mutationFn: (cuerpo: { nombre: string }) =>
+      api.post<Habito>("/habitos", cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["habitos"] });
+      void qc.invalidateQueries({ queryKey: ["habitos", "all"] });
+    },
+  });
+
+  const actualizar = useMutation({
+    mutationFn: (args: { id: number; cuerpo: { nombre?: string; activo?: boolean; orden?: number } }) =>
+      api.patch<Habito>(`/habitos/${args.id}`, args.cuerpo),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["habitos"] });
+      void qc.invalidateQueries({ queryKey: ["habitos", "all"] });
+    },
+  });
+
+  const reordenar = useMutation({
+    mutationFn: (ids: number[]) =>
+      api.put<void>("/habitos/reordenar", { ids }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["habitos"] });
+      void qc.invalidateQueries({ queryKey: ["habitos", "all"] });
+    },
+  });
+
+  function obtenerError(err: unknown): string | null {
+    if (!err) return null;
+    if (err instanceof ApiError) return err.message;
+    if (err instanceof Error) return err.message;
+    return "Error desconocido";
+  }
+
+  return {
+    habitos: listar.data ?? [],
+    cargando: listar.isLoading,
+    error: obtenerError(listar.error),
+    crear: (nombre: string) => crear.mutateAsync({ nombre }),
+    actualizar: (id: number, cuerpo: { nombre?: string; activo?: boolean; orden?: number }) =>
+      actualizar.mutateAsync({ id, cuerpo }),
+    archivar: (id: number) => actualizar.mutateAsync({ id, cuerpo: { activo: false } }),
+    reordenar: (id: number, dir: "arriba" | "abajo", lista: Habito[]) => {
+      const idx = lista.findIndex((h) => h.id === id);
+      if (idx === -1) return Promise.resolve();
+      const objetivo = dir === "arriba" ? idx - 1 : idx + 1;
+      if (objetivo < 0 || objetivo >= lista.length) return Promise.resolve();
+      // Swap y persistir el orden completo.
+      const nueva = [...lista];
+      const a = nueva[idx];
+      const b = nueva[objetivo];
+      if (!a || !b) return Promise.resolve();
+      nueva[idx] = b;
+      nueva[objetivo] = a;
+      return reordenar.mutateAsync(nueva.map((h) => h.id));
+    },
+  };
+}
+
 export function useUsuarioActual() {
   return useQuery({
     queryKey: ["usuario", "me"],

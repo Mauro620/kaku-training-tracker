@@ -512,3 +512,106 @@ async def test_cierre_semana_rango_invertido_devuelve_422(
 ) -> None:
     respuesta = await cliente.get("/api/v1/semana?desde=2026-08-07&hasta=2026-08-01")
     assert respuesta.status_code == 422
+
+
+# --------------------------------------- D4: CRUD de habitos (Ajustes) -----
+
+
+async def test_habito_post_crea_habito_y_get_all_lo_incluye(
+    cliente: AsyncClient,
+) -> None:
+    """D4: la pantalla de Ajustes necesita un GET que devuelva todos
+    los habitos (incluyendo archivados) y un POST para crear."""
+    # El seed ya tiene 3 habitos creativos, magnesio, estiramiento.
+    # Crear uno nuevo.
+    r = await cliente.post("/api/v1/habitos", json={"nombre": "vitamina D"})
+    assert r.status_code == 201, r.text
+    nuevo = r.json()
+    assert nuevo["nombre"] == "vitamina D"
+    assert nuevo["activo"] is True
+
+    # /all lo lista.
+    todos = await cliente.get("/api/v1/habitos/all")
+    assert todos.status_code == 200
+    nombres = {h["nombre"] for h in todos.json()}
+    assert "vitamina D" in nombres
+
+
+async def test_habito_post_con_nombre_duplicado_devuelve_422(
+    cliente: AsyncClient,
+) -> None:
+    """La constraint UNIQUE (usuario_id, nombre) actua a nivel DB; el
+    servicio traduce a 422 legible."""
+    r = await cliente.post("/api/v1/habitos", json={"nombre": "Duplicado"})
+    assert r.status_code == 201
+    r2 = await cliente.post("/api/v1/habitos", json={"nombre": "Duplicado"})
+    assert r2.status_code == 422
+    assert "ya existe" in r2.json()["detail"].lower()
+
+
+async def test_habito_patch_archiva_con_activo_false(
+    cliente: AsyncClient,
+) -> None:
+    """D3: archivar es `activo = false`, NUNCA DELETE. El GET /habitos
+    (activos) NO lo muestra, pero GET /all SI."""
+    crear = await cliente.post("/api/v1/habitos", json={"nombre": "omega 3"})
+    habito_id = crear.json()["id"]
+
+    # Archivar.
+    r = await cliente.patch(f"/api/v1/habitos/{habito_id}", json={"activo": False})
+    assert r.status_code == 200
+    assert r.json()["activo"] is False
+
+    # GET / no lo ve.
+    activos = await cliente.get("/api/v1/habitos")
+    ids_activos = {h["id"] for h in activos.json()}
+    assert habito_id not in ids_activos
+
+    # GET /all SI lo ve.
+    todos = await cliente.get("/api/v1/habitos/all")
+    ids_todos = {h["id"] for h in todos.json()}
+    assert habito_id in ids_todos
+
+
+async def test_habito_patch_desarchivar_con_activo_true(
+    cliente: AsyncClient,
+) -> None:
+    """Roundtrip del archivado: false -> true vuelve a mostrar el habito."""
+    crear = await cliente.post("/api/v1/habitos", json={"nombre": "a"})
+    habito_id = crear.json()["id"]
+    await cliente.patch(f"/api/v1/habitos/{habito_id}", json={"activo": False})
+    r = await cliente.patch(f"/api/v1/habitos/{habito_id}", json={"activo": True})
+    assert r.status_code == 200
+    assert r.json()["activo"] is True
+    activos = await cliente.get("/api/v1/habitos")
+    assert habito_id in {h["id"] for h in activos.json()}
+
+
+async def test_habito_reordenar_asigna_orden_por_posicion(
+    cliente: AsyncClient,
+) -> None:
+    """PUT /habitos/reordenar: el array `ids` define el orden. El primer
+    id tiene orden=0, el segundo orden=1, etc."""
+    a = await cliente.post("/api/v1/habitos", json={"nombre": "a"})
+    b = await cliente.post("/api/v1/habitos", json={"nombre": "b"})
+    c = await cliente.post("/api/v1/habitos", json={"nombre": "c"})
+    ids_a, ids_b, ids_c = a.json()["id"], b.json()["id"], c.json()["id"]
+
+    # Reordeno: c primero, a segundo, b tercero.
+    r = await cliente.put(
+        "/api/v1/habitos/reordenar", json={"ids": [ids_c, ids_a, ids_b]}
+    )
+    assert r.status_code == 204
+
+    todos = await cliente.get("/api/v1/habitos/all")
+    por_id = {h["id"]: h for h in todos.json() if h["id"] in (ids_a, ids_b, ids_c)}
+    assert por_id[ids_c]["orden"] == 0
+    assert por_id[ids_a]["orden"] == 1
+    assert por_id[ids_b]["orden"] == 2
+
+
+async def test_habito_patch_de_id_inexistente_devuelve_404(
+    cliente: AsyncClient,
+) -> None:
+    r = await cliente.patch("/api/v1/habitos/9999", json={"nombre": "x"})
+    assert r.status_code == 404

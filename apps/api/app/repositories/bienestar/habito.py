@@ -23,6 +23,52 @@ async def listar_activos(session: AsyncSession, usuario_id: uuid.UUID) -> list[H
     )
 
 
+async def listar_todos(session: AsyncSession, usuario_id: uuid.UUID) -> list[Habito]:
+    """Pantalla de Ajustes: incluye archivados para mostrar el historial
+    y permitir 'desarchivar' (volver a activo=true). Orden: activos
+    primero por orden, despues archivados por nombre."""
+    return list(
+        (
+            await session.scalars(
+                select(Habito)
+                .where(Habito.usuario_id == usuario_id)
+                .order_by(Habito.activo.desc(), Habito.orden, Habito.nombre)
+            )
+        ).all()
+    )
+
+
+async def crear(
+    session: AsyncSession, usuario_id: uuid.UUID, *, nombre: str, orden: int
+) -> Habito:
+    """Crea un habito nuevo del usuario. El nombre no puede estar
+    repetido por (usuario_id, nombre) (constraint UNIQUE)."""
+    habito = Habito(usuario_id=usuario_id, nombre=nombre, orden=orden)
+    session.add(habito)
+    await session.flush()
+    return habito
+
+
+async def actualizar(
+    session: AsyncSession,
+    habito: Habito,
+    *,
+    nombre: str | None = None,
+    activo: bool | None = None,
+    orden: int | None = None,
+) -> Habito:
+    """Modifica campos de un habito. Si activo=False, se archiva (D3 del
+    prompt de revision UI: archivado NUNCA es DELETE)."""
+    if nombre is not None:
+        habito.nombre = nombre
+    if activo is not None:
+        habito.activo = activo
+    if orden is not None:
+        habito.orden = orden
+    await session.flush()
+    return habito
+
+
 async def obtener_habito(
     session: AsyncSession, usuario_id: uuid.UUID, habito_id: int
 ) -> Habito | None:
