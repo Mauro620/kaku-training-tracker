@@ -14,6 +14,9 @@ import type { EventoOutbox } from "@/lib/sync/outbox";
 function sincronizarYRefrescar(qc: QueryClient, keys: (string | number | null)[][]): void {
   void procesarCola(endpointDesdeApi(api)).then(() => {
     for (const key of keys) void qc.invalidateQueries({ queryKey: key });
+    // C: la grilla de cumplimiento semanal depende de todas las
+    // dimensiones; refresca cuando cualquier captura cambie.
+    void qc.invalidateQueries({ queryKey: ["cierre-semana"] });
   });
 }
 
@@ -181,6 +184,70 @@ export function useSuenoDeHoy(fecha: string) {
   });
 }
 
+// ---------- C: cumplimiento semanal (cerrar semana) ----------
+
+export type CierreSuenoDia = {
+  horas: string | null;
+  objetivo_h: string;
+};
+
+export type CierreSesionDia = {
+  registrada: boolean;
+};
+
+export type CierreHidratacionDia = {
+  ml_totales: number | null;
+  objetivo_ml: number;
+};
+
+export type CierreHabitosDia = {
+  marcados: number;
+  activos: number;
+};
+
+export type CierreBienestarDia = {
+  registrado: boolean;
+};
+
+export type CierreDia = {
+  fecha: string;
+  sueno: CierreSuenoDia;
+  sesion: CierreSesionDia;
+  hidratacion: CierreHidratacionDia;
+  habitos: CierreHabitosDia;
+  bienestar: CierreBienestarDia;
+};
+
+export type CierreSemana = {
+  dias: CierreDia[];
+};
+
+/** Devuelve la data cruda por dia de las 5 dimensiones. La UI
+ * calcula los flags cumplidos/incumplidos con los thresholds que
+ * prefiera (>= objetivo, >= 80% del objetivo, etc.). Por ahora la
+ * regla es >= objetivo. */
+export function useCierreSemana(desde: string, hasta: string) {
+  return useQuery({
+    queryKey: ["cierre-semana", desde, hasta],
+    queryFn: () =>
+      api.get<CierreSemana>(
+        `/semana?desde=${desde}&hasta=${hasta}`,
+      ),
+    staleTime: 60 * 1000,
+  });
+}
+
+// H3 de la revision de UI: historial de 14 dias para la grilla y la
+// deuda 7d. staleTime corto: la UI lo invalida al guardar un sueno nuevo
+// (ver useUpsertSueno.onSuccess abajo), no recachea en cada navegacion.
+export function useSuenoUltimosNDias(dias: number) {
+  return useQuery({
+    queryKey: ["sueno", "ultimos", dias],
+    queryFn: () => api.get<RegistroSueno[]>(`/sueno/ultimos?dias=${dias}`),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useBienestarDeHoy(fecha: string) {
   return useQuery({
     queryKey: ["bienestar", fecha],
@@ -248,6 +315,9 @@ export function useUpsertSueno(fecha: string) {
         cuerpo: { fecha, ...cuerpo, origen: "manual", idempotency_key: crypto.randomUUID() },
       };
       await encolar(evento);
+      // Tambien invalida la lista de N dias: la grilla del historial y la
+      // deuda 7d dependen de este row.
+      void qc.invalidateQueries({ queryKey: ["sueno", "ultimos"] });
       sincronizarYRefrescar(qc, [["sueno", fecha]]);
     },
   });

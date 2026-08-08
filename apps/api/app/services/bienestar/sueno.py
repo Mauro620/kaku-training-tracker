@@ -52,3 +52,13 @@ async def obtener(
     if registro is None:
         raise RecursoNoEncontradoError(f"sin registro de sueño para {fecha}")
     return registro
+
+
+async def listar_ultimos_n_dias(
+    session: AsyncSession, usuario_id: uuid.UUID, n: int, hoy: date
+) -> list[RegistroSueno]:
+    """Devuelve los ultimos `n` dias contando desde `hoy` hacia atras
+    (inclusivo). El servicio calcula el rango, no la UI: la fecha de
+    registro del backend es la unica que cuenta para esto."""
+    desde = date.fromordinal(hoy.toordinal() - (n - 1))
+    return await repo.listar_desde_hasta(session, usuario_id, desde, hoy)

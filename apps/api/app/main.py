@@ -10,6 +10,7 @@ from app.api.v1.routers import (
     bienestar_router,
     catalogos_router,
     ciclos_router,
+    cierre_semana_router,
     comidas_router,
     despensa_router,
     entrenamiento_router,
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     v1.include_router(comidas_router)
     v1.include_router(despensa_router)
     v1.include_router(evaluacion_router)
+    v1.include_router(cierre_semana_router)
     app.include_router(v1)
 
     return app

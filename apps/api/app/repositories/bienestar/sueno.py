@@ -120,3 +120,28 @@ async def obtener_por_fecha(
             )
         ),
     )
+
+
+async def listar_desde_hasta(
+    session: AsyncSession,
+    usuario_id: uuid.UUID,
+    desde: date,
+    hasta: date,
+) -> list[RegistroSueno]:
+    """Para los graficos de la pantalla Hoy (H3 de la revision de UI):
+    14 dias de barras y deuda 7d. Ordenado del mas reciente al mas viejo.
+
+    Devuelve solo dias que tienen fila: los dias sin registro simplemente
+    no aparecen. La UI rellena los huecos visualmente (con un "Sin
+    registro" explicito) para no falsear el ritmo de sueno.
+    """
+    resultado = await session.scalars(
+        select(RegistroSueno)
+        .where(
+            RegistroSueno.usuario_id == usuario_id,
+            RegistroSueno.fecha >= desde,
+            RegistroSueno.fecha <= hasta,
+        )
+        .order_by(RegistroSueno.fecha.desc())
+    )
+    return list(resultado.all())

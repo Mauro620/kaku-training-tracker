@@ -123,9 +123,14 @@ export function BibliotecaRecetas() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-[11px] tracking-widest uppercase text-text-secondary">
-              Ingredientes
-            </label>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] tracking-widest uppercase text-text-secondary">
+                Ingredientes
+              </label>
+              <span className="text-[11px] text-text-secondary">
+                Cantidad en gramos.
+              </span>
+            </div>
             {items.map((it, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <select
@@ -150,7 +155,7 @@ export function BibliotecaRecetas() {
                 <input
                   type="number"
                   inputMode="numeric"
-                  placeholder="g"
+                  placeholder="ej. 100"
                   value={it.cantidad_g}
                   onChange={(e) => {
                     const copia = [...items];

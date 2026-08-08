@@ -22,14 +22,8 @@ COPY . .
 RUN uv sync --frozen
 
 EXPOSE 8000
-# alembic upgrade head antes de arrancar: Railway (y la mayoria de PaaS) no
-# tiene una release phase separada como Heroku, asi que el propio arranque
-# del contenedor es el unico lugar garantizado de correr antes de servir
-# trafico. Es idempotente (no-op si ya esta en head), seguro en cada boot
-# y en local (docker-compose ya espera a que el db este healthy).
-#
-# Railway inyecta PORT dinamico y espera que el proceso escuche ahi;
-# docker-compose local no lo setea, por eso el fallback a 8000 (el mismo
-# puerto que docker-compose ya mapea). Forma shell, no exec, para que
-# ${PORT:-8000} se expanda.
-CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Railway (y otros PaaS) inyectan PORT dinamico y esperan que el proceso
+# escuche ahi; docker-compose local no lo setea, por eso el fallback a 8000
+# (el mismo puerto que docker-compose ya mapea). Forma shell, no exec, para
+# que ${PORT:-8000} se expanda.
+CMD ["sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
