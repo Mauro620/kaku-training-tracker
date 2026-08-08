@@ -79,6 +79,55 @@ async def test_leer_sueno_de_fecha_sin_registro_devuelve_404(
     assert respuesta.status_code == 404
 
 
+async def test_sueno_ultimos_n_dias_devuelve_ventana(
+    cliente: AsyncClient,
+) -> None:
+    """H3 de la revision de UI: la pantalla Hoy pide 14 dias para graficar
+    la grilla y calcular la deuda 7d. El endpoint acepta un query param
+    `dias` (default 14, max 60) y devuelve los registros del rango, ordenados
+    del mas reciente al mas viejo."""
+    # 3 noches, cada una con su propia fecha de despertar (el modelo
+    # es unique por (usuario_id, fecha_del_despertar)).
+    noches = [
+        ("2026-08-01", "2026-07-31T23:30:00-05:00", "2026-08-01T07:00:00-05:00"),
+        ("2026-08-02", "2026-08-01T23:30:00-05:00", "2026-08-02T07:00:00-05:00"),
+        ("2026-08-04", "2026-08-03T23:30:00-05:00", "2026-08-04T07:00:00-05:00"),
+    ]
+    for fecha, inicio, fin in noches:
+        await cliente.post(
+            "/api/v1/sueno",
+            json={
+                "fecha": fecha,
+                "inicio": inicio,
+                "fin": fin,
+                "celular_fuera": True,
+            },
+        )
+
+    # Pido 14 dias, solo 3 deberian aparecer (solo los que tienen fila).
+    respuesta = await cliente.get("/api/v1/sueno/ultimos?dias=14")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert isinstance(cuerpo, list)
+    assert len(cuerpo) == 3
+    # Orden: descendente (mas reciente primero).
+    assert cuerpo[0]["fecha"] == "2026-08-04"
+    assert cuerpo[1]["fecha"] == "2026-08-02"
+    assert cuerpo[2]["fecha"] == "2026-08-01"
+    # Cada uno trae horas_sueno calculado por la base.
+    for item in cuerpo:
+        assert item["horas_sueno"] == "7.50"
+
+
+async def test_sueno_ultimos_dias_param_valida_rango(
+    cliente: AsyncClient,
+) -> None:
+    """El parametro `dias` tiene cota 1..60; fuera de rango es 422."""
+    assert (await cliente.get("/api/v1/sueno/ultimos?dias=0")).status_code == 422
+    assert (await cliente.get("/api/v1/sueno/ultimos?dias=61")).status_code == 422
+    assert (await cliente.get("/api/v1/sueno/ultimos?dias=14")).status_code == 200
+
+
 # ------------------------------------------------------------ bienestar ----
 
 

@@ -181,6 +181,17 @@ export function useSuenoDeHoy(fecha: string) {
   });
 }
 
+// H3 de la revision de UI: historial de 14 dias para la grilla y la
+// deuda 7d. staleTime corto: la UI lo invalida al guardar un sueno nuevo
+// (ver useUpsertSueno.onSuccess abajo), no recachea en cada navegacion.
+export function useSuenoUltimosNDias(dias: number) {
+  return useQuery({
+    queryKey: ["sueno", "ultimos", dias],
+    queryFn: () => api.get<RegistroSueno[]>(`/sueno/ultimos?dias=${dias}`),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useBienestarDeHoy(fecha: string) {
   return useQuery({
     queryKey: ["bienestar", fecha],
@@ -248,6 +259,9 @@ export function useUpsertSueno(fecha: string) {
         cuerpo: { fecha, ...cuerpo, origen: "manual", idempotency_key: crypto.randomUUID() },
       };
       await encolar(evento);
+      // Tambien invalida la lista de N dias: la grilla del historial y la
+      // deuda 7d dependen de este row.
+      void qc.invalidateQueries({ queryKey: ["sueno", "ultimos"] });
       sincronizarYRefrescar(qc, [["sueno", fecha]]);
     },
   });

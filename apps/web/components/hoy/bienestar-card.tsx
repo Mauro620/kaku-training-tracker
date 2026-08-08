@@ -68,7 +68,7 @@ export function BienestarCard({ fecha }: Props) {
     : (data?.hooper ?? null);
 
   return (
-    <BentoCard ancho="half">
+    <BentoCard>
       <header className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-normal tracking-widest uppercase text-text-secondary">
           Bienestar
@@ -84,6 +84,9 @@ export function BienestarCard({ fecha }: Props) {
           </span>
         </div>
       </header>
+      <p className="mb-4 text-[11px] text-text-secondary">
+        1 bien · 5 mal. La direccion es contraintuitiva: mas alto es peor.
+      </p>
 
       {isLoading || borrador === null ? (
         <div className="h-32" />
