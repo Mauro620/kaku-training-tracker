@@ -13,6 +13,7 @@ from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.bienestar import router as bienestar_router
 from app.api.v1.routers.catalogos import router as catalogos_router
 from app.api.v1.routers.ciclos import router as ciclos_router
+from app.api.v1.routers.cierre_semana import router as cierre_semana_router
 from app.api.v1.routers.comidas import router as comidas_router
 from app.api.v1.routers.despensa import router as despensa_router
 from app.api.v1.routers.entrenamiento import router as entrenamiento_router
@@ -32,6 +33,7 @@ __all__ = [
     "bienestar_router",
     "catalogos_router",
     "ciclos_router",
+    "cierre_semana_router",
     "comidas_router",
     "despensa_router",
     "entrenamiento_router",

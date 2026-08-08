@@ -456,9 +456,9 @@ async def test_macros_desayuno_3_items_con_gramos_reales(
             "fecha": "2026-08-09",
             "momento": "desayuno",
             "items": [
-                {"alimento_id": 10, "cantidad_g": "80"},   # Avena
-                {"alimento_id": 1, "cantidad_g": "100"},   # Huevo entero
-                {"alimento_id": 23, "cantidad_g": "120"},   # Banano
+                {"alimento_id": 10, "cantidad_g": "80"},  # Avena
+                {"alimento_id": 1, "cantidad_g": "100"},  # Huevo entero
+                {"alimento_id": 23, "cantidad_g": "120"},  # Banano
             ],
             "idempotency_key": str(uuid4()),
         },

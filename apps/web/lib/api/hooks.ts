@@ -14,6 +14,9 @@ import type { EventoOutbox } from "@/lib/sync/outbox";
 function sincronizarYRefrescar(qc: QueryClient, keys: (string | number | null)[][]): void {
   void procesarCola(endpointDesdeApi(api)).then(() => {
     for (const key of keys) void qc.invalidateQueries({ queryKey: key });
+    // C: la grilla de cumplimiento semanal depende de todas las
+    // dimensiones; refresca cuando cualquier captura cambie.
+    void qc.invalidateQueries({ queryKey: ["cierre-semana"] });
   });
 }
 
@@ -178,6 +181,59 @@ export function useSuenoDeHoy(fecha: string) {
       if (error instanceof ApiError && error.status === 404) return false;
       return failureCount < 1;
     },
+  });
+}
+
+// ---------- C: cumplimiento semanal (cerrar semana) ----------
+
+export type CierreSuenoDia = {
+  horas: string | null;
+  objetivo_h: string;
+};
+
+export type CierreSesionDia = {
+  registrada: boolean;
+};
+
+export type CierreHidratacionDia = {
+  ml_totales: number | null;
+  objetivo_ml: number;
+};
+
+export type CierreHabitosDia = {
+  marcados: number;
+  activos: number;
+};
+
+export type CierreBienestarDia = {
+  registrado: boolean;
+};
+
+export type CierreDia = {
+  fecha: string;
+  sueno: CierreSuenoDia;
+  sesion: CierreSesionDia;
+  hidratacion: CierreHidratacionDia;
+  habitos: CierreHabitosDia;
+  bienestar: CierreBienestarDia;
+};
+
+export type CierreSemana = {
+  dias: CierreDia[];
+};
+
+/** Devuelve la data cruda por dia de las 5 dimensiones. La UI
+ * calcula los flags cumplidos/incumplidos con los thresholds que
+ * prefiera (>= objetivo, >= 80% del objetivo, etc.). Por ahora la
+ * regla es >= objetivo. */
+export function useCierreSemana(desde: string, hasta: string) {
+  return useQuery({
+    queryKey: ["cierre-semana", desde, hasta],
+    queryFn: () =>
+      api.get<CierreSemana>(
+        `/semana?desde=${desde}&hasta=${hasta}`,
+      ),
+    staleTime: 60 * 1000,
   });
 }
 

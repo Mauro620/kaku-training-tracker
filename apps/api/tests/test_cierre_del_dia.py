@@ -423,3 +423,92 @@ async def test_bienestar_sin_idempotency_key_sigue_siendo_upsert(
     )
     assert total is not None
     assert total.idempotency_key is None
+
+
+# ----------------------------------------- Cierre de semana (C) -----
+
+
+async def test_cierre_semana_devuelve_data_cruda_por_dia(
+    cliente: AsyncClient,
+) -> None:
+    """C de la revision de UI: el endpoint devuelve la data cruda de
+    cada una de las 5 dimensiones por dia. La UI arma el grid 5x7 con
+    flags cumplidos/incumplidos/sin-dato a partir de estos datos."""
+    # Creo un registro de cada dimension en un dia conocido.
+    fecha = "2026-08-04"
+    # Sueno
+    await cliente.post(
+        "/api/v1/sueno",
+        json={
+            "fecha": fecha,
+            "inicio": "2026-08-03T23:30:00-05:00",
+            "fin": "2026-08-04T07:00:00-05:00",
+            "celular_fuera": True,
+        },
+    )
+    # Bienestar
+    await cliente.post(
+        "/api/v1/bienestar",
+        json={
+            "fecha": fecha,
+            "sueno_pobre": 2,
+            "fatiga": 3,
+            "dolor_muscular": 1,
+            "estres": 2,
+        },
+    )
+    # Hidratacion
+    await cliente.post(
+        "/api/v1/hidratacion",
+        json={"fecha": fecha, "cantidad_ml": 3500},
+    )
+    # Sesion
+    await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+            "fecha": fecha,
+            "tipo_sesion_id": 1,
+            "duracion_min": 60,
+            "rpe": 6,
+            "bloques": [],
+        },
+    )
+    respuesta = await cliente.get("/api/v1/semana?desde=2026-08-01&hasta=2026-08-07")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert len(cuerpo["dias"]) == 7
+
+    # El dia 2026-08-04 tiene todos los datos.
+    dia_con_dato = next(d for d in cuerpo["dias"] if d["fecha"] == "2026-08-04")
+    assert float(dia_con_dato["sueno"]["horas"]) == 7.5
+    assert float(dia_con_dato["sueno"]["objetivo_h"]) == 7.0
+    assert dia_con_dato["sesion"]["registrada"] is True
+    assert dia_con_dato["hidratacion"]["ml_totales"] == 3500
+    assert dia_con_dato["hidratacion"]["objetivo_ml"] == 3000
+    assert dia_con_dato["habitos"]["marcados"] == 0
+    assert dia_con_dato["bienestar"]["registrado"] is True
+
+    # Un dia sin datos: todos los null donde corresponda.
+    dia_vacio = next(d for d in cuerpo["dias"] if d["fecha"] == "2026-08-01")
+    assert dia_vacio["sueno"]["horas"] is None
+    assert dia_vacio["sesion"]["registrada"] is False
+    assert dia_vacio["hidratacion"]["ml_totales"] is None
+    assert dia_vacio["bienestar"]["registrado"] is False
+
+
+async def test_cierre_semana_rango_mayor_a_31_dias_devuelve_422(
+    cliente: AsyncClient,
+) -> None:
+    """El cap de 31 dias esta para no tirar queries absurdas; un mes
+    alcanza para esta pantalla."""
+    respuesta = await cliente.get("/api/v1/semana?desde=2026-01-01&hasta=2026-02-15")
+    assert respuesta.status_code == 422
+
+
+async def test_cierre_semana_rango_invertido_devuelve_422(
+    cliente: AsyncClient,
+) -> None:
+    respuesta = await cliente.get("/api/v1/semana?desde=2026-08-07&hasta=2026-08-01")
+    assert respuesta.status_code == 422
