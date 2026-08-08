@@ -187,6 +187,14 @@ function HorasConContexto({
   const horasTexto = horasNum.toFixed(1);
   const rengoBanda = clasificarBanda(horasNum, objetivo);
 
+  const contextoDelta = (() => {
+    if (Math.abs(delta) < 0.05) return "en objetivo";
+    if (delta > 0) {
+      return `${delta.toFixed(1)} sobre objetivo`;
+    }
+    return `${Math.abs(delta).toFixed(1)} bajo objetivo`;
+  })();
+
   return (
     <>
       <div className="flex items-baseline gap-3">
@@ -195,7 +203,7 @@ function HorasConContexto({
           <span className="ml-2 text-base font-medium text-text-secondary">h</span>
         </p>
         <p className="text-[13px] text-text-secondary">
-          {Math.abs(delta).toFixed(1)} {delta >= 0 ? "sobre" : "bajo"} objetivo
+          {contextoDelta}
           <span className="text-text-secondary"> · {objetivo} h</span>
         </p>
       </div>
@@ -231,8 +239,9 @@ function BarraProgreso({
   );
 }
 
-/** "Te acostaste a las 23:30, tu media es 22:50". Calculado contra la
- * propia serie, no contra un patron externo.
+/** "Te acostaste a las 01:32, tu media es 00:30". Distancia angular:
+ * la diferencia se mide en el reloj de 24h, asi que un inicio a la 01:32
+ * con media 23:30 no es "22 horas antes" sino "2 horas despues".
  */
 function ContextoHora({
   inicio,
@@ -256,17 +265,23 @@ function ContextoHora({
   const inicioMin = toMinutos(inicio);
   if (inicioMin === null) return null;
 
-  const diffMin = Math.round(inicioMin - media);
+  // Distancia angular sobre el reloj de 24h. Si la diferencia lineal
+  // es > 12h, el atajo mas corto es envolver el reloj por el otro lado.
+  let diffMin = inicioMin - media;
+  if (diffMin > 12 * 60) diffMin -= 24 * 60;
+  else if (diffMin < -12 * 60) diffMin += 24 * 60;
+
+  const absMin = Math.abs(Math.round(diffMin));
   const direccion = diffMin > 0 ? "despues" : "antes";
   const diffTexto =
-    Math.abs(diffMin) < 1
+    absMin < 1
       ? "a tu hora habitual"
-      : `${Math.abs(diffMin)} min ${direccion}`;
+      : `${absMin} min ${direccion}`;
 
   return (
     <p className="mt-4 text-[13px] text-text-secondary">
-      Te acostaste a las {inicio} · {diffTexto} (
-      <span className="text-text-primary">media {toHHMM(media)}</span>)
+      Te acostaste a las {inicio} · {diffTexto} · media{" "}
+      <span className="text-text-primary">{toHHMM(media)}</span>
     </p>
   );
 }
@@ -308,6 +323,9 @@ function BarrasHistorial({
     return Math.ceil(max);
   }, [rango, objetivo]);
 
+  const diasConDato = rango.filter((r) => r.registro).length;
+  const diasSinDato = rango.length - diasConDato;
+
   return (
     <div className="mt-6">
       <p className="mb-2 text-[11px] tracking-widest uppercase text-text-secondary">
@@ -316,6 +334,8 @@ function BarrasHistorial({
       <div className="flex items-end gap-1 h-20">
         {rango.map(({ fecha: d, registro }) => {
           const horas = registro ? Number(registro.horas_sueno) : null;
+          // B1: dias sin dato renderizan una ranura tenue de altura minima,
+          // no ausencia. Asi el eje se lee completo desde el primer dia.
           const altura = horas === null ? "h-1" : `${Math.max(8, (horas / maxHoras) * 80)}px`;
           const banda = horas === null ? "vacio" : clasificarBanda(horas, objetivo);
           const color =
@@ -340,6 +360,11 @@ function BarrasHistorial({
           );
         })}
       </div>
+      {diasSinDato > 0 && (
+        <p className="mt-2 text-[11px] text-text-secondary">
+          {diasSinDato} de {dias} dias sin registro.
+        </p>
+      )}
     </div>
   );
 }
@@ -374,18 +399,17 @@ function DeudaAcumulada({
   if (deuda === 0) {
     return (
       <p className="mt-4 text-[13px] text-text-secondary">
-        Deuda 7d 0 h · al dia con el objetivo.
+        Deuda 7d: 0 h · al dia con el objetivo.
       </p>
     );
   }
 
   return (
     <p className="mt-4 text-[13px] text-text-secondary">
-      Deuda 7d{" "}
+      Deuda 7d:{" "}
       <span className="font-bold text-text-primary tabular">
         {deuda.toFixed(1)} h
-      </span>{" "}
-      · te faltan {deuda.toFixed(1)} h esta semana.
+      </span>
     </p>
   );
 }

@@ -2,7 +2,10 @@ type Opcion<T> = { valor: T; etiqueta?: string };
 
 type Props<T extends string | number> = {
   opciones: ReadonlyArray<Opcion<T>>;
-  valor: T;
+  /** Puede ser null para representar "aun no hay seleccion" (A1 de la
+   * revision de UI: los sliders de bienestar renderizan vacios antes del
+   * primer toque). */
+  valor: T | null;
   onChange: (siguiente: T) => void;
   /** Etiqueta accesible del grupo, ej. "Calidad de sueño". */
   label: string;

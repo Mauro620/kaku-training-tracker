@@ -17,6 +17,15 @@ PARAMETROS: tuple[tuple[str, Decimal, str | None, str], ...] = (
         "(alguien que se acuesta después de medianoche no debería ver la "
         "pantalla Hoy en blanco antes de dormir)",
     ),
+    # ---------- Hidratacion ----------
+    (
+        "hidratacion_objetivo_ml",
+        Decimal("3000"),
+        "ml",
+        "Objetivo diario de agua (4 termos de 750 ml). El usuario tiene "
+        "rangos personales en usuario.agua_objetivo_ml_min/max, pero aca "
+        "va un valor global de referencia para la UI de Hoy.",
+    ),
     # ---------- ACWR (REGLAS_NEGOCIO §3) ----------
     ("acwr_min_seguro", Decimal("0.8"), None, "Piso de la zona segura de ACWR"),
     ("acwr_max_seguro", Decimal("1.3"), None, "Techo de la zona segura de ACWR"),
