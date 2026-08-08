@@ -7,10 +7,20 @@ arrancar.
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, PostgresDsn
+from pydantic import Field, PostgresDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _con_driver_async(url: str) -> str:
+    """Railway (y la mayoría de proveedores) da la URL como
+    `postgresql://...` o `postgres://...`; `create_async_engine` necesita
+    el driver asyncpg explícito en el scheme."""
+    for prefijo in ("postgresql://", "postgres://"):
+        if url.startswith(prefijo):
+            return "postgresql+asyncpg://" + url[len(prefijo) :]
+    return url
 
 
 def _raiz_monorepo() -> Path:
@@ -48,17 +58,41 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # ---------- Base de datos ----------
-    # Las partes son la fuente de verdad; la URL se deriva. Tener las dos cosas
-    # en el entorno es garantía de que un día no coincidan.
-    postgres_host: str
+    # Dos formas de configurar la conexión, a elección: `DATABASE_URL` sola
+    # (lo que da Railway y la mayoría de proveedores al crear el Postgres),
+    # o las partes sueltas (lo que arma docker-compose en dev local). Si
+    # llega DATABASE_URL, gana ella entera y las partes no hacen falta.
+    database_url_override: str | None = Field(default=None, alias="DATABASE_URL")
+
+    postgres_host: str | None = None
     postgres_port: int = 5432
-    postgres_db: str
-    postgres_user: str
-    postgres_password: str
+    postgres_db: str | None = None
+    postgres_user: str | None = None
+    postgres_password: str | None = None
 
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_echo: bool = False
+
+    @model_validator(mode="after")
+    def _validar_conexion_db(self) -> Self:
+        if self.database_url_override:
+            return self
+        faltantes = [
+            nombre
+            for nombre, valor in (
+                ("POSTGRES_HOST", self.postgres_host),
+                ("POSTGRES_DB", self.postgres_db),
+                ("POSTGRES_USER", self.postgres_user),
+                ("POSTGRES_PASSWORD", self.postgres_password),
+            )
+            if not valor
+        ]
+        if faltantes:
+            raise ValueError(
+                "Definí DATABASE_URL, o si no, todas estas: " + ", ".join(faltantes)
+            )
+        return self
 
     # ---------- Seed del usuario único ----------
     # Las credenciales son fase 2. Acá solo el nombre, que es lo que la fase 1
@@ -85,7 +119,15 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
 
     def dsn(self, database: str) -> str:
-        """URL de conexión a una base arbitraria del mismo servidor."""
+        """URL de conexión a una base arbitraria del mismo servidor.
+
+        Solo tiene sentido con las partes sueltas: `_validar_conexion_db`
+        garantiza que si no hay `database_url_override`, estas 3 no son
+        `None`. `test_database_url` (dev/CI, siempre con partes sueltas)
+        es el único llamador real."""
+        assert self.postgres_user is not None
+        assert self.postgres_password is not None
+        assert self.postgres_host is not None
         return str(
             PostgresDsn.build(
                 scheme="postgresql+asyncpg",
@@ -99,11 +141,17 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.database_url_override:
+            return _con_driver_async(self.database_url_override)
+        assert self.postgres_db is not None
         return self.dsn(self.postgres_db)
 
     @property
     def test_database_url(self) -> str:
-        """Base separada para tests. Se crea y se destruye en cada corrida."""
+        """Base separada para tests. Se crea y se destruye en cada corrida.
+        Siempre por partes sueltas (nunca corre contra `DATABASE_URL` de
+        Railway): tests locales/CI configuran Postgres con las 5 vars."""
+        assert self.postgres_db is not None
         return self.dsn(f"{self.postgres_db}_test")
 
     @property
