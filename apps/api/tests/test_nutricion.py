@@ -424,3 +424,82 @@ async def test_eliminar_de_despensa(cliente: AsyncClient) -> None:
     # Segunda vez: 404.
     otra_vez = await cliente.delete("/api/v1/despensa/1")
     assert otra_vez.status_code == 404
+
+
+# --------------------------------------- REGRESION: macros del desayuno --
+
+
+async def test_macros_desayuno_3_items_con_gramos_reales(
+    cliente: AsyncClient,
+) -> None:
+    """REGRESION: si el usuario registra un desayuno con 80 g de Avena +
+    100 g de Huevo + 120 g de Banano, los macros del dia deben reflejar
+    la formula `macro = macro_por_100g * cantidad_g / 100` (REGLAS_NEGOCIO §12).
+
+    Caso reportado: la UI mostro 8.36 kcal / 0.53 g proteina para un
+    desayuno de 3 items. Eso es tres ordenes de magnitud abajo. La causa
+    fue UX, no bug del calculo: el form permitia registrar "1" en vez de
+    "100 g" y el server aplicaba la formula correctamente sobre 1 g.
+    """
+    # Precios del catalogo sembrado (kcal_100g, proteina_100g):
+    #   Avena en hojuelas: 389 kcal, 16.9 g
+    #   Huevo entero:      143 kcal, 12.6 g
+    #   Banano:             89 kcal,  1.1 g
+    # Formula: macro * g / 100
+    #   Avena:    80/100  -> 311.2 kcal, 13.52 g prot
+    #   Huevo:    100/100 -> 143.0 kcal, 12.60 g prot
+    #   Banano:   120/100 -> 106.8 kcal,  1.32 g prot
+    #   Total:              561.0 kcal, 27.44 g prot
+    crear = await cliente.post(
+        "/api/v1/comidas",
+        json={
+            "fecha": "2026-08-09",
+            "momento": "desayuno",
+            "items": [
+                {"alimento_id": 10, "cantidad_g": "80"},   # Avena
+                {"alimento_id": 1, "cantidad_g": "100"},   # Huevo entero
+                {"alimento_id": 23, "cantidad_g": "120"},   # Banano
+            ],
+            "idempotency_key": str(uuid4()),
+        },
+    )
+    assert crear.status_code == 201, crear.text
+
+    respuesta = await cliente.get("/api/v1/comidas?fecha=2026-08-09")
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    macros = cuerpo["macros_del_dia"]
+
+    # El calculo cierra a 2 decimales (ver services/nutricion/calculo.py).
+    assert macros["kcal"] == "561.00"
+    assert macros["proteina"] == "27.44"
+    assert macros["carbo"] == "81.10"
+    assert macros["grasa"] == "15.38"
+
+
+async def test_macros_con_cantidad_en_gramos_enteros_no_porciones(
+    cliente: AsyncClient,
+) -> None:
+    """Test paralelo al de arriba, pero con la causa del bug original:
+    el usuario escribio "3" sin unidad y el server lo guardo como 3 g.
+    La formula es correcta: 3 g de huevo = 4.29 kcal. No es un bug del
+    server, es del UX del form (ver H1-H3)."""
+    crear = await cliente.post(
+        "/api/v1/comidas",
+        json={
+            "fecha": "2026-08-10",
+            "momento": "desayuno",
+            "items": [
+                {"alimento_id": 1, "cantidad_g": "3"},  # 3 g de huevo
+                {"alimento_id": 12, "cantidad_g": "1"},  # 1 g de pan
+                {"alimento_id": 24, "cantidad_g": "1"},  # 1 g de aguacate
+            ],
+            "idempotency_key": str(uuid4()),
+        },
+    )
+    assert crear.status_code == 201
+
+    respuesta = await cliente.get("/api/v1/comidas?fecha=2026-08-10")
+    macros = respuesta.json()["macros_del_dia"]
+    # 3*143/100 + 1*247/100 + 1*160/100 = 4.29 + 2.47 + 1.60 = 8.36 kcal
+    assert macros["kcal"] == "8.36"

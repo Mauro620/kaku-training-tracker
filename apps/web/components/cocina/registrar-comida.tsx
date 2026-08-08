@@ -170,57 +170,79 @@ export function RegistrarComida({ fecha }: Props) {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <label className="text-[11px] tracking-widest uppercase text-text-secondary">
-              Ingredientes
-            </label>
-            {items.map((it, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <select
-                  value={it.alimento_id}
-                  onChange={(e) => {
-                    const copia = [...items];
-                    const actual = copia[idx];
-                    if (actual) {
-                      copia[idx] = { alimento_id: e.target.value, cantidad_g: actual.cantidad_g };
-                    }
-                    setItems(copia);
-                  }}
-                  className="flex-1 rounded-lg bg-surface-secondary px-3 py-3 text-[14px] text-text-primary"
-                >
-                  <option value="">Elegir alimento...</option>
-                  {(alimentos.data ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nombre}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="g"
-                  value={it.cantidad_g}
-                  onChange={(e) => {
-                    const copia = [...items];
-                    const actual = copia[idx];
-                    if (actual) {
-                      copia[idx] = { alimento_id: actual.alimento_id, cantidad_g: e.target.value };
-                    }
-                    setItems(copia);
-                  }}
-                  className="w-20 rounded-lg bg-surface-secondary px-3 py-3 text-[14px] text-text-primary tabular"
-                />
-                {items.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setItems(items.filter((_, i) => i !== idx))}
-                    aria-label="Quitar item"
-                    className="shrink-0 rounded p-2 text-text-secondary hover:text-state-danger"
-                  >
-                    <X size={16} aria-hidden />
-                  </button>
-                )}
-              </div>
-            ))}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] tracking-widest uppercase text-text-secondary">
+                Ingredientes
+              </label>
+              <span className="text-[11px] text-text-secondary">
+                Cantidad en gramos. Ej: 1 huevo ≈ 50 g, 1 taza de avena ≈ 80 g,
+                1 banano ≈ 120 g.
+              </span>
+            </div>
+            {items.map((it, idx) => {
+              const cantidadNum = Number(it.cantidad_g);
+              const sinAlimento = !it.alimento_id;
+              const advertencia = !sinAlimento
+                && Number.isFinite(cantidadNum)
+                && cantidadNum > 0
+                && cantidadNum < 5;
+              return (
+                <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={it.alimento_id}
+                      onChange={(e) => {
+                        const copia = [...items];
+                        const actual = copia[idx];
+                        if (actual) {
+                          copia[idx] = { alimento_id: e.target.value, cantidad_g: actual.cantidad_g };
+                        }
+                        setItems(copia);
+                      }}
+                      className="flex-1 rounded-lg bg-surface-secondary px-3 py-3 text-[14px] text-text-primary"
+                    >
+                      <option value="">Elegir alimento...</option>
+                      {(alimentos.data ?? []).map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="ej. 100"
+                      value={it.cantidad_g}
+                      onChange={(e) => {
+                        const copia = [...items];
+                        const actual = copia[idx];
+                        if (actual) {
+                          copia[idx] = { alimento_id: actual.alimento_id, cantidad_g: e.target.value };
+                        }
+                        setItems(copia);
+                      }}
+                      className="w-20 rounded-lg bg-surface-secondary px-3 py-3 text-[14px] text-text-primary tabular"
+                    />
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                        aria-label="Quitar item"
+                        className="shrink-0 rounded p-2 text-text-secondary hover:text-state-danger"
+                      >
+                        <X size={16} aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                  {advertencia && (
+                    <span className="pl-1 text-[11px] text-state-warning">
+                      {cantidadNum} g es muy poco para un alimento entero.
+                      Confirmá que es la cantidad real.
+                    </span>
+                  )}
+                </div>
+              );
+            })}
             <button
               type="button"
               onClick={() =>
