@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:20-slim AS base
 
 # pnpm viene con corepack; activarlo en la imagen evita pedirle al dev que
 # instale pnpm aparte y deja la version fija via packageManager del package.json
@@ -26,6 +26,8 @@ RUN pnpm fetch \
 COPY apps/web ./apps/web
 COPY packages/contracts ./packages/contracts
 
+# ---------- dev: docker-compose local, hot reload via bind mount ----------
+FROM base AS dev
 ENV NODE_ENV=development \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000
@@ -39,7 +41,32 @@ RUN chown -R node:node /srv
 USER node
 
 EXPOSE 3000
-
-# Dev: hot reload via bind mount del compose. Para prod, sobreescribir el
-# CMD en compose con `pnpm start` despues de buildear.
 CMD ["pnpm", "--filter", "web", "dev"]
+
+# ---------- prod: Railway u otro PaaS, sin bind mount ----------
+# Target por default (ultimo stage): un `docker build` sin --target (lo que
+# hace Railway) cae aca. docker-compose local pide `target: dev` explicito.
+FROM base AS prod
+
+# NEXT_PUBLIC_* se hornea en el bundle JS durante `next build`, no se lee en
+# runtime: tiene que llegar como build ARG (Railway inyecta las Variables
+# del servicio como ARG si estan declaradas con el mismo nombre aca), no
+# alcanza con setearla despues como env var del contenedor corriendo.
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_NAME
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME \
+    NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+
+RUN pnpm --filter web build
+
+RUN chown -R node:node /srv
+USER node
+
+EXPOSE 3000
+# Railway inyecta PORT dinamico; `next start` sin -p ya lo respeta via la
+# env var (no hace falta pasarlo como flag -- el forwarding de pnpm con
+# `--` termina mandandole el "--" literal a next y rompe con "Invalid
+# project directory provided, no such directory: -p").
+CMD ["sh", "-c", "PORT=${PORT:-3000} pnpm --filter web start"]

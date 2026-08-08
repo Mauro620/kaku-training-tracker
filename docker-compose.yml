@@ -46,6 +46,10 @@ services:
       # pnpm-workspace.yaml, package.json raíz y packages/contracts.
       context: .
       dockerfile: apps/web/Dockerfile
+      # El Dockerfile es multi-stage (dev/prod) desde que el stage default
+      # (el último, sin --target) pasó a ser el de producción para que
+      # Railway lo use tal cual. Local pide el de dev explícito.
+      target: dev
     environment:
       # En el celular, el front apunta al api por la IP del host. En este
       # compose el api vive en otro contenedor, asi que usamos el nombre de
