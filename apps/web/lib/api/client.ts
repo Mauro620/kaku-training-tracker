@@ -35,7 +35,25 @@ async function parsear<R>(respuesta: Response): Promise<R> {
   return JSON.parse(texto) as R;
 }
 
+// El refresh ROTA el token en el backend (una sola vez es valido, ver
+// auth.py::refresh): si dos requests pegan 401 casi juntas (TanStack Query
+// dispara varias en paralelo, ej. la pantalla Hoy), cada una llamaba a esto
+// por separado. La primera rotaba el token y guardaba el nuevo; la segunda
+// todavia tenia el viejo en memoria, el backend ya no lo reconocia (401),
+// y limpiarTokens() borraba TODO -- incluido el token bueno que la primera
+// acababa de guardar. Un solo refresh en vuelo, todas las llamadas
+// concurrentes esperan la MISMA promesa en vez de disparar una cada una.
+let refrescoEnCurso: Promise<boolean> | null = null;
+
 async function intentarRefresh(): Promise<boolean> {
+  if (refrescoEnCurso) return refrescoEnCurso;
+  refrescoEnCurso = ejecutarRefresh().finally(() => {
+    refrescoEnCurso = null;
+  });
+  return refrescoEnCurso;
+}
+
+async function ejecutarRefresh(): Promise<boolean> {
   const refresh = leerRefreshToken();
   if (!refresh) return false;
   try {

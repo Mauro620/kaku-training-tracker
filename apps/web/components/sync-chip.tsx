@@ -91,10 +91,24 @@ export function SyncChip() {
     }
 
     void cargar();
+    // Reintentar/Descartar mutan la cola pero no hay reactividad automatica
+    // (ver comentario de arriba: poll simple, sin useLiveQuery). Sin este
+    // intervalo el item desaparece de Dexie/pasa a "pendiente" pero la
+    // lista en pantalla queda vieja hasta que se cierra y reabre el drawer.
+    const interval = setInterval(cargar, 1_000);
     return () => {
       cancelado = true;
+      clearInterval(interval);
     };
   }, [mostrarFallidos]);
+
+  async function onReintentar(id: string) {
+    await reintentar(id);
+    // "Reintentar" cambia el item a "pendiente" pero eso solo no dispara el
+    // envio: sin esto quedaba esperando el proximo evento "online" o un
+    // reload de la pagina para efectivamente reintentar.
+    void procesarCola(endpointDesdeApi(api));
+  }
 
   if (pendientes === 0 && fallidos === 0) return null;
 
@@ -140,14 +154,14 @@ export function SyncChip() {
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
-                    onClick={() => reintentar(item.id)}
+                    onClick={() => void onReintentar(item.id)}
                     className="rounded border border-amber-700 px-2 py-1 hover:bg-amber-900"
                   >
                     Reintentar
                   </button>
                   <button
                     type="button"
-                    onClick={() => descartar(item.id)}
+                    onClick={() => void descartar(item.id)}
                     className="rounded border border-amber-700 px-2 py-1 hover:bg-amber-900"
                   >
                     Descartar

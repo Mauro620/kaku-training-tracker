@@ -13,7 +13,7 @@ import { TABS } from "@/lib/tabs";
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-10 mx-auto flex max-w-3xl items-center justify-around bg-canvas/80 backdrop-blur-xl border-t border-border-subtle pb-[env(safe-area-inset-bottom)]">
+    <nav className="transform-gpu fixed bottom-0 left-0 right-0 z-10 mx-auto flex max-w-3xl items-center justify-around bg-canvas/80 backdrop-blur-xl border-t border-border-subtle pb-[env(safe-area-inset-bottom)]">
       {TABS.map(({ href, icono: Icono, etiqueta }) => {
         const activa = pathname?.startsWith(href) ?? false;
         return (
