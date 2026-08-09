@@ -95,23 +95,36 @@ export function MolestiaForm({ fecha, existentes }: Props) {
                 className="w-full bg-surface-secondary rounded-pill px-4 py-2 text-[14px] text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-state-focus"
               />
 
-              <button
-                type="button"
-                disabled={crear.isPending}
-                onClick={async () => {
-                  await crear.mutateAsync({
-                    zona_id: zonaId,
-                    intensidad,
-                    nota: nota || null,
-                  });
-                  setZonaId(null);
-                  setIntensidad(5);
-                  setNota("");
-                }}
-                className="mt-5 w-full bg-text-primary text-canvas rounded-pill py-3 text-[14px] font-semibold disabled:opacity-50"
-              >
-                {crear.isPending ? "Guardando..." : "Guardar molestia"}
-              </button>
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setZonaId(null);
+                    setIntensidad(5);
+                    setNota("");
+                  }}
+                  className="flex-1 rounded-pill bg-surface-secondary py-3 text-[14px] font-medium text-text-primary"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={crear.isPending}
+                  onClick={async () => {
+                    await crear.mutateAsync({
+                      zona_id: zonaId,
+                      intensidad,
+                      nota: nota || null,
+                    });
+                    setZonaId(null);
+                    setIntensidad(5);
+                    setNota("");
+                  }}
+                  className="flex-1 rounded-pill bg-text-primary py-3 text-[14px] font-semibold text-canvas disabled:opacity-50"
+                >
+                  {crear.isPending ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
             </>
           )}
 

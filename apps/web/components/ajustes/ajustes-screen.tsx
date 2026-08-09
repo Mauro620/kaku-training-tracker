@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 
 import { useHabitosAjustes } from "@/lib/api/hooks";
 import type { Habito } from "@/lib/api/hooks";
@@ -23,6 +23,7 @@ export function AjustesScreen() {
 
   const [dialogoAbierto, setDialogoAbierto] = useState(false);
   const [editando, setEditando] = useState<Habito | null>(null);
+  const [mostrarArchivados, setMostrarArchivados] = useState(false);
 
   if (cargando) {
     return (
@@ -84,32 +85,41 @@ export function AjustesScreen() {
 
       {archivados.length > 0 && (
         <section>
-          <header className="mb-3">
-            <h2 className="text-[15px] font-semibold text-text-secondary">
-              Archivados
-            </h2>
-            <p className="mt-1 text-[12px] text-text-muted">
-              No aparecen en el check-in diario. Reactivarlos los devuelve
-              a la lista de arriba.
-            </p>
-          </header>
-          <ul className="space-y-2">
-            {archivados.map((h) => (
-              <TarjetaHabito
-                key={h.id}
-                habito={h}
-                indice={0}
-                total={1}
-                archivado
-                onEditar={() => {
-                  setEditando(h);
-                  setDialogoAbierto(true);
-                }}
-                onArchivar={() => {}}
-                onMover={() => {}}
-              />
-            ))}
-          </ul>
+          <button
+            type="button"
+            aria-expanded={mostrarArchivados}
+            onClick={() => setMostrarArchivados((v) => !v)}
+            className="flex w-full items-center gap-1.5 rounded-md py-1.5 text-left transition hover:bg-bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {mostrarArchivados ? (
+              <ChevronDown className="h-3.5 w-3.5 text-text-secondary" aria-hidden />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 text-text-secondary" aria-hidden />
+            )}
+            <span className="text-[13px] font-medium text-text-secondary">
+              Archivados ({archivados.length})
+            </span>
+          </button>
+          {mostrarArchivados && (
+            <ul className="mt-2 space-y-2">
+              {archivados.map((h) => (
+                <TarjetaHabito
+                  key={h.id}
+                  habito={h}
+                  indice={0}
+                  total={1}
+                  archivado
+                  onEditar={() => {
+                    setEditando(h);
+                    setDialogoAbierto(true);
+                  }}
+                  onArchivar={() => {}}
+                  onMover={() => {}}
+                  onReactivar={() => actualizar(h.id, { activo: true })}
+                />
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

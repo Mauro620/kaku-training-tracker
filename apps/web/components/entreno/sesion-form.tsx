@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import {
   BLOQUE_VACIO,
@@ -35,6 +35,7 @@ export function SesionForm({ fecha, planes }: Props) {
   const sesionesDeHoy = useSesionesDeFecha(fecha);
   const crear = useCrearSesion(fecha);
 
+  const [expandido, setExpandido] = useState(false);
   const [tipoSesionId, setTipoSesionId] = useState<number | null>(null);
   const [tipoExpandido, setTipoExpandido] = useState(false);
   const [duracionMin, setDuracionMin] = useState<number>(60);
@@ -86,16 +87,30 @@ export function SesionForm({ fecha, planes }: Props) {
 
   return (
     <BentoCard>
-      <header className="mb-4 flex items-center justify-between">
+      <button
+        type="button"
+        onClick={() => setExpandido((v) => !v)}
+        className="flex w-full items-center justify-between"
+      >
         <p className="text-[11px] font-normal tracking-widest uppercase text-text-secondary">
           Nueva sesion
         </p>
-        {bloques.length > 0 && (
-          <span className="text-[11px] text-text-secondary">
-            {bloques.length} bloque{bloques.length === 1 ? "" : "s"}
-          </span>
-        )}
-      </header>
+        <span className="flex items-center gap-2">
+          {bloques.length > 0 && (
+            <span className="text-[11px] text-text-secondary">
+              {bloques.length} bloque{bloques.length === 1 ? "" : "s"}
+            </span>
+          )}
+          {expandido ? (
+            <ChevronUp size={16} className="text-text-secondary" />
+          ) : (
+            <ChevronDown size={16} className="text-text-secondary" />
+          )}
+        </span>
+      </button>
+
+      {expandido && (
+        <div className="mt-4">
 
       {/* Plan de hoy: solo antes de elegir tipo, para no competir con el
           selector una vez que ya se sabe que se esta registrando. */}
@@ -285,14 +300,18 @@ export function SesionForm({ fecha, planes }: Props) {
             nota: nota || null,
             bloques: bloquesPayload,
           });
-          // Reset del form
+          // Reset del form y colapsa: la tarea esta hecha, no hace falta
+          // seguir ocupando la pantalla.
           setBloques([]);
           setNota("");
+          setExpandido(false);
         }}
         className="mt-6 w-full bg-text-primary text-canvas rounded-pill py-3 text-[14px] font-semibold disabled:opacity-50"
       >
         {crear.isPending ? "Guardando..." : "Guardar sesion"}
       </button>
+        </div>
+      )}
     </BentoCard>
   );
 }

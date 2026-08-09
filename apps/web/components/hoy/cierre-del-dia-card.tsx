@@ -173,13 +173,13 @@ function SegmentoDot({
   return (
     <div
       role="listitem"
-      className="flex-1 flex flex-col gap-2 rounded-lg bg-surface-secondary px-3 py-3"
+      className="min-w-0 flex-1 flex flex-col gap-2 rounded-lg bg-surface-secondary px-3 py-3"
       aria-label={`${ETIQUETA[segmento]}: ${etiqueta}`}
     >
       <span className="h-1.5 w-full rounded-full bg-canvas overflow-hidden">
         <span className={`block h-full ${clasesBarra}`} />
       </span>
-      <span className="text-[11px] tracking-widest uppercase text-text-secondary">
+      <span className="block truncate text-[11px] tracking-wide uppercase text-text-secondary">
         {ETIQUETA[segmento]}
       </span>
     </div>

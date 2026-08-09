@@ -22,7 +22,7 @@ export default function CiclosPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-5 pt-8">
+    <main className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)]">
       <header className="mb-6">
         <h1 className="text-[28px] font-bold tracking-tight text-text-primary">Ciclos</h1>
         <p className="mt-1 text-[13px] text-text-secondary">

@@ -26,7 +26,7 @@ export function CicloDetalleCliente({ cicloId }: Props) {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-5 pt-8">
+    <main className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)]">
       <Link
         href="/entreno/ciclos"
         className="mb-4 flex items-center gap-1 text-[13px] text-text-secondary"

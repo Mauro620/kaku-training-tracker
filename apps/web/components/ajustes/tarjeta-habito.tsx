@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Archive, Pencil } from "lucide-react";
+import { ArrowDown, ArrowUp, Archive, Pencil, RotateCcw } from "lucide-react";
 
 import type { Habito } from "@/lib/api/hooks";
 
@@ -14,6 +14,8 @@ interface Props {
   onEditar: () => void;
   onArchivar: () => void;
   onMover: (dir: "arriba" | "abajo") => void;
+  /** Solo cuando archivado=true: lo devuelve a activos. */
+  onReactivar?: () => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export function TarjetaHabito({
   onEditar,
   onArchivar,
   onMover,
+  onReactivar,
 }: Props) {
   return (
     <li
@@ -39,9 +42,22 @@ export function TarjetaHabito({
       }`}
     >
       {archivado ? (
-        <span className="flex-1 text-[14px] text-text-secondary">
-          {habito.nombre}
-        </span>
+        <>
+          <span className="flex-1 text-[14px] text-text-secondary">
+            {habito.nombre}
+          </span>
+          {onReactivar && (
+            <button
+              type="button"
+              aria-label="Reactivar"
+              title="Reactivar"
+              onClick={onReactivar}
+              className="rounded-md p-1.5 text-text-secondary transition hover:bg-bg-elevated hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              <RotateCcw className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
+          )}
+        </>
       ) : (
         <>
           <div className="flex flex-col">

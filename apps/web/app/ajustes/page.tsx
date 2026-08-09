@@ -7,7 +7,7 @@ import { AjustesScreen } from "@/components/ajustes/ajustes-screen";
  */
 export default function AjustesPage() {
   return (
-    <main className="mx-auto max-w-3xl px-5 pt-8 pb-24">
+    <main className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-24">
       <header className="mb-6">
         <h1 className="text-[28px] font-bold tracking-tight text-text-primary">
           Ajustes

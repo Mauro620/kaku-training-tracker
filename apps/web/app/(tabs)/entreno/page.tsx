@@ -26,7 +26,7 @@ export default function EntrenoPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-5 pt-8">
+    <main className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)]">
       <header className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-[28px] font-bold tracking-tight text-text-primary">Entreno</h1>

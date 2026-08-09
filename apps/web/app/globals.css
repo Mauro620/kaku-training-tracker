@@ -47,4 +47,28 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Transicion de navegacion (template.tsx del grupo (tabs)): fade + slide
+     sutil, sin rebote. El bezier es una curva ease-out-expo, la misma
+     familia que pide DESIGN.md para motion. */
+  .animate-enter {
+    animation: entrada-pantalla 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-enter {
+      animation: none;
+    }
+  }
+}
+
+@keyframes entrada-pantalla {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

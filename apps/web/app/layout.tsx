@@ -37,6 +37,15 @@ export const viewport: Viewport = {
   themeColor: "#09090B",
   width: "device-width",
   initialScale: 1,
+  // Bloqueo el zoom para que la PWA se sienta como app nativa: pinch
+  // sobre cualquier boton rompe la jerarquia visual y un usuario
+  // desesperado termina persiguiendo un input por toda la pantalla.
+  // Accesibilidad: este producto no tiene bloques largos de lectura,
+  // la interaccion es de captura (formularios). El argumento clasico
+  // contra bloquear el zoom aplica a articulos y documentacion, no a
+  // una UI de botones y checklists.
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 

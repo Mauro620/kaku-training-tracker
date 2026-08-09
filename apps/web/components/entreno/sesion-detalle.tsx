@@ -49,7 +49,7 @@ export function SesionDetalle({ sesionId, onCerrar }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-canvas">
-      <div className="mx-auto max-w-3xl px-5 pt-8">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)]">
         <button
           type="button"
           onClick={onCerrar}
