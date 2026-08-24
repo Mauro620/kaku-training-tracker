@@ -153,7 +153,10 @@ async def _resolver_ejercicios(
             )
             if ejercicio is None:
                 ejercicio = await repo.crear_ejercicio(
-                    session, nombre=bloque.ejercicio, tipo_medicion=bloque.tipo_medicion
+                    session,
+                    nombre=bloque.ejercicio,
+                    tipo_medicion=bloque.tipo_medicion,
+                    descripcion=bloque.descripcion,
                 )
                 creados.append(bloque.ejercicio)
             elif ejercicio.tipo_medicion is not bloque.tipo_medicion:

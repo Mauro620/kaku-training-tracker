@@ -65,6 +65,9 @@ class BloqueImport(SchemaBase):
 
     ejercicio: str = Field(min_length=1, max_length=80)
     tipo_medicion: TipoMedicion
+    # Solo se usa al CREAR el ejercicio. Si ya existe se ignora: el catalogo
+    # no se sobrescribe desde una importacion (PLAN_IMPORT.md §6).
+    descripcion: str | None = None
     series: Positivo | None = None
     # `reps` exacto es azucar de `reps_min == reps_max`: el esquema solo tiene
     # el rango, y un objetivo exacto es un rango de amplitud cero.

@@ -10,7 +10,7 @@ valores, lo que rompe cuando el seed agrega uno nuevo.
 inline, el universo de ejercicios de una rutina real es abierto.
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
@@ -19,6 +19,7 @@ from app.models import Ejercicio, TipoSesion, TipoTest, Usuario, ZonaCorporal
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
     EjercicioRead,
+    EjercicioUpdate,
     TipoSesionRead,
     TipoTestRead,
     ZonaCorporalRead,
@@ -63,7 +64,30 @@ async def crear_ejercicio(
     _: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
 ) -> Ejercicio:
-    return await service.crear_ejercicio(sesion, payload.nombre, payload.tipo_medicion)
+    return await service.crear_ejercicio(
+        sesion, payload.nombre, payload.tipo_medicion, payload.descripcion
+    )
+
+
+@router.patch(
+    "/ejercicios/{ejercicio_id}",
+    response_model=EjercicioRead,
+    summary="Edita nombre y descripcion. tipo_medicion NO es editable.",
+)
+async def actualizar_ejercicio(
+    payload: EjercicioUpdate,
+    ejercicio_id: int = Path(..., description="id del ejercicio"),
+    _: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> Ejercicio:
+    """`tipo_medicion` queda afuera del payload: cambiarlo invalidaria los
+    bloques historicos, que se midieron con el anterior (REGLAS_NEGOCIO §15)."""
+    return await service.actualizar_ejercicio(
+        sesion,
+        ejercicio_id,
+        nombre=payload.nombre,
+        descripcion=payload.descripcion,
+    )
 
 
 @router.get(

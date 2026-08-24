@@ -505,3 +505,44 @@ async def test_el_plan_del_dia_0_cae_lunes(
 
     vacio = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-16"})
     assert vacio.json() == []
+
+
+async def test_la_descripcion_solo_se_usa_al_crear_el_ejercicio(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """El catalogo no se sobrescribe desde una importacion: si el ejercicio ya
+    existe, su descripcion queda como estaba (PLAN_IMPORT.md §4.1)."""
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 21
+    payload["sesiones"][0]["bloques"] = [
+        {
+            "ejercicio": "Pase largo diagonal",
+            "tipo_medicion": "distancia",
+            "reps": 20,
+            "distancia_m": 30,
+            "descripcion": "Contacto con el empeine interno.",
+        },
+        # Ya existe en el seed: la descripcion se ignora.
+        {
+            "ejercicio": "Hip thrust",
+            "tipo_medicion": "carga",
+            "series": 3,
+            "reps": 8,
+            "descripcion": "ESTO NO DEBE GUARDARSE",
+        },
+    ]
+    respuesta = await _importar(cliente, payload)
+    assert respuesta.status_code == 200
+    assert respuesta.json()["ejercicios_creados"] == ["Pase largo diagonal"]
+
+    nuevo = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pase largo diagonal")
+    )
+    assert nuevo is not None
+    assert nuevo.descripcion == "Contacto con el empeine interno."
+
+    existente = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Hip thrust")
+    )
+    assert existente is not None
+    assert existente.descripcion != "ESTO NO DEBE GUARDARSE"

@@ -34,6 +34,18 @@ class TipoSesionRead(ReadBase):
 class EjercicioCreate(SchemaBase):
     nombre: str = Field(min_length=1, max_length=80)
     tipo_medicion: TipoMedicion
+    descripcion: str | None = None
+
+
+class EjercicioUpdate(SchemaBase):
+    """Sin `tipo_medicion` a proposito: cambiarlo invalidaria los bloques
+    historicos, que se midieron con el anterior (REGLAS_NEGOCIO §15).
+
+    Los campos son opcionales y None significa "no tocar". Para borrar la
+    descripcion se manda string vacio."""
+
+    nombre: str | None = Field(default=None, min_length=1, max_length=80)
+    descripcion: str | None = None
 
 
 class EjercicioRead(ReadBase):
@@ -43,6 +55,7 @@ class EjercicioRead(ReadBase):
     carga_lumbar: CargaLumbar
     tipo_sesion_id: int | None
     tipo_medicion: TipoMedicion
+    descripcion: str | None
 
 
 class ZonaCorporalRead(ReadBase):

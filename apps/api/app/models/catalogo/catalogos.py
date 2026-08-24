@@ -1,6 +1,6 @@
 """Catálogos sembrados. Agregar una fila es un seed, nunca una migración."""
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String
+from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -40,6 +40,10 @@ class Ejercicio(Base):
     tipo_medicion: Mapped[TipoMedicion] = mapped_column(
         Enum(TipoMedicion, name="tipo_medicion"), nullable=False
     )
+    # Como se ejecuta el ejercicio. La escribe el LLM al planear la semana y
+    # queda guardada: buscar la tecnica en el momento es fricción en la cancha,
+    # y el registro diario no puede pasar de 2 minutos (AGENTS.md §1).
+    descripcion: Mapped[str | None] = mapped_column(Text)
 
 
 class ZonaCorporal(Base):

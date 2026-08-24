@@ -27,15 +27,48 @@ async def obtener_por_nombre(session: AsyncSession, nombre: str) -> Ejercicio | 
 
 
 async def crear(
-    session: AsyncSession, *, nombre: str, tipo_medicion: TipoMedicion
+    session: AsyncSession,
+    *,
+    nombre: str,
+    tipo_medicion: TipoMedicion,
+    descripcion: str | None = None,
 ) -> Ejercicio:
     """Unico catalogo con creacion de usuario (REGLAS_NEGOCIO §15): el
     universo de ejercicios de una rutina real es abierto, a diferencia de
     tipo_sesion o zona_corporal. carga_lumbar/tipo_sesion_id quedan en su
     default (baja/NULL): el usuario no los declara al crear inline."""
     ejercicio = Ejercicio(
-        nombre=nombre, tipo_medicion=tipo_medicion, carga_lumbar=CargaLumbar.baja
+        nombre=nombre,
+        tipo_medicion=tipo_medicion,
+        carga_lumbar=CargaLumbar.baja,
+        descripcion=descripcion,
     )
     session.add(ejercicio)
+    await session.flush()
+    return ejercicio
+
+
+async def obtener_por_id(session: AsyncSession, ejercicio_id: int) -> Ejercicio | None:
+    return cast(
+        "Ejercicio | None",
+        await session.scalar(select(Ejercicio).where(Ejercicio.id == ejercicio_id)),
+    )
+
+
+async def actualizar(
+    session: AsyncSession,
+    ejercicio: Ejercicio,
+    *,
+    nombre: str | None,
+    descripcion: str | None,
+) -> Ejercicio:
+    """Solo nombre y descripcion. `tipo_medicion` NO se edita: cambiarlo
+    invalidaria los bloques historicos, que se midieron con el anterior
+    (REGLAS_NEGOCIO §15). None significa "no tocar", no "poner en NULL":
+    para borrar la descripcion se manda string vacio."""
+    if nombre is not None:
+        ejercicio.nombre = nombre
+    if descripcion is not None:
+        ejercicio.descripcion = descripcion or None
     await session.flush()
     return ejercicio

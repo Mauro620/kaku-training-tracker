@@ -86,6 +86,7 @@ reporta como advertencia. El histórico es intocable.
 | `sesion.rpe_objetivo` | `sesion_plan` | `rpe_objetivo` |
 | `bloque.ejercicio` | `ejercicio` | `nombre` (busca o crea) |
 | `bloque.tipo_medicion` | `ejercicio` | `tipo_medicion` (solo al crear) |
+| `bloque.descripcion` | `ejercicio` | `descripcion` (solo al crear) |
 | `bloque.series` | `bloque_plan` | `series` |
 | `bloque.reps` / `reps_min`,`reps_max` | `bloque_plan` | `reps_min` / `reps_max` |
 | `bloque.peso_kg` | `bloque_plan` | `peso_objetivo_kg` |
@@ -113,6 +114,23 @@ no algo que se ignora en silencio.
 
 `calidad` no existe en el plan a propósito: es una medida de ejecución, no
 algo que se planifique.
+
+### 4.1 `descripcion`
+
+Todo bloque acepta además `descripcion`: cómo se ejecuta el ejercicio, en una
+o dos frases. **Solo se usa al crear un ejercicio nuevo.** Si el ejercicio ya
+existe en el catálogo, se ignora sin avisar — igual que `tipo_medicion`, el
+catálogo no se sobrescribe desde una importación.
+
+Escribila siempre para los ejercicios que creas. El punto es no tener que
+buscar la técnica en la cancha: se escribe una vez al planear y queda para
+siempre. Se edita después con `PATCH /catalogos/ejercicios/{id}`.
+
+```json
+{ "ejercicio": "Pase largo diagonal", "tipo_medicion": "distancia",
+  "reps": 20, "distancia_m": 30,
+  "descripcion": "Balón parado, tres pasos de carrera, contacto con el empeine interno. Buscar que caiga en el pecho del receptor sin pique." }
+```
 
 ---
 

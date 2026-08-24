@@ -69,17 +69,6 @@ export function diaDeLaSemana(fechaInicioCiclo: string, fecha: string): number {
   return ((diferenciaEnDias(fechaInicioCiclo, fecha) % 7) + 7) % 7;
 }
 
-/** Fecha absoluta del `dia_sugerido` de un plan dentro de la semana `numero`. */
-export function fechaDelDia(
-  fechaInicioCiclo: string,
-  numeroSemana: number,
-  dia: number,
-): string {
-  const d = new Date(`${fechaInicioCiclo}T00:00:00`);
-  d.setDate(d.getDate() + (numeroSemana - 1) * 7 + dia);
-  return d.toISOString().slice(0, 10);
-}
-
 export const NOMBRE_DIA = [
   "Lunes",
   "Martes",

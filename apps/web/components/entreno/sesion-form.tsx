@@ -15,7 +15,9 @@ import {
   useEjercicios,
   useSesionesDeFecha,
   useTiposSesion,
+  useUltimasSesiones,
   type BloqueBorradorPayload,
+  type BloquePlan,
   type SesionPlan,
   type TipoSesion,
 } from "@/lib/api/hooks";
@@ -43,6 +45,7 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
   const tipos = useTiposSesion();
   const ejercicios = useEjercicios();
   const sesionesDeHoy = useSesionesDeFecha(fecha);
+  const ultimas = useUltimasSesiones(10);
   const crear = useCrearSesion(fecha);
 
   const [expandido, setExpandido] = useState(false);
@@ -56,9 +59,9 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
   const contenedor = useRef<HTMLDivElement>(null);
   const ultimoNonce = useRef<number | null>(null);
 
-  // Precarga desde el plan: duracion y RPE objetivo son lo que el usuario iba
-  // a hacer, asi que arrancar ahi y editar la diferencia es menos trabajo que
-  // escribir los dos numeros de cero.
+  // Precarga desde el plan: si el usuario hizo exactamente lo planeado,
+  // guardar es un tap. Solo edita lo que cambio. Con los campos en blanco el
+  // plan importado no ahorraria nada, que es el punto entero del feature.
   useEffect(() => {
     if (!pedido || pedido.nonce === ultimoNonce.current) return;
     ultimoNonce.current = pedido.nonce;
@@ -66,6 +69,7 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
     setTipoSesionId(pedido.plan?.tipo_sesion_id ?? null);
     if (pedido.plan?.duracion_min_est) setDuracionMin(pedido.plan.duracion_min_est);
     if (pedido.plan?.rpe_objetivo) setRpe(pedido.plan.rpe_objetivo);
+    setBloques((pedido.plan?.bloques_planeados ?? []).map(desdePlan));
     contenedor.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [pedido]);
 
@@ -88,6 +92,26 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
     null;
 
   const cargaEstimada = rpe * duracionMin;
+
+  // Referencias para leer la carga: la del plan y la media reciente. Un
+  // numero solo no dice si 350 es mucho o poco. La media sale de las sesiones
+  // que el historico ya trae; no hace falta un endpoint aparte.
+  const cargaPlan =
+    planVinculado?.rpe_objetivo && planVinculado?.duracion_min_est
+      ? planVinculado.rpe_objetivo * planVinculado.duracion_min_est
+      : null;
+  const cargasPrevias = ultimas.data ?? [];
+  const cargaMedia = cargasPrevias.length
+    ? Math.round(
+        cargasPrevias.reduce((acc, x) => acc + x.carga_srpe, 0) / cargasPrevias.length,
+      )
+    : null;
+  const referencias = [
+    cargaPlan !== null && `plan ${cargaPlan}`,
+    cargaMedia !== null && `tu media ${cargaMedia}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   function agregarBloque() {
     setBloques((s) => [...s, { localId: uid(), ...BLOQUE_VACIO }]);
@@ -266,6 +290,9 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
         {cargaEstimada}
         <span className="ml-2 text-base font-medium text-text-secondary">carga sRPE</span>
       </p>
+      {referencias && (
+        <p className="mt-1 text-center text-[12px] text-text-secondary">{referencias}</p>
+      )}
 
       <label className="mt-4 flex flex-col gap-1">
         <span className="text-[11px] uppercase tracking-widest text-text-secondary">Nota</span>
@@ -374,4 +401,30 @@ function BotonTipo({
       {tipo.nombre}
     </button>
   );
+}
+
+/**
+ * `bloque_plan` -> borrador editable. El plan guarda un RANGO de reps
+ * (reps_min/reps_max); el bloque real guarda UNO solo, asi que se precarga el
+ * minimo: es el compromiso que el plan pide, y subirlo es un tap.
+ *
+ * peso/distancia vienen como string (Decimal serializado) y el editor trabaja
+ * con number.
+ *
+ * rpe y calidad quedan en null a proposito: son medidas de ejecucion, no se
+ * planifican (REGLAS_NEGOCIO §15). Precargarlas seria inventar el dato.
+ */
+function desdePlan(bp: BloquePlan): BloqueBorrador {
+  return {
+    localId: uid(),
+    ejercicio_id: bp.ejercicio_id,
+    series: bp.series,
+    reps: bp.reps_min ?? bp.reps_max,
+    distancia_m: bp.distancia_objetivo_m !== null ? Number(bp.distancia_objetivo_m) : null,
+    duracion_s: bp.duracion_objetivo_s,
+    calidad: null,
+    peso_kg: bp.peso_objetivo_kg !== null ? Number(bp.peso_objetivo_kg) : null,
+    rpe: null,
+    dolor_lumbar: false,
+  };
 }

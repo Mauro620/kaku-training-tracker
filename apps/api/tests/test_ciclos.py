@@ -824,3 +824,81 @@ async def test_bloque_acepta_los_campos_de_su_tipo_medicion(
     bloques = {b["ejercicio_id"]: b for b in creado.json()["bloques"]}
     assert bloques[ejercicio_distancia]["distancia_m"] == "20.0"
     assert bloques[ejercicio_tecnica]["calidad"] == 4
+
+
+# ---------------------------------------- descripcion de ejercicio (Fase 4 R5) --
+
+
+async def test_crear_ejercicio_guarda_la_descripcion(cliente: AsyncClient) -> None:
+    creado = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={
+            "nombre": "Sprint en cuesta",
+            "tipo_medicion": "distancia",
+            "descripcion": "Pendiente 10%, arranque desde parado, 6 zancadas.",
+        },
+    )
+    assert creado.status_code == 200
+    assert creado.json()["descripcion"].startswith("Pendiente 10%")
+
+
+async def test_patch_edita_nombre_y_descripcion(cliente: AsyncClient) -> None:
+    creado = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Skipping alto", "tipo_medicion": "tecnica"},
+    )
+    ejercicio_id = creado.json()["id"]
+    assert creado.json()["descripcion"] is None
+
+    editado = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{ejercicio_id}",
+        json={"descripcion": "Rodilla a la altura de la cadera, tobillo activo."},
+    )
+    assert editado.status_code == 200
+    assert editado.json()["nombre"] == "Skipping alto"  # None = no tocar
+    assert editado.json()["descripcion"].startswith("Rodilla")
+
+    # String vacio SI borra: es la unica forma de distinguirlo de "no tocar".
+    borrado = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{ejercicio_id}", json={"descripcion": ""}
+    )
+    assert borrado.json()["descripcion"] is None
+
+
+async def test_patch_no_deja_cambiar_el_tipo_medicion(cliente: AsyncClient) -> None:
+    """Cambiarlo invalidaria los bloques historicos, medidos con el anterior.
+    El schema tiene extra=forbid, asi que ni siquiera se acepta el campo."""
+    creado = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Zancada lateral", "tipo_medicion": "carga"},
+    )
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{creado.json()['id']}",
+        json={"tipo_medicion": "tiempo"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_patch_rechaza_un_nombre_ya_usado(cliente: AsyncClient) -> None:
+    a = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Salto al cajon", "tipo_medicion": "carga"},
+    )
+    await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Salto lateral al cajon", "tipo_medicion": "carga"},
+    )
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{a.json()['id']}",
+        json={"nombre": "Salto lateral al cajon"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_patch_a_un_ejercicio_inexistente_devuelve_404(
+    cliente: AsyncClient,
+) -> None:
+    respuesta = await cliente.patch(
+        "/api/v1/catalogos/ejercicios/999999", json={"descripcion": "x"}
+    )
+    assert respuesta.status_code == 404
