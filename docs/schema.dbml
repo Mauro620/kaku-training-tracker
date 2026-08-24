@@ -16,6 +16,13 @@ enum estado_ciclo {
 	cerrado
 }
 
+enum estado_sesion_plan {
+	pendiente
+	cumplido
+	movido
+	descartado
+}
+
 enum momento_comida {
 	desayuno
 	media_manana
@@ -84,11 +91,11 @@ Table ejercicio [headercolor: #175e7a] {
 	id integer [ pk, increment ]
 	nombre varchar(80) [ not null, unique ]
 	patron varchar(40)
-	carga_lumbar carga_lumbar [ not null, default: baja ]
-	tipo_sesion_id smallint [ not null ]
+	carga_lumbar carga_lumbar [ not null, default: `baja` ]
+	tipo_sesion_id smallint
 	tipo_medicion tipo_medicion [ not null ]
 
-	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §14): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→duracion_s, tecnica→reps o duracion_s + calidad. Unico catalogo con creacion de usuario (POST /catalogos/ejercicios): a diferencia de tipo_sesion o zona_corporal, el universo de ejercicios es abierto y personal.'
+	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §14): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→duracion_s, tecnica→reps o duracion_s + calidad. tipo_sesion_id es NULLABLE a proposito (migracion a09181f1ca0e): unico catalogo con creacion de usuario (POST /catalogos/ejercicios), el usuario que crea inline no elige tipo de sesion.'
 }
 
 Table zona_corporal [headercolor: #53177a] {
@@ -110,7 +117,7 @@ Table alimento [headercolor: #ed9d3b] {
 	id integer [ pk, increment ]
 	nombre varchar(80) [ not null, unique ]
 	grupo grupo_alimento [ not null ]
-	estado_pesaje estado_pesaje [ not null, default: crudo ]
+	estado_pesaje estado_pesaje [ not null, default: `crudo` ]
 	kcal_100g numeric(6,2) [ not null ]
 	proteina_100g numeric(5,2) [ not null ]
 	carbo_100g numeric(5,2) [ not null ]
@@ -142,7 +149,7 @@ Table ciclo [headercolor: #175e7a] {
 	objetivo text [ not null ]
 	fecha_inicio date [ not null ]
 	semanas smallint [ not null, default: 4 ]
-	estado estado_ciclo [ not null, default: planificado ]
+	estado estado_ciclo [ not null, default: `planificado` ]
 	fecha_fin_prevista date [ not null ]
 	fecha_cierre_real date
 
@@ -190,8 +197,14 @@ Table sesion_plan [headercolor: #175e7a] {
 	objetivo text
 	duracion_min_est smallint
 	rpe_objetivo smallint
+	estado estado_sesion_plan [ not null, default: `pendiente` ]
+	clave_import varchar(80)
 
-	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga. fecha_prevista es NULLABLE desde que el cumplimiento pasó a medirse por composición semanal, no por fecha exacta (REGLAS_NEGOCIO §13): un plan puede vivir solo dentro de una ciclo_semana sin comprometerse a un día. dia_sugerido (0=lunes..6=domingo) es sugerencia de UI, no obligación — CHECK dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6.'
+	indexes {
+		(ciclo_semana_id, clave_import) [ unique, note: 'PARCIAL: WHERE clave_import IS NOT NULL' ]
+	}
+
+	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga. fecha_prevista es NULLABLE desde que el cumplimiento pasó a medirse por composición semanal, no por fecha exacta (REGLAS_NEGOCIO §13): un plan puede vivir solo dentro de una ciclo_semana sin comprometerse a un día. dia_sugerido (0=lunes..6=domingo) es sugerencia de UI, no obligación — CHECK dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6. estado se PERSISTE, no se deriva: descartado lo declara el usuario y cumplido/movido los escribe resolver_estado_de_plan() cada vez que una sesion se crea, cambia de fecha o se borra. movido = existe una sesion contra este plan pero su fecha cae en un dia distinto al dia_sugerido; sigue contando para el cumplimiento semanal. clave_import es {dia_sugerido}-{tipo_sesion.codigo} y solo la asigna el importador de plan semanal (docs/feature_1_session_plan_json/PLAN_IMPORT.md): su indice unico es PARCIAL para que los planes creados a mano (clave NULL) no choquen entre si. Un plan en cumplido o movido NUNCA se reemplaza al reimportar.'
 }
 
 Table bloque_plan [headercolor: #175e7a] {
@@ -275,7 +288,7 @@ Table registro_sueno [headercolor: #53177a] {
 	inicio timestamptz [ not null ]
 	fin timestamptz [ not null, note: 'CHECK fin > inicio' ]
 	celular_fuera boolean [ note: 'Unico lugar donde vive este dato. NO existe como habito: se llena en el mismo formulario de sueno.' ]
-	origen origen_dato [ not null, default: manual ]
+	origen origen_dato [ not null, default: `manual` ]
 	idempotency_key uuid [ unique ]
 
 	indexes {
@@ -283,7 +296,6 @@ Table registro_sueno [headercolor: #53177a] {
 	}
 
 	Note: 'timestamptz en vez de time: cruzar medianoche con dos campos time obliga a lógica condicional en cada consulta. horas_sueno = EXTRACT(EPOCH FROM fin - inicio)/3600, generada. La fecha es la del despertar. INVARIANTE DE SERVICIO: fecha debe coincidir con la fecha local de fin. No se puede imponer con CHECK ni con columna generada porque la conversion de zona horaria no es IMMUTABLE en Postgres. idempotency_key es nullable para admitir backfill historico (Fase 9) sin UUID; la deduplicacion la hace la PK (usuario_id, fecha), el key lo genera la cola de Fase 5 para distinguir reintentos de requests distintas.'
-}
 }
 
 Table registro_bienestar [headercolor: #53177a] {
@@ -353,7 +365,7 @@ Table medida_corporal [headercolor: #53177a] {
 	fecha date [ not null ]
 	peso_kg numeric(5,2) [ not null ]
 	fc_reposo smallint
-	origen origen_dato [ not null, default: manual ]
+	origen origen_dato [ not null, default: `manual` ]
 
 	indexes {
 		(usuario_id, fecha) [ unique ]
@@ -425,7 +437,7 @@ Table despensa [headercolor: #ed9d3b] {
 	Note: 'La lista de mercado es: imprescindible = true AND en_stock = false.'
 }
 
-Table auth_usuario [headercolor: #53177a] {
+Table auth_usuario [headercolor: #8b3a3a] {
 	usuario_id uuid [ pk ]
 	email varchar(120) [ not null, unique ]
 	password_hash varchar(255) [ not null ]

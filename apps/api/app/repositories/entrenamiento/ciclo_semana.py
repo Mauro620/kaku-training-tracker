@@ -39,6 +39,21 @@ async def obtener_por_id(session: AsyncSession, semana_id: int) -> CicloSemana |
     )
 
 
+async def obtener_por_numero(
+    session: AsyncSession, ciclo_id: int, numero: int
+) -> CicloSemana | None:
+    """UNIQUE(ciclo_id, numero). El JSON de importacion identifica la semana
+    por su numero dentro del ciclo, no por id."""
+    return cast(
+        "CicloSemana | None",
+        await session.scalar(
+            select(CicloSemana).where(
+                CicloSemana.ciclo_id == ciclo_id, CicloSemana.numero == numero
+            )
+        ),
+    )
+
+
 async def listar_por_ciclo(session: AsyncSession, ciclo_id: int) -> list[CicloSemana]:
     resultado = await session.scalars(
         select(CicloSemana)

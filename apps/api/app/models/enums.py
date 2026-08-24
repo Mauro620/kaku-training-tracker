@@ -26,6 +26,21 @@ class EstadoCiclo(StrEnum):
     cerrado = "cerrado"
 
 
+class EstadoSesionPlan(StrEnum):
+    """Estado de ejecucion de un `sesion_plan`.
+
+    `descartado` lo declara el usuario. `cumplido` y `movido` los escribe el
+    service de sesion (`resolver_estado_de_plan`) cada vez que una sesion se
+    crea, cambia de fecha o se borra: la columna es la fuente de verdad y el
+    importador la lee directo, sin join contra `sesion`.
+    """
+
+    pendiente = "pendiente"
+    cumplido = "cumplido"
+    movido = "movido"
+    descartado = "descartado"
+
+
 class MomentoComida(StrEnum):
     desayuno = "desayuno"
     media_manana = "media_manana"

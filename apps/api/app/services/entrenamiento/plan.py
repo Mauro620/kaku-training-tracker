@@ -6,8 +6,9 @@ from datetime import date, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import RecursoNoEncontradoError
+from app.core.exceptions import InvarianteDeNegocioError, RecursoNoEncontradoError
 from app.models import CicloSemana, SesionPlan
+from app.models.enums import EstadoSesionPlan
 from app.repositories import entrenamiento as repo
 from app.schemas.entrenamiento.plan import SesionPlanCreate
 from app.services.entrenamiento.bloque import validar_campos
@@ -126,3 +127,66 @@ async def listar_planes_de_fecha(
         if inicio_semana + timedelta(days=plan.dia_sugerido) == fecha:
             resultado.append(plan)
     return resultado
+
+
+async def resolver_estado_de_plan(session: AsyncSession, sesion_plan_id: int) -> None:
+    """Recalcula `sesion_plan.estado` a partir de la sesión real asociada.
+
+    El estado se PERSISTE en vez de derivarse al leer, así que esta función
+    es la única que lo escribe y hay que llamarla desde TODO camino que cree,
+    mueva de fecha o borre una `sesion` (ver `services/entrenamiento/sesion.py`).
+    Si aparece un camino nuevo que toque `sesion.fecha` o `sesion.sesion_plan_id`
+    sin pasar por acá, la columna miente y el importador pisa histórico.
+
+    No commitea: la deja preparada para el commit de quien la llamó.
+    """
+    plan = await repo.obtener_sesion_plan_por_id(session, sesion_plan_id)
+    if plan is None:
+        return
+
+    sesion = await repo.obtener_sesion_por_plan(session, sesion_plan_id)
+    if sesion is None:
+        # `descartado` lo declaró el usuario: no se pisa por no haber sesión,
+        # que es justamente lo que descartar significa.
+        nuevo = (
+            EstadoSesionPlan.descartado
+            if plan.estado is EstadoSesionPlan.descartado
+            else EstadoSesionPlan.pendiente
+        )
+    elif plan.dia_sugerido is None or plan.ciclo_semana_id is None:
+        # Sin día planeado no hay contra qué comparar: se ejecutó y ya.
+        # Ejecutar gana sobre descartar: el entrenamiento pasó de verdad.
+        nuevo = EstadoSesionPlan.cumplido
+    else:
+        semana = await repo.obtener_ciclo_semana_por_id(session, plan.ciclo_semana_id)
+        assert semana is not None  # FK garantiza que existe
+        ciclo = await repo.obtener_ciclo_por_id(session, semana.ciclo_id)
+        assert ciclo is not None  # FK garantiza que existe
+        inicio_semana, _ = calcular_rango_semana(ciclo.fecha_inicio, semana.numero)
+        nuevo = (
+            EstadoSesionPlan.cumplido
+            if (sesion.fecha - inicio_semana).days == plan.dia_sugerido
+            else EstadoSesionPlan.movido
+        )
+
+    if plan.estado is not nuevo:
+        await repo.actualizar_estado_sesion_plan(session, plan, nuevo)
+
+
+async def descartar_plan(
+    session: AsyncSession, usuario_id: uuid.UUID, sesion_plan_id: int
+) -> SesionPlan:
+    """El usuario declara que un plan no se va a hacer. Es la única
+    transición de estado que elige una persona: `cumplido` y `movido` los
+    resuelve `resolver_estado_de_plan` contra la sesión real."""
+    plan = await repo.obtener_sesion_plan_por_id(session, sesion_plan_id)
+    if plan is None or plan.usuario_id != usuario_id:
+        raise RecursoNoEncontradoError(f"sesion_plan {sesion_plan_id} no encontrado")
+    if plan.estado in (EstadoSesionPlan.cumplido, EstadoSesionPlan.movido):
+        raise InvarianteDeNegocioError(
+            "El plan ya se ejecutó: no se puede descartar. El histórico no se toca."
+        )
+    await repo.actualizar_estado_sesion_plan(session, plan, EstadoSesionPlan.descartado)
+    await session.commit()
+    await session.refresh(plan, attribute_names=["bloques_planeados"])
+    return plan

@@ -3,14 +3,19 @@ from datetime import date
 from sqlalchemy import (
     CheckConstraint,
     Date,
+    Enum,
     ForeignKey,
+    Index,
     SmallInteger,
+    String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.enums import EstadoSesionPlan
 from app.models.types import Distancia, IntPk, Peso, UsuarioFk
 
 
@@ -32,6 +37,15 @@ class SesionPlan(Base):
             "dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6",
             name="dia_sugerido_rango",
         ),
+        # Parcial (WHERE clave_import IS NOT NULL): los planes creados a mano
+        # por POST /planes no tienen clave y no deben chocar entre si.
+        Index(
+            "ix_sesion_plan_clave_import",
+            "ciclo_semana_id",
+            "clave_import",
+            unique=True,
+            postgresql_where=text("clave_import IS NOT NULL"),
+        ),
     )
 
     id: Mapped[IntPk]
@@ -48,6 +62,16 @@ class SesionPlan(Base):
     objetivo: Mapped[str | None] = mapped_column(Text)
     duracion_min_est: Mapped[int | None] = mapped_column(SmallInteger)
     rpe_objetivo: Mapped[int | None] = mapped_column(SmallInteger)
+    estado: Mapped[EstadoSesionPlan] = mapped_column(
+        Enum(EstadoSesionPlan, name="estado_sesion_plan"),
+        nullable=False,
+        server_default=EstadoSesionPlan.pendiente.value,
+    )
+    # Identidad del plan dentro de la semana PARA EL IMPORTADOR:
+    # `{dia_sugerido}-{tipo_sesion_codigo}`. NULL en los planes creados a mano.
+    # Reimportar la semana reemplaza el plan de la misma clave en vez de
+    # duplicarlo (docs/feature_1_session_plan_json/PLAN_IMPORT.md §2.2).
+    clave_import: Mapped[str | None] = mapped_column(String(80))
 
     bloques_planeados: Mapped[list["BloquePlan"]] = relationship(
         back_populates="sesion_plan", order_by="BloquePlan.orden"

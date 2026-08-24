@@ -3,6 +3,9 @@ from app.repositories.catalogo.ejercicio import listar as listar_ejercicios
 from app.repositories.catalogo.ejercicio import (
     listar_por_ids as listar_ejercicios_por_ids,
 )
+from app.repositories.catalogo.ejercicio import (
+    obtener_por_nombre as obtener_ejercicio_por_nombre,
+)
 from app.repositories.catalogo.tipo_sesion import listar as listar_tipos_sesion
 from app.repositories.catalogo.zona_corporal import listar as listar_zonas_corporales
 from app.repositories.entrenamiento import ciclo as _ciclo
@@ -42,14 +45,19 @@ from app.repositories.entrenamiento.sesion import (
 from app.repositories.entrenamiento.sesion import (
     obtener_por_id as obtener_sesion_por_id,
 )
+from app.repositories.entrenamiento.sesion import (
+    obtener_por_sesion_plan as obtener_sesion_por_plan,
+)
 
 crear_ciclo = _ciclo.crear
 obtener_ciclo_por_id = _ciclo.obtener_por_id
+obtener_ciclo_por_numero = _ciclo.obtener_por_numero
 listar_ciclos_por_usuario = _ciclo.listar_por_usuario
 cerrar_ciclo = _ciclo.cerrar
 
 crear_ciclo_semana = _ciclo_semana.crear
 obtener_ciclo_semana_por_id = _ciclo_semana.obtener_por_id
+obtener_ciclo_semana_por_numero = _ciclo_semana.obtener_por_numero
 listar_ciclo_semanas_por_ciclo = _ciclo_semana.listar_por_ciclo
 actualizar_ciclo_semana = _ciclo_semana.actualizar
 eliminar_ciclo_semana = _ciclo_semana.eliminar
@@ -64,9 +72,12 @@ listar_planes_por_ciclo_y_tipos = _plan.listar_por_ciclo_y_tipos
 listar_planes_candidatos_de_fecha = _plan.listar_candidatos_de_fecha
 listar_planes_por_ciclo_semana = _plan.listar_por_ciclo_semana
 eliminar_sesion_plan = _plan.eliminar
+actualizar_estado_sesion_plan = _plan.actualizar_estado
+listar_planes_por_semana_y_claves = _plan.listar_por_semana_y_claves
 
 __all__ = [
     "actualizar_ciclo_semana",
+    "actualizar_estado_sesion_plan",
     "actualizar_sesion",
     "cerrar_ciclo",
     "contar_sesiones_por_tipo_en_rango",
@@ -94,12 +105,17 @@ __all__ = [
     "listar_planes_candidatos_de_fecha",
     "listar_planes_por_ciclo_semana",
     "listar_planes_por_ciclo_y_tipos",
+    "listar_planes_por_semana_y_claves",
     "listar_sesiones_por_fecha",
     "listar_tipos_sesion",
     "listar_zonas_corporales",
     "obtener_ciclo_por_id",
+    "obtener_ciclo_por_numero",
     "obtener_ciclo_semana_por_id",
+    "obtener_ciclo_semana_por_numero",
+    "obtener_ejercicio_por_nombre",
     "obtener_sesion_plan_por_id",
     "obtener_sesion_por_id",
+    "obtener_sesion_por_plan",
     "reemplazar_composicion",
 ]

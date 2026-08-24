@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "ciclo": {
+    "numero": 2,
+    "objetivo": "Velocidad, primer paso y resistencia intermitente",
+    "fecha_inicio": "2026-09-01",
+    "semanas": 4
+  },
+  "semana": {
+    "numero": 2,
+    "fase": "carga",
+    "rpe_objetivo": { "min": 7, "max": 9 },
+    "volumen_pct": 100
+  },
+  "sesiones": [
+    {
+      "dia": 0,
+      "tipo": "fuerza",
+      "objetivo": "Fuerza de piernas con contraste",
+      "duracion_min": 60,
+      "rpe_objetivo": 8,
+      "bloques": [
+        { "ejercicio": "Sentadilla explosiva", "tipo_medicion": "carga",
+          "series": 4, "reps_min": 4, "reps_max": 6, "peso_kg": 85 },
+        { "ejercicio": "Salto vertical de contraste", "tipo_medicion": "carga",
+          "series": 3, "reps": 3 },
+        { "ejercicio": "Peso muerto rumano", "tipo_medicion": "carga",
+          "series": 3, "reps": 8, "peso_kg": 70 },
+        { "ejercicio": "Pallof press", "tipo_medicion": "carga",
+          "series": 3, "reps": 10 },
+        { "ejercicio": "Elevación de talón", "tipo_medicion": "carga",
+          "series": 3, "reps": 12, "peso_kg": 20 }
+      ]
+    },
+    {
+      "dia": 1,
+      "tipo": "balon_control",
+      "objetivo": "Recepción orientada y salida del regate",
+      "duracion_min": 50,
+      "rpe_objetivo": 6,
+      "bloques": [
+        { "ejercicio": "Control con muro", "tipo_medicion": "tecnica",
+          "duracion_s": 900 },
+        { "ejercicio": "Control orientado", "tipo_medicion": "tecnica",
+          "duracion_s": 600 },
+        { "ejercicio": "Regate en conos", "tipo_medicion": "tecnica",
+          "duracion_s": 900 },
+        { "ejercicio": "Conducción en zigzag", "tipo_medicion": "tecnica",
+          "duracion_s": 600 }
+      ]
+    },
+    {
+      "dia": 2,
+      "tipo": "velocidad_salto",
+      "objetivo": "Aceleración y cambio de dirección",
+      "duracion_min": 45,
+      "rpe_objetivo": 8,
+      "bloques": [
+        { "ejercicio": "Sprint acelerativo 10-20 m", "tipo_medicion": "distancia",
+          "reps": 8, "distancia_m": 20 },
+        { "ejercicio": "Test 505", "tipo_medicion": "distancia",
+          "reps": 6, "distancia_m": 15 },
+        { "ejercicio": "Corte a 45 grados", "tipo_medicion": "distancia",
+          "reps": 6, "distancia_m": 20 },
+        { "ejercicio": "Salto CMJ", "tipo_medicion": "distancia",
+          "reps": 4 },
+        { "ejercicio": "Broad jump", "tipo_medicion": "distancia",
+          "reps": 4 }
+      ]
+    },
+    {
+      "dia": 3,
+      "tipo": "balon_distribucion",
+      "objetivo": "Pase largo y cambio de orientación",
+      "duracion_min": 50,
+      "rpe_objetivo": 6,
+      "bloques": [
+        { "ejercicio": "Recepción y pase", "tipo_medicion": "distancia",
+          "reps": 20, "distancia_m": 15 },
+        { "ejercicio": "Recepción y pase", "tipo_medicion": "distancia",
+          "reps": 20, "distancia_m": 20 },
+        { "ejercicio": "Recepción y pase", "tipo_medicion": "distancia",
+          "reps": 15, "distancia_m": 25 },
+        { "ejercicio": "Conducción y centro", "tipo_medicion": "tecnica",
+          "reps": 12 },
+        { "ejercicio": "Tiro libre", "tipo_medicion": "tecnica",
+          "reps": 20 }
+      ]
+    },
+    {
+      "dia": 4,
+      "tipo": "fuerza",
+      "objetivo": "Cadena posterior y core",
+      "duracion_min": 55,
+      "rpe_objetivo": 8,
+      "bloques": [
+        { "ejercicio": "Hip thrust", "tipo_medicion": "carga",
+          "series": 3, "reps_min": 6, "reps_max": 8, "peso_kg": 100 },
+        { "ejercicio": "Plancha Copenhague", "tipo_medicion": "tiempo",
+          "duracion_s": 90 },
+        { "ejercicio": "Rotacional con balón", "tipo_medicion": "carga",
+          "series": 3, "reps": 5 },
+        { "ejercicio": "Pogos", "tipo_medicion": "tecnica",
+          "reps": 20 }
+      ]
+    },
+    {
+      "dia": 5,
+      "tipo": "resistencia",
+      "objetivo": "Capacidad intermitente y recuperación entre sprints",
+      "duracion_min": 45,
+      "rpe_objetivo": 9,
+      "bloques": [
+        { "ejercicio": "Fartlek", "tipo_medicion": "tiempo",
+          "duracion_s": 900 },
+        { "ejercicio": "RSA 30 m", "tipo_medicion": "distancia",
+          "reps": 16, "distancia_m": 30 },
+        { "ejercicio": "Circuito con balón", "tipo_medicion": "tecnica",
+          "duracion_s": 600 }
+      ]
+    },
+    {
+      "dia": 6,
+      "tipo": "recuperacion",
+      "objetivo": "Movilidad y descarga",
+      "duracion_min": 30,
+      "rpe_objetivo": 3,
+      "bloques": [
+        { "ejercicio": "Movilidad completa", "tipo_medicion": "tiempo",
+          "duracion_s": 1200 },
+        { "ejercicio": "Trote suave", "tipo_medicion": "tiempo",
+          "duracion_s": 600 }
+      ]
+    }
+  ]
+}

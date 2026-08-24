@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Ciclo, CicloSemana, SesionPlan
+from app.models.enums import EstadoSesionPlan
 
 
 async def crear(
@@ -22,6 +23,7 @@ async def crear(
     objetivo: str | None,
     duracion_min_est: int | None,
     rpe_objetivo: int | None,
+    clave_import: str | None = None,
 ) -> SesionPlan:
     plan = SesionPlan(
         usuario_id=usuario_id,
@@ -32,10 +34,36 @@ async def crear(
         objetivo=objetivo,
         duracion_min_est=duracion_min_est,
         rpe_objetivo=rpe_objetivo,
+        clave_import=clave_import,
     )
     session.add(plan)
     await session.flush()
     return plan
+
+
+async def actualizar_estado(
+    session: AsyncSession, plan: SesionPlan, estado: EstadoSesionPlan
+) -> SesionPlan:
+    plan.estado = estado
+    await session.flush()
+    return plan
+
+
+async def listar_por_semana_y_claves(
+    session: AsyncSession, ciclo_semana_id: int, claves: list[str]
+) -> list[SesionPlan]:
+    """Planes importados de la semana cuya `clave_import` esta en la lista.
+    Es lo que hace idempotente la reimportacion: el importador compara contra
+    esto para decidir entre reemplazar, omitir o crear."""
+    if not claves:
+        return []
+    resultado = await session.scalars(
+        select(SesionPlan).where(
+            SesionPlan.ciclo_semana_id == ciclo_semana_id,
+            SesionPlan.clave_import.in_(claves),
+        )
+    )
+    return list(resultado.all())
 
 
 async def obtener_por_id(session: AsyncSession, plan_id: int) -> SesionPlan | None:

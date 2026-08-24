@@ -75,6 +75,19 @@ async def obtener_por_id(session: AsyncSession, sesion_id: uuid.UUID) -> Sesion 
     )
 
 
+async def obtener_por_sesion_plan(
+    session: AsyncSession, sesion_plan_id: int
+) -> Sesion | None:
+    """La sesion real que se registro contra un plan, si existe.
+    `sesion.sesion_plan_id` es UNIQUE: hay a lo sumo una."""
+    return cast(
+        "Sesion | None",
+        await session.scalar(
+            select(Sesion).where(Sesion.sesion_plan_id == sesion_plan_id)
+        ),
+    )
+
+
 async def actualizar(
     session: AsyncSession,
     sesion: Sesion,

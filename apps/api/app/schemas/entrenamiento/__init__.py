@@ -11,6 +11,15 @@ from app.schemas.entrenamiento.ciclo import (
     CumplimientoItem,
     ReemplazarComposicionRequest,
 )
+from app.schemas.entrenamiento.importacion import (
+    BloqueImport,
+    CicloImport,
+    ImportacionResultado,
+    PlanSemanalImport,
+    RpeObjetivoImport,
+    SemanaImport,
+    SesionImport,
+)
 from app.schemas.entrenamiento.plan import (
     BloquePlanCreate,
     BloquePlanRead,
@@ -32,6 +41,7 @@ from app.schemas.entrenamiento.sesion import (
 
 __all__ = [
     "BloqueCreate",
+    "BloqueImport",
     "BloquePlanCreate",
     "BloquePlanRead",
     "BloquePlanSinPlanCreate",
@@ -41,6 +51,7 @@ __all__ = [
     "BloqueUpdate",
     "CicloCerrarRequest",
     "CicloCreate",
+    "CicloImport",
     "CicloRead",
     "CicloSemanaCreate",
     "CicloSemanaRead",
@@ -49,8 +60,13 @@ __all__ = [
     "ComposicionItem",
     "ComposicionItemRead",
     "CumplimientoItem",
+    "ImportacionResultado",
+    "PlanSemanalImport",
     "ReemplazarComposicionRequest",
+    "RpeObjetivoImport",
+    "SemanaImport",
     "SesionCreate",
+    "SesionImport",
     "SesionPlanCreate",
     "SesionPlanRead",
     "SesionPlanUpdate",

@@ -32,7 +32,7 @@ async def _horas_a_dias(session: AsyncSession, clave: str) -> int:
     return math.ceil(float(parametro.valor) / 24)
 
 
-async def validar_espaciado(
+async def evaluar_espaciado(
     session: AsyncSession,
     *,
     usuario_id: uuid.UUID,
@@ -40,10 +40,19 @@ async def validar_espaciado(
     semana: CicloSemana,
     tipo_sesion: TipoSesion,
     dia_sugerido: int | None,
-) -> None:
-    if dia_sugerido is None:
-        return
+) -> list[str]:
+    """Devuelve los avisos de espaciado, sin levantar nada.
 
+    Existe separada de `validar_espaciado` porque las dos rutas de entrada
+    tratan la misma regla distinto: crear un plan a mano es un acto
+    deliberado y se bloquea, pero importar la semana entera devuelve
+    advertencias sin frenar la importacion (PLAN_IMPORT.md 6). La regla vive
+    una sola vez; lo que cambia es quien decide que hacer con el aviso.
+    """
+    if dia_sugerido is None:
+        return []
+
+    avisos: list[str] = []
     candidata = _fecha_absoluta(ciclo, semana, dia_sugerido)
     rango_desde = ciclo.fecha_inicio
     rango_hasta = ciclo.fecha_fin_prevista
@@ -58,10 +67,10 @@ async def validar_espaciado(
             if otra == candidata:
                 continue
             if abs((otra - candidata).days) < min_dias:
-                raise InvarianteDeNegocioError(
-                    f"El día sugerido ({candidata}) queda a menos de "
-                    f"{min_dias} días de otra sesión de fuerza ({otra}). "
-                    f"Mínimo: fuerza_separacion_min_horas."
+                avisos.append(
+                    f"El dia sugerido ({candidata}) queda a menos de "
+                    f"{min_dias} dias de otra sesion de fuerza ({otra}). "
+                    f"Minimo: fuerza_separacion_min_horas."
                 )
 
     if tipo_sesion.codigo == CODIGO_PARTIDO:
@@ -78,11 +87,34 @@ async def validar_espaciado(
         for otra in [*reales, *planificadas]:
             dias_antes = (candidata - otra).days
             if 0 < dias_antes <= ventana_dias:
-                raise InvarianteDeNegocioError(
-                    f"El día sugerido para el partido ({candidata}) tiene una "
-                    f"sesión de demanda alta {dias_antes} día(s) antes ({otra}). "
+                avisos.append(
+                    f"El dia sugerido para el partido ({candidata}) tiene una "
+                    f"sesion de demanda alta {dias_antes} dia(s) antes ({otra}). "
                     f"Ventana requerida: partido_ventana_previa_horas."
                 )
+
+    return avisos
+
+
+async def validar_espaciado(
+    session: AsyncSession,
+    *,
+    usuario_id: uuid.UUID,
+    ciclo: Ciclo,
+    semana: CicloSemana,
+    tipo_sesion: TipoSesion,
+    dia_sugerido: int | None,
+) -> None:
+    avisos = await evaluar_espaciado(
+        session,
+        usuario_id=usuario_id,
+        ciclo=ciclo,
+        semana=semana,
+        tipo_sesion=tipo_sesion,
+        dia_sugerido=dia_sugerido,
+    )
+    if avisos:
+        raise InvarianteDeNegocioError(avisos[0])
 
 
 async def _fechas_planificadas(

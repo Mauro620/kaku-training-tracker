@@ -4,6 +4,7 @@ from typing import Self
 
 from pydantic import Field, model_validator
 
+from app.models.enums import EstadoSesionPlan
 from app.schemas.base import ReadBase, SchemaBase
 from app.schemas.types import (
     DiaSemana,
@@ -54,6 +55,9 @@ class SesionPlanRead(ReadBase):
     objetivo: str | None
     duracion_min_est: int | None
     rpe_objetivo: int | None
+    estado: EstadoSesionPlan
+    # NULL en los planes creados a mano: solo el importador la asigna.
+    clave_import: str | None
     bloques_planeados: list["BloquePlanRead"] = Field(default_factory=list)
 
 

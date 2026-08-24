@@ -26,6 +26,7 @@ from app.schemas.entrenamiento.sesion import (
     SesionUpdate,
 )
 from app.services.entrenamiento.bloque import validar_campos
+from app.services.entrenamiento.plan import resolver_estado_de_plan
 
 
 async def _validar_bloques(
@@ -107,6 +108,13 @@ async def crear_sesion_con_bloques(
             )
             creadas += 1
 
+    # El plan asociado pasa a cumplido o movido segun caiga la fecha
+    # (PLAN_IMPORT.md 2.1). `estado` es columna persistida, no derivada: si
+    # esta llamada falta, el importador cree que el plan sigue pendiente y lo
+    # reemplaza, borrando planificacion que ya se ejecuto.
+    if sesion_creada.sesion_plan_id is not None:
+        await resolver_estado_de_plan(session, sesion_creada.sesion_plan_id)
+
     await session.commit()
     # attribute_names=["bloques"]: SesionRead siempre incluye los bloques,
     # asi que el service es quien los deja cargados antes de devolver.
@@ -176,6 +184,10 @@ async def actualizar_sesion(
             dolor_lumbar=b.dolor_lumbar,
         )
 
+    # La fecha pudo moverse: cumplido <-> movido se recalcula.
+    if sesion.sesion_plan_id is not None:
+        await resolver_estado_de_plan(session, sesion.sesion_plan_id)
+
     await session.commit()
     # carga_srpe es Computed: el UPDATE la deja expirada (no vino con
     # RETURNING como el INSERT de crear_sesion). Sin refrescarla acá, el
@@ -189,5 +201,11 @@ async def eliminar_sesion(
     session: AsyncSession, usuario_id: uuid.UUID, sesion_id: uuid.UUID
 ) -> None:
     sesion = await obtener_sesion(session, usuario_id, sesion_id)
+    sesion_plan_id = sesion.sesion_plan_id
     await repo.eliminar_sesion(session, sesion)
+    # Sin sesion real el plan vuelve a pendiente (o sigue descartado). Va
+    # despues del DELETE: resolver_estado_de_plan busca la sesion asociada y
+    # tiene que no encontrarla.
+    if sesion_plan_id is not None:
+        await resolver_estado_de_plan(session, sesion_plan_id)
     await session.commit()

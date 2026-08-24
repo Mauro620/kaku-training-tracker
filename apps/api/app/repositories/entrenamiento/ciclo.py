@@ -38,6 +38,19 @@ async def obtener_por_id(session: AsyncSession, ciclo_id: int) -> Ciclo | None:
     )
 
 
+async def obtener_por_numero(
+    session: AsyncSession, usuario_id: uuid.UUID, numero: int
+) -> Ciclo | None:
+    """UNIQUE(usuario_id, numero): el numero de ciclo es su identidad para el
+    usuario, y es lo unico que trae el JSON de importacion."""
+    return cast(
+        "Ciclo | None",
+        await session.scalar(
+            select(Ciclo).where(Ciclo.usuario_id == usuario_id, Ciclo.numero == numero)
+        ),
+    )
+
+
 async def listar_por_usuario(
     session: AsyncSession, usuario_id: uuid.UUID
 ) -> list[Ciclo]:
