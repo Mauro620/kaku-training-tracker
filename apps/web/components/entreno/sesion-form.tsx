@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import {
@@ -20,7 +20,17 @@ import {
   type TipoSesion,
 } from "@/lib/api/hooks";
 
-type Props = { fecha: string; planes: SesionPlan[] };
+type Props = {
+  fecha: string;
+  planes: SesionPlan[];
+  /**
+   * Pedido externo de abrir el form ya apuntando a un plan (boton "Empezar
+   * sesion" de PlanDeHoyCard, o el selector de otra sesion de la semana).
+   * `nonce` existe para que dos pedidos seguidos del MISMO plan vuelvan a
+   * disparar el efecto: sin el, cerrar y volver a tocar no haria nada.
+   */
+  pedido?: { plan: SesionPlan | null; nonce: number } | null;
+};
 
 /**
  * Form de sesion (Fase 4, ROADMAP §4).
@@ -29,7 +39,7 @@ type Props = { fecha: string; planes: SesionPlan[] };
  * El cliente genera `id` y `idempotency_key` (uuid v4) para que el backend
  * pueda detectar reintentos idempotentes (Fase 5 offline-first).
  */
-export function SesionForm({ fecha, planes }: Props) {
+export function SesionForm({ fecha, planes, pedido = null }: Props) {
   const tipos = useTiposSesion();
   const ejercicios = useEjercicios();
   const sesionesDeHoy = useSesionesDeFecha(fecha);
@@ -43,6 +53,22 @@ export function SesionForm({ fecha, planes }: Props) {
   const [nota, setNota] = useState("");
   const [bloques, setBloques] = useState<BloqueBorrador[]>([]);
 
+  const contenedor = useRef<HTMLDivElement>(null);
+  const ultimoNonce = useRef<number | null>(null);
+
+  // Precarga desde el plan: duracion y RPE objetivo son lo que el usuario iba
+  // a hacer, asi que arrancar ahi y editar la diferencia es menos trabajo que
+  // escribir los dos numeros de cero.
+  useEffect(() => {
+    if (!pedido || pedido.nonce === ultimoNonce.current) return;
+    ultimoNonce.current = pedido.nonce;
+    setExpandido(true);
+    setTipoSesionId(pedido.plan?.tipo_sesion_id ?? null);
+    if (pedido.plan?.duracion_min_est) setDuracionMin(pedido.plan.duracion_min_est);
+    if (pedido.plan?.rpe_objetivo) setRpe(pedido.plan.rpe_objetivo);
+    contenedor.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [pedido]);
+
   const tipoSeleccionado = tipos.data?.find((t) => t.id === tipoSesionId) ?? null;
 
   // Un plan ya cumplido (tiene una sesion real que lo referencia) no se
@@ -53,8 +79,13 @@ export function SesionForm({ fecha, planes }: Props) {
       .filter((id): id is number => id !== null),
   );
   const planesPendientes = planes.filter((p) => !idsPlanesCumplidos.has(p.id));
+  // Si el plan vino por `pedido` manda ese, aunque sea de otro dia de la
+  // semana: es exactamente el caso de "hacer hoy la sesion del martes". El
+  // backend deriva `movido` solo al comparar fecha contra dia_sugerido.
   const planVinculado =
-    planesPendientes.find((p) => p.tipo_sesion_id === tipoSesionId) ?? null;
+    pedido?.plan ??
+    planesPendientes.find((p) => p.tipo_sesion_id === tipoSesionId) ??
+    null;
 
   const cargaEstimada = rpe * duracionMin;
 
@@ -86,6 +117,9 @@ export function SesionForm({ fecha, planes }: Props) {
   const puedeGuardar = tipoSesionId !== null && !bloques.some(bloqueInvalido);
 
   return (
+    // div envolvente solo para el ref: BentoCard no reenvia ref y no vale la
+    // pena cambiarlo para un scrollIntoView.
+    <div ref={contenedor}>
     <BentoCard>
       <button
         type="button"
@@ -313,6 +347,7 @@ export function SesionForm({ fecha, planes }: Props) {
         </div>
       )}
     </BentoCard>
+    </div>
   );
 }
 

@@ -25,6 +25,15 @@ class Ciclo(Base):
             "fecha_cierre_real IS NULL OR estado = 'cerrado'",
             name="fecha_cierre_coherente",
         ),
+        # dia_sugerido es un offset desde el inicio de la semana y esta
+        # documentado como 0=lunes (REGLAS_NEGOCIO §13.3). Eso solo es cierto
+        # si fecha_inicio cae lunes: con un ciclo que arranca domingo, el
+        # "lunes" de cada plan aterriza un dia antes y `movido` se calcula mal.
+        # El service ancla la fecha al lunes ISO; este CHECK es el que hace que
+        # no importe si alguien se saltea el service.
+        CheckConstraint(
+            "EXTRACT(ISODOW FROM fecha_inicio) = 1", name="fecha_inicio_es_lunes"
+        ),
     )
 
     id: Mapped[IntPk]

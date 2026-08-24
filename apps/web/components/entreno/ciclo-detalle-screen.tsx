@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
+import { EstadoPlanPill } from "@/components/entreno/estado-plan-pill";
 import { EjercicioPicker } from "@/components/entreno/bloque-editor";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -12,6 +13,7 @@ import {
   useCrearPlan,
   useCrearSemana,
   useCumplimiento,
+  useDescartarPlan,
   useEjercicios,
   useEliminarSemana,
   usePlanesDeSemana,
@@ -286,10 +288,22 @@ function PlanesBloque({ semanaId }: { semanaId: number }) {
 }
 
 function PlanCard({ plan, tipoNombre }: { plan: SesionPlan; tipoNombre: string }) {
+  // Solo se puede descartar un plan que sigue pendiente: cumplido y movido
+  // los resuelve el server contra la sesion real, descartado ya lo decidio
+  // el usuario. El server tambien lo valida (PATCH /planes/{id}/descartar
+  // levanta si el plan esta ejecutado), pero la UI lo refleja para no
+  // exponer un boton que va a fallar.
+  const descartable = plan.estado === "pendiente";
+  const [confirmando, setConfirmando] = useState(false);
+  const descartar = useDescartarPlan();
+
   return (
     <li className="rounded-bento bg-canvas px-4 py-2 text-[13px]">
-      <div className="flex items-center justify-between">
-        <span className="font-medium capitalize text-text-primary">{tipoNombre}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-medium capitalize text-text-primary">{tipoNombre}</span>
+          <EstadoPlanPill estado={plan.estado} compacto />
+        </div>
         <span className="tabular text-text-secondary">
           {plan.dia_sugerido !== null ? DIAS_SEMANA[plan.dia_sugerido] : "Sin dia"}
         </span>
@@ -304,6 +318,53 @@ function PlanCard({ plan, tipoNombre }: { plan: SesionPlan; tipoNombre: string }
           .filter(Boolean)
           .join(" · ") || "Sin detalle"}
       </p>
+
+      {descartable && !confirmando && (
+        <div className="mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setConfirmando(true)}
+            className="rounded-pill bg-surface-secondary px-3 py-1 text-[11px] font-medium text-text-secondary"
+          >
+            Descartar
+          </button>
+        </div>
+      )}
+
+      {confirmando && (
+        <div className="mt-2 flex flex-col gap-2 rounded-bento bg-surface-secondary p-2">
+          <p className="text-[12px] text-text-secondary">
+            Marcar este plan como descartado? No contara para el incumplimiento.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmando(false)}
+              className="flex-1 rounded-pill bg-canvas py-1.5 text-[12px] font-medium text-text-primary"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={descartar.isPending}
+              onClick={async () => {
+                await descartar.mutateAsync(plan.id);
+                setConfirmando(false);
+              }}
+              className="flex-1 rounded-pill bg-state-focus py-1.5 text-[12px] font-semibold text-canvas disabled:opacity-50"
+            >
+              {descartar.isPending ? "Descartando..." : "Confirmar"}
+            </button>
+          </div>
+          {descartar.error && (
+            <p className="text-[11px] text-state-danger">
+              {descartar.error instanceof ApiError
+                ? descartar.error.message
+                : "No se pudo descartar."}
+            </p>
+          )}
+        </div>
+      )}
     </li>
   );
 }

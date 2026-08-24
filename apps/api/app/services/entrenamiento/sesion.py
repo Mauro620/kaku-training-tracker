@@ -128,6 +128,12 @@ async def listar_sesiones_de_fecha(
     return await repo.listar_sesiones_por_fecha(session, usuario_id, fecha)
 
 
+async def listar_ultimas_sesiones(
+    session: AsyncSession, usuario_id: uuid.UUID, limite: int
+) -> list[Sesion]:
+    return await repo.listar_ultimas_sesiones(session, usuario_id, limite)
+
+
 async def obtener_sesion(
     session: AsyncSession, usuario_id: uuid.UUID, sesion_id: uuid.UUID
 ) -> Sesion:

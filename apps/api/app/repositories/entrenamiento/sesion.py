@@ -138,6 +138,22 @@ async def listar_por_fecha(
     return list(resultado.all())
 
 
+async def listar_ultimas(
+    session: AsyncSession, usuario_id: uuid.UUID, limite: int
+) -> list[Sesion]:
+    """Las N sesiones mas recientes, sin acotar a una fecha. Orden por fecha
+    y despues por `registrado_en`: dos sesiones del mismo dia se desempatan
+    por cuando se cargaron, no arbitrariamente."""
+    resultado = await session.scalars(
+        select(Sesion)
+        .where(Sesion.usuario_id == usuario_id)
+        .options(selectinload(Sesion.bloques))
+        .order_by(Sesion.fecha.desc(), Sesion.registrado_en.desc())
+        .limit(limite)
+    )
+    return list(resultado.all())
+
+
 async def contar_por_tipo_en_rango(
     session: AsyncSession,
     usuario_id: uuid.UUID,

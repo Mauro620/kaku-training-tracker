@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
-import { useCiclos, type Ciclo } from "@/lib/api/hooks";
+import { useCiclos } from "@/lib/api/hooks";
+import { elegirCicloActivo, progresoDeSemana, useSemanaActual } from "@/lib/semana";
 
 type Props = { fecha: string };
 
@@ -16,11 +17,12 @@ type Props = { fecha: string };
  */
 export function CicloActivoCard({ fecha }: Props) {
   const ciclos = useCiclos();
+  const actual = useSemanaActual(fecha);
 
-  if (!ciclos.data || ciclos.data.length === 0) return null;
-
-  const ciclo = elegirCicloActivo(ciclos.data, fecha);
+  const ciclo = ciclos.data ? elegirCicloActivo(ciclos.data, fecha) : null;
   if (!ciclo) return null;
+
+  const progreso = progresoDeSemana(actual.planes);
 
   return (
     <Link href={`/entreno/ciclos/${ciclo.id}`}>
@@ -35,23 +37,15 @@ export function CicloActivoCard({ fecha }: Props) {
           <p className="mt-0.5 text-[11px] text-text-secondary">
             {ciclo.fecha_inicio} → {ciclo.fecha_fin_prevista}
           </p>
+          {actual.semana && (
+            <p className="mt-1 text-[11px] uppercase tracking-widest text-text-secondary">
+              Semana {actual.semana.numero} de {ciclo.semanas} · {actual.semana.fase} ·{" "}
+              {progreso.hechas} de {progreso.total} sesiones
+            </p>
+          )}
         </div>
         <ChevronRight size={18} className="text-text-secondary" />
       </BentoCard>
     </Link>
-  );
-}
-
-function elegirCicloActivo(ciclos: Ciclo[], fecha: string): Ciclo | null {
-  const noCerrados = ciclos.filter((c) => c.estado !== "cerrado");
-  if (noCerrados.length === 0) return null;
-
-  const dentroDeRango = noCerrados.find(
-    (c) => c.fecha_inicio <= fecha && fecha <= c.fecha_fin_prevista,
-  );
-  if (dentroDeRango) return dentroDeRango;
-
-  return (
-    [...noCerrados].sort((a, b) => (a.fecha_inicio < b.fecha_inicio ? 1 : -1))[0] ?? null
   );
 }

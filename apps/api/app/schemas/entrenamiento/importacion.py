@@ -152,10 +152,19 @@ class ImportacionResultado(ReadBase):
 
     `advertencias` no bloquea: son cosas que el usuario probablemente quiera
     revisar, no razones para rechazar la semana entera.
+
+    `ciclo_semana_inicio` / `ciclo_semana_fin` se calculan desde
+    `ciclo.fecha_inicio` y `ciclo_semana.numero`: le devuelven al cliente el
+    rango de fechas que la importacion efectivamente cubrio, para que el
+    usuario sepa en que ventana cae lo que acaba de planificar (sin esto, una
+    importacion de "semana 2" en un ciclo que arranca el lunes se ve
+    visualmente igual a una de "semana 1" hasta que abris el detalle).
     """
 
     ciclo_id: int
     ciclo_semana_id: int
+    ciclo_semana_inicio: date
+    ciclo_semana_fin: date
     sesiones_creadas: int
     sesiones_reemplazadas: int
     sesiones_omitidas: int

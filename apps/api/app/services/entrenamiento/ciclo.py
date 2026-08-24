@@ -19,6 +19,25 @@ from app.schemas.entrenamiento.ciclo import (
 # ---------- Ciclo ----------
 
 
+def anclar_a_lunes(fecha: date) -> date:
+    """Lunes ISO de la semana que contiene `fecha`.
+
+    `dia_sugerido` es un offset desde el inicio de la semana y vale 0=lunes
+    (REGLAS_NEGOCIO §13.3). Como el rango de la semana N se deriva de
+    `ciclo.fecha_inicio` (`calcular_rango_semana`), esa equivalencia solo se
+    sostiene si `fecha_inicio` cae lunes. Un ciclo que arranca domingo hace
+    que cada plan aterrice un dia antes de lo que dice su enum, y que
+    `resolver_estado_de_plan` marque `movido` lo que se cumplio en fecha.
+
+    Se normaliza al ESCRIBIR y no al leer a proposito:
+    `ciclo.fecha_fin_prevista` es una columna generada a partir de
+    `fecha_inicio`, y el filtro de planes del dia usa ese rango. Correr el
+    anclaje solo en la lectura dejaria la cola de la ultima semana fuera del
+    rango del ciclo, y esos planes se filtrarian.
+    """
+    return fecha - timedelta(days=fecha.weekday())
+
+
 async def crear_ciclo(
     session: AsyncSession, usuario_id: uuid.UUID, payload: CicloCreate
 ) -> Ciclo:
@@ -27,7 +46,7 @@ async def crear_ciclo(
         usuario_id=usuario_id,
         numero=payload.numero,
         objetivo=payload.objetivo,
-        fecha_inicio=payload.fecha_inicio,
+        fecha_inicio=anclar_a_lunes(payload.fecha_inicio),
         semanas=payload.semanas,
     )
     await session.commit()

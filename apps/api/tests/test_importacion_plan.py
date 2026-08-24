@@ -9,6 +9,7 @@ quedó mintiendo y el test tiene que enterarse.
 import json
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.main import app
 from app.models import (
+    Ciclo,
     CicloSemanaComposicion,
     Ejercicio,
     SesionPlan,
@@ -216,14 +218,15 @@ async def test_no_reemplaza_un_plan_ya_ejecutado(
     assert plan is not None
     plan_id, objetivo_original = plan.id, plan.objetivo
 
-    # La semana 2 arranca el 2026-09-08 (fecha_inicio + 7); el día 0 es ese mismo.
+    # fecha_inicio 2026-09-01 (martes) se ancla al lunes 2026-08-31, asi que
+    # la semana 2 arranca el 2026-09-07 y su día 0 es ese mismo.
     creada = await cliente.post(
         "/api/v1/sesiones",
         json={
             "id": str(uuid.uuid4()),
             "idempotency_key": str(uuid.uuid4()),
             "sesion_plan_id": plan_id,
-            "fecha": "2026-09-08",
+            "fecha": "2026-09-07",
             "tipo_sesion_id": plan.tipo_sesion_id,
             "duracion_min": 60,
             "rpe": 8,
@@ -260,14 +263,14 @@ async def test_una_sesion_en_otro_dia_deja_el_plan_en_movido(
     )
     assert plan is not None
 
-    # dia 0 de la semana 1 es 2026-09-01; se entrena el 2026-09-03.
+    # dia 0 de la semana 1 es 2026-08-31 (lunes); se entrena el 2026-09-02.
     creada = await cliente.post(
         "/api/v1/sesiones",
         json={
             "id": str(uuid.uuid4()),
             "idempotency_key": str(uuid.uuid4()),
             "sesion_plan_id": plan.id,
-            "fecha": "2026-09-03",
+            "fecha": "2026-09-02",
             "tipo_sesion_id": plan.tipo_sesion_id,
             "duracion_min": 60,
             "rpe": 8,
@@ -297,7 +300,7 @@ async def test_borrar_la_sesion_devuelve_el_plan_a_pendiente(
             "id": sesion_id,
             "idempotency_key": str(uuid.uuid4()),
             "sesion_plan_id": plan.id,
-            "fecha": "2026-09-01",
+            "fecha": "2026-08-31",
             "tipo_sesion_id": plan.tipo_sesion_id,
             "duracion_min": 60,
             "rpe": 8,
@@ -334,7 +337,7 @@ async def test_descartar_un_plan_y_no_poder_descartar_uno_ejecutado(
             "id": str(uuid.uuid4()),
             "idempotency_key": str(uuid.uuid4()),
             "sesion_plan_id": plan.id,
-            "fecha": "2026-09-01",
+            "fecha": "2026-08-31",
             "tipo_sesion_id": plan.tipo_sesion_id,
             "duracion_min": 60,
             "rpe": 8,
@@ -466,3 +469,39 @@ async def test_advierte_dos_fuerzas_a_menos_de_48_horas_sin_bloquear(
     avisos_fuerza = [a for a in cuerpo["advertencias"] if "fuerza" in a]
     # Una sola vez, no una por cada lado del conflicto.
     assert len(avisos_fuerza) == 1
+
+
+async def test_el_ciclo_se_ancla_al_lunes_de_su_semana(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """`dia_sugerido` 0=lunes solo es cierto si fecha_inicio cae lunes: el
+    rango de la semana se deriva de ella (REGLAS_NEGOCIO §13.3)."""
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 11
+    payload["ciclo"]["fecha_inicio"] = "2026-08-23"  # domingo
+
+    respuesta = await _importar(cliente, payload)
+    assert respuesta.status_code == 200
+
+    ciclo = await sesion.get(Ciclo, respuesta.json()["ciclo_id"])
+    assert ciclo is not None
+    assert ciclo.fecha_inicio == date(2026, 8, 17)  # lunes anterior
+    assert ciclo.fecha_inicio.weekday() == 0
+
+
+async def test_el_plan_del_dia_0_cae_lunes(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """Cierre del bucle: con el anclaje, el plan de `dia: 0` se resuelve el
+    lunes de esa semana y no un día antes."""
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 12
+    payload["ciclo"]["fecha_inicio"] = "2026-08-23"  # domingo
+    await _importar(cliente, payload)
+
+    encontrados = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-17"})
+    assert encontrados.status_code == 200
+    assert [p["clave_import"] for p in encontrados.json()] == ["0-fuerza"]
+
+    vacio = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-16"})
+    assert vacio.json() == []

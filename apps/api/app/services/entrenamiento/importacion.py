@@ -17,6 +17,7 @@ Dos invariantes gobiernan todo lo de abajo:
 
 import uuid
 from collections import Counter
+from datetime import timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,7 @@ from app.schemas.entrenamiento.importacion import (
     SesionImport,
 )
 from app.services.entrenamiento.bloque import validar_campos
+from app.services.entrenamiento.ciclo import anclar_a_lunes
 from app.services.entrenamiento.espaciado import evaluar_espaciado
 from app.services.entrenamiento.plan import resolver_estado_de_plan
 
@@ -94,6 +96,10 @@ async def importar_plan_semanal(
     return ImportacionResultado(
         ciclo_id=ciclo.id,
         ciclo_semana_id=semana.id,
+        ciclo_semana_inicio=ciclo.fecha_inicio
+        + timedelta(days=(semana.numero - 1) * 7),
+        ciclo_semana_fin=ciclo.fecha_inicio
+        + timedelta(days=(semana.numero - 1) * 7 + 6),
         sesiones_creadas=creadas,
         sesiones_reemplazadas=reemplazadas,
         sesiones_omitidas=len(ejecutadas),
@@ -204,7 +210,7 @@ async def _resolver_ciclo(
         usuario_id=usuario_id,
         numero=payload.ciclo.numero,
         objetivo=payload.ciclo.objetivo,
-        fecha_inicio=payload.ciclo.fecha_inicio,
+        fecha_inicio=anclar_a_lunes(payload.ciclo.fecha_inicio),
         semanas=payload.ciclo.semanas,
     )
 

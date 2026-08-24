@@ -59,6 +59,23 @@ async def listar_sesiones(
     return await service.listar_sesiones_de_fecha(sesion, usuario.id, fecha)
 
 
+# Declarado ANTES de /{sesion_id}: FastAPI resuelve por orden y esa ruta se
+# comeria "ultimas" como si fuera un uuid.
+@router.get(
+    "/ultimas",
+    response_model=list[SesionRead],
+    summary="Ultimas N sesiones registradas, de la mas reciente a la mas vieja.",
+)
+async def listar_ultimas(
+    limite: int = Query(10, ge=1, le=50, description="Cuantas sesiones traer"),
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> list[Sesion]:
+    """El historico de la pantalla Entreno. Tope de 50 para no traer el
+    ciclo entero sin querer."""
+    return await service.listar_ultimas_sesiones(sesion, usuario.id, limite)
+
+
 @router.get(
     "/{sesion_id}",
     response_model=SesionRead,

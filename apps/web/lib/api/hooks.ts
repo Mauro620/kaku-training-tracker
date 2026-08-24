@@ -165,6 +165,11 @@ export type SesionPlan = {
   objetivo: string | null;
   duracion_min_est: number | null;
   rpe_objetivo: number | null;
+  // Fase 4 R4 (feat/import-plan-semanal-json 22d4c61): el backend ahora
+  // persiste `estado` en sesion_plan y devuelve `clave_import` para los
+  // planes creados por el importador (NULL en los manuales).
+  estado: "pendiente" | "cumplido" | "movido" | "descartado";
+  clave_import: string | null;
   bloques_planeados: BloquePlan[];
 };
 
@@ -546,8 +551,12 @@ export function useCrearSesion(fecha: string) {
         },
       };
       await encolar(evento);
-      // Una sesion vinculada a un plan lo saca de "pendiente".
-      sincronizarYRefrescar(qc, [["sesiones", fecha], ["planes", fecha]]);
+      // Prefijos y no claves exactas: una sesion vinculada a un plan cambia
+      // su `estado`, y eso se ve en los planes de la fecha, en los de la
+      // semana (["semana", id, "planes"]) y en el historico
+      // (["sesiones", "ultimas", n]). Invalidar solo ["sesiones", fecha]
+      // dejaba esas tres pantallas mostrando datos viejos.
+      sincronizarYRefrescar(qc, [["sesiones"], ["planes"], ["semana"]]);
     },
   });
 }
@@ -619,6 +628,13 @@ export function useDuplicarSesion() {
 }
 
 // ---------- Fase 4 R2: planes ----------
+
+export function useUltimasSesiones(limite = 10) {
+  return useQuery({
+    queryKey: ["sesiones", "ultimas", limite],
+    queryFn: () => api.get<Sesion[]>(`/sesiones/ultimas?limite=${limite}`),
+  });
+}
 
 export function usePlanesDeFecha(fecha: string) {
   return useQuery({
@@ -821,6 +837,93 @@ export function useCrearPlan(semanaId: number) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["semana", semanaId, "planes"] });
       void qc.invalidateQueries({ queryKey: ["planes"] });
+    },
+  });
+}
+
+// ---------- Fase 4 R4: importar plan semanal por JSON ----------
+//
+// El importador es deliberado, no es captura offline-first: es trabajo de
+// escritorio (pegar un JSON que escribio el usuario o un LLM). Va directo al
+// server, NO pasa por la cola (lib/sync/outbox). El server valida la forma y
+// la coherencia con el catalogo; si todo va bien, devuelve advertencias que
+// NO bloquean (ejercicios creados, planes omitidos por estar ya ejecutados).
+
+export type PlanSemanalImport = {
+  version: number;
+  ciclo: {
+    numero: number;
+    objetivo: string;
+    fecha_inicio: string;
+    semanas: number;
+  };
+  semana: {
+    numero: number;
+    fase: "readaptacion" | "carga" | "descarga";
+    rpe_objetivo: { min: number; max: number } | null;
+    volumen_pct: number;
+  };
+  sesiones: Array<{
+    dia: number;
+    tipo: string;
+    objetivo: string | null;
+    duracion_min: number | null;
+    rpe_objetivo: number | null;
+    bloques: Array<{
+      ejercicio: string;
+      tipo_medicion: TipoMedicion;
+      series?: number | null;
+      reps?: number | null;
+      reps_min?: number | null;
+      reps_max?: number | null;
+      peso_kg?: number | null;
+      distancia_m?: number | null;
+      duracion_s?: number | null;
+    }>;
+  }>;
+};
+
+export type ImportacionResultado = {
+  ciclo_id: number;
+  ciclo_semana_id: number;
+  // Rango de fechas cubierto por la semana importada. El backend lo calcula
+  // desde ciclo.fecha_inicio + (semana.numero - 1) * 7; el cliente lo usa
+  // para mostrar en que ventana caen los planes nuevos.
+  ciclo_semana_inicio: string;
+  ciclo_semana_fin: string;
+  sesiones_creadas: number;
+  sesiones_reemplazadas: number;
+  sesiones_omitidas: number;
+  ejercicios_creados: string[];
+  advertencias: string[];
+};
+
+export function useImportarPlanSemanal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: PlanSemanalImport) =>
+      api.post<ImportacionResultado>("/planes/importar", payload),
+    // La importacion mueve muchas cosas a la vez (ciclo, semana, planes,
+    // composicion derivada, cumplimiento recalculado): invalidamos a lo
+    // ancho en vez de adivinar que clave de query especificas cambiaron.
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["ciclos"] });
+      void qc.invalidateQueries({ queryKey: ["ciclo"] });
+      void qc.invalidateQueries({ queryKey: ["planes"] });
+      void qc.invalidateQueries({ queryKey: ["cierre-semana"] });
+    },
+  });
+}
+
+export function useDescartarPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: number) =>
+      api.patch<SesionPlan>(`/planes/${planId}/descartar`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["planes"] });
+      void qc.invalidateQueries({ queryKey: ["semana"] });
+      void qc.invalidateQueries({ queryKey: ["cierre-semana"] });
     },
   });
 }
