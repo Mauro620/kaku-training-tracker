@@ -23,6 +23,7 @@ async def crear(
     peso_kg: Peso | None,
     rpe: int | None,
     dolor_lumbar: bool,
+    nota: str | None = None,
 ) -> Bloque:
     """Inserta un bloque. No tiene idempotency_key: el cliente genera el
     `orden` por sesion, y la unicidad (sesion_id, orden) en la tabla evita
@@ -39,6 +40,7 @@ async def crear(
         peso_kg=peso_kg,
         rpe=rpe,
         dolor_lumbar=dolor_lumbar,
+        nota=nota,
     )
     session.add(bloque)
     await session.flush()

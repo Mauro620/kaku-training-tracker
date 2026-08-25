@@ -1,9 +1,9 @@
 """Tests de la importación de plan semanal por JSON.
 
-El contrato es `docs/feature_1_session_plan_json/PLAN_IMPORT.md`. El camino
-feliz se prueba contra `plan-ejemplo.json` **sin copiarlo acá**: ese archivo es
-lo que el usuario le pega a un LLM, así que si deja de importar, el documento
-quedó mintiendo y el test tiene que enterarse.
+El contrato es `docs/PLAN_IMPORT.md`. El camino feliz se prueba contra
+`plan-ejemplo.json` **sin copiarlo acá**: ese archivo es lo que el usuario le
+pega a un LLM, así que si deja de importar, el documento quedó mintiendo y el
+test tiene que enterarse.
 """
 
 import json
@@ -31,12 +31,7 @@ from app.models import (
 )
 from app.models.enums import EstadoSesionPlan, TipoMedicion
 
-RUTA_EJEMPLO = (
-    Path(__file__).resolve().parents[3]
-    / "docs"
-    / "feature_1_session_plan_json"
-    / "plan-ejemplo.json"
-)
+RUTA_EJEMPLO = Path(__file__).resolve().parents[3] / "docs" / "plan-ejemplo.json"
 
 
 @pytest.fixture
@@ -65,7 +60,7 @@ def _ejemplo() -> dict[str, Any]:
 def _payload_minimo(**cambios: Any) -> dict[str, Any]:
     """Una semana de una sola sesión, para probar una regla por vez."""
     base: dict[str, Any] = {
-        "version": 1,
+        "version": 2,
         "ciclo": {
             "numero": 7,
             "objetivo": "Ciclo de prueba",
@@ -123,12 +118,12 @@ async def test_importa_el_ejemplo_del_documento(
     ).all()
     assert len(planes) == 7
     assert {p.clave_import for p in planes} == {
-        "0-fuerza",
-        "1-balon_control",
-        "2-velocidad_salto",
-        "3-balon_distribucion",
-        "4-fuerza",
-        "5-resistencia",
+        "0-activacion",
+        "1-recuperacion",
+        "2-partido",
+        "3-fuerza",
+        "4-balon_control",
+        "5-fuerza",
         "6-recuperacion",
     }
     assert all(p.estado is EstadoSesionPlan.pendiente for p in planes)
@@ -153,12 +148,11 @@ async def test_la_composicion_se_deriva_de_las_sesiones(
     composicion = {tipos[f.tipo_sesion_id]: f.cantidad_objetivo for f in filas}
 
     assert composicion == {
+        "activacion": 1,
+        "recuperacion": 2,
+        "partido": 1,
         "fuerza": 2,
         "balon_control": 1,
-        "velocidad_salto": 1,
-        "balon_distribucion": 1,
-        "resistencia": 1,
-        "recuperacion": 1,
     }
 
 
@@ -212,21 +206,21 @@ async def test_no_reemplaza_un_plan_ya_ejecutado(
     plan = await sesion.scalar(
         select(SesionPlan).where(
             SesionPlan.ciclo_semana_id == semana_id,
-            SesionPlan.clave_import == "0-fuerza",
+            SesionPlan.clave_import == "0-activacion",
         )
     )
     assert plan is not None
     plan_id, objetivo_original = plan.id, plan.objetivo
 
     # fecha_inicio 2026-09-01 (martes) se ancla al lunes 2026-08-31, asi que
-    # la semana 2 arranca el 2026-09-07 y su día 0 es ese mismo.
+    # el día 0 de la semana 1 es ese mismo.
     creada = await cliente.post(
         "/api/v1/sesiones",
         json={
             "id": str(uuid.uuid4()),
             "idempotency_key": str(uuid.uuid4()),
             "sesion_plan_id": plan_id,
-            "fecha": "2026-09-07",
+            "fecha": "2026-08-31",
             "tipo_sesion_id": plan.tipo_sesion_id,
             "duracion_min": 60,
             "rpe": 8,
@@ -242,7 +236,7 @@ async def test_no_reemplaza_un_plan_ya_ejecutado(
     cuerpo = segunda.json()
     assert cuerpo["sesiones_omitidas"] == 1
     assert cuerpo["sesiones_reemplazadas"] == 6
-    assert any("0-fuerza" in a for a in cuerpo["advertencias"])
+    assert any("0-activacion" in a for a in cuerpo["advertencias"])
 
     sobreviviente = await sesion.get(SesionPlan, plan_id)
     assert sobreviviente is not None
@@ -438,7 +432,7 @@ async def test_rechaza_dos_sesiones_con_el_mismo_dia_y_tipo(
 
 
 async def test_rechaza_una_version_no_soportada(cliente: AsyncClient) -> None:
-    respuesta = await _importar(cliente, _payload_minimo(version=2))
+    respuesta = await _importar(cliente, _payload_minimo(version=1))
     assert respuesta.status_code == 422
 
 

@@ -119,6 +119,8 @@ class Bloque(Base):
     dolor_lumbar: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
+    # DE ESTA VEZ, precargada desde bloque_plan.nota (REGLAS_NEGOCIO §15).
+    nota: Mapped[str | None] = mapped_column(String(120))
 
     sesion: Mapped[Sesion] = relationship(back_populates="bloques")
 

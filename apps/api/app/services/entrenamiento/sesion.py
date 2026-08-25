@@ -105,6 +105,7 @@ async def crear_sesion_con_bloques(
                 peso_kg=b.peso_kg,
                 rpe=b.rpe,
                 dolor_lumbar=b.dolor_lumbar,
+                nota=b.nota,
             )
             creadas += 1
 
@@ -188,6 +189,7 @@ async def actualizar_sesion(
             peso_kg=b.peso_kg,
             rpe=b.rpe,
             dolor_lumbar=b.dolor_lumbar,
+            nota=b.nota,
         )
 
     # La fecha pudo moverse: cumplido <-> movido se recalcula.

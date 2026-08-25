@@ -58,6 +58,9 @@ class SesionPlanRead(ReadBase):
     estado: EstadoSesionPlan
     # NULL en los planes creados a mano: solo el importador la asigna.
     clave_import: str | None
+    # Etiqueta legible y contexto de la semana (docs/PLAN_IMPORT.md §2.3).
+    nombre: str | None
+    nota: str | None
     bloques_planeados: list["BloquePlanRead"] = Field(default_factory=list)
 
 
@@ -118,6 +121,8 @@ class BloquePlanRead(ReadBase):
     peso_objetivo_kg: Peso | None
     distancia_objetivo_m: Distancia | None
     duracion_objetivo_s: int | None
+    # DE ESTA VEZ (§15). Se precarga hacia bloque.nota al registrar.
+    nota: str | None
 
 
 # Resuelve las forward refs.

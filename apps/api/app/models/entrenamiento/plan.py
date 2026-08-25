@@ -70,8 +70,15 @@ class SesionPlan(Base):
     # Identidad del plan dentro de la semana PARA EL IMPORTADOR:
     # `{dia_sugerido}-{tipo_sesion_codigo}`. NULL en los planes creados a mano.
     # Reimportar la semana reemplaza el plan de la misma clave en vez de
-    # duplicarlo (docs/feature_1_session_plan_json/PLAN_IMPORT.md §2.2).
+    # duplicarlo (docs/PLAN_IMPORT.md §2.2).
     clave_import: Mapped[str | None] = mapped_column(String(80))
+    # Etiqueta legible ("Priming pre-partido"). El tipo sigue siendo el
+    # catálogo cerrado que alimenta demanda/espaciado/semáforo; lo descriptivo
+    # va acá, no se abre `tipo` a texto libre (docs/PLAN_IMPORT.md §2.3).
+    # A diferencia de ejercicio.descripcion, nombre y nota cambian semana a
+    # semana: se reemplazan al reimportar.
+    nombre: Mapped[str | None] = mapped_column(String(60))
+    nota: Mapped[str | None] = mapped_column(Text)
 
     bloques_planeados: Mapped[list["BloquePlan"]] = relationship(
         back_populates="sesion_plan", order_by="BloquePlan.orden"
@@ -115,5 +122,9 @@ class BloquePlan(Base):
     peso_objetivo_kg: Mapped[Peso | None]
     distancia_objetivo_m: Mapped[Distancia | None]
     duracion_objetivo_s: Mapped[int | None] = mapped_column(SmallInteger)
+    # DE ESTA VEZ ("al 60-70%", "remo si no salen las dominadas"): nunca va en
+    # ejercicio.descripcion, que es PERMANENTE (REGLAS_NEGOCIO §15). Se
+    # precarga hacia bloque.nota al registrar la sesión.
+    nota: Mapped[str | None] = mapped_column(String(120))
 
     sesion_plan: Mapped[SesionPlan] = relationship(back_populates="bloques_planeados")

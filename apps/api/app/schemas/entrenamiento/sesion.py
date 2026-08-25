@@ -84,6 +84,8 @@ class BloqueCreate(SchemaBase):
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool = False
+    # DE ESTA VEZ (REGLAS_NEGOCIO §15), precargada desde bloque_plan.nota.
+    nota: str | None = Field(default=None, max_length=120)
 
 
 class BloqueSinSesionCreate(SchemaBase):
@@ -100,6 +102,7 @@ class BloqueSinSesionCreate(SchemaBase):
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool = False
+    nota: str | None = Field(default=None, max_length=120)
 
 
 class BloqueUpdate(SchemaBase):
@@ -113,6 +116,7 @@ class BloqueUpdate(SchemaBase):
     peso_kg: Peso | None = None
     rpe: Rpe | None = None
     dolor_lumbar: bool | None = None
+    nota: str | None = Field(default=None, max_length=120)
 
 
 class BloqueRead(ReadBase):
@@ -128,6 +132,7 @@ class BloqueRead(ReadBase):
     peso_kg: Peso | None
     rpe: int | None
     dolor_lumbar: bool
+    nota: str | None
 
 
 # Resuelve las forward refs.

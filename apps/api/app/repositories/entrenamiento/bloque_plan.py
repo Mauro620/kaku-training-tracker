@@ -19,6 +19,7 @@ async def crear(
     peso_objetivo_kg: Peso | None,
     distancia_objetivo_m: Distancia | None,
     duracion_objetivo_s: int | None,
+    nota: str | None = None,
 ) -> BloquePlan:
     bloque_plan = BloquePlan(
         sesion_plan_id=sesion_plan_id,
@@ -30,6 +31,7 @@ async def crear(
         peso_objetivo_kg=peso_objetivo_kg,
         distancia_objetivo_m=distancia_objetivo_m,
         duracion_objetivo_s=duracion_objetivo_s,
+        nota=nota,
     )
     session.add(bloque_plan)
     await session.flush()

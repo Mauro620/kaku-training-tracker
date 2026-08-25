@@ -24,6 +24,8 @@ async def crear(
     duracion_min_est: int | None,
     rpe_objetivo: int | None,
     clave_import: str | None = None,
+    nombre: str | None = None,
+    nota: str | None = None,
 ) -> SesionPlan:
     plan = SesionPlan(
         usuario_id=usuario_id,
@@ -35,6 +37,8 @@ async def crear(
         duracion_min_est=duracion_min_est,
         rpe_objetivo=rpe_objetivo,
         clave_import=clave_import,
+        nombre=nombre,
+        nota=nota,
     )
     session.add(plan)
     await session.flush()

@@ -12,7 +12,9 @@ from app.models.enums import TipoMedicion
 CAMPOS_PERMITIDOS: dict[TipoMedicion, frozenset[str]] = {
     TipoMedicion.carga: frozenset({"series", "reps", "peso"}),
     TipoMedicion.distancia: frozenset({"reps", "distancia"}),
-    TipoMedicion.tiempo: frozenset({"duracion"}),
+    # tiempo acepta `series` desde el spec v2: una plancha son 3x30s, no 90s
+    # seguidos (REGLAS_NEGOCIO §15).
+    TipoMedicion.tiempo: frozenset({"series", "duracion"}),
     TipoMedicion.tecnica: frozenset({"reps", "duracion", "calidad"}),
 }
 

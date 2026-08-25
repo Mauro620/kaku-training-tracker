@@ -1,7 +1,7 @@
 """Contrato del JSON de importacion de plan semanal.
 
-El formato lo define `docs/feature_1_session_plan_json/PLAN_IMPORT.md`, que es
-tambien el documento que el usuario le pasa a un LLM para que genere el plan.
+El formato lo define `docs/PLAN_IMPORT.md`, que es tambien el documento que
+el usuario le pasa a un LLM para que genere el plan.
 Cualquier cambio acá tiene que reflejarse allá: ese doc es el prompt.
 
 Lo que se valida en este modulo es todo lo que se puede saber sin tocar la
@@ -27,7 +27,7 @@ from app.schemas.types import (
     Rpe,
 )
 
-VERSION_SOPORTADA = 1
+VERSION_SOPORTADA = 2
 
 
 class CicloImport(SchemaBase):
@@ -65,8 +65,8 @@ class BloqueImport(SchemaBase):
 
     ejercicio: str = Field(min_length=1, max_length=80)
     tipo_medicion: TipoMedicion
-    # Solo se usa al CREAR el ejercicio. Si ya existe se ignora: el catalogo
-    # no se sobrescribe desde una importacion (PLAN_IMPORT.md §6).
+    # Solo se usa al CREAR el ejercicio. Si ya existe y difiere, se conserva
+    # la del catalogo y se avisa (PLAN_IMPORT.md §4.1).
     descripcion: str | None = None
     series: Positivo | None = None
     # `reps` exacto es azucar de `reps_min == reps_max`: el esquema solo tiene
@@ -77,6 +77,8 @@ class BloqueImport(SchemaBase):
     peso_kg: Peso | None = None
     distancia_m: Distancia | None = None
     duracion_s: DuracionSeg | None = None
+    # DE ESTA VEZ, va a bloque_plan.nota (PLAN_IMPORT.md §2.4).
+    nota: str | None = Field(default=None, max_length=120)
 
     @model_validator(mode="after")
     def _validar_reps(self) -> Self:
@@ -111,6 +113,10 @@ class SesionImport(SchemaBase):
 
     dia: DiaSemana
     tipo: str = Field(min_length=1, max_length=30)
+    # Etiqueta legible y contexto de la semana: cambian semana a semana y se
+    # reemplazan al reimportar (PLAN_IMPORT.md §2.3).
+    nombre: str | None = Field(default=None, max_length=60)
+    nota: str | None = None
     objetivo: str | None = None
     duracion_min: DuracionMin | None = None
     rpe_objetivo: Rpe | None = None

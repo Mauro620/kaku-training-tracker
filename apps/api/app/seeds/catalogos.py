@@ -12,6 +12,9 @@ TIPOS_SESION: tuple[tuple[str, str, Demanda], ...] = (
     ("balon_distribucion", "Balón: distribución", Demanda.media),
     ("recuperacion", "Recuperación activa", Demanda.baja),
     ("partido", "Partido", Demanda.alta),
+    # Baja es deliberada: un priming no cuenta como dia de alta demanda en la
+    # ventana previa a un partido (docs/PLAN_IMPORT.md §2.5).
+    ("activacion", "Activación", Demanda.baja),
 )
 
 ZONAS_CORPORALES: tuple[str, ...] = (
