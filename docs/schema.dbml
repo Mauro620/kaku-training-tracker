@@ -84,7 +84,7 @@ Table tipo_sesion [headercolor: #175e7a] {
 	nombre varchar(60) [ not null ]
 	demanda demanda [ not null ]
 
-	Note: 'fuerza, velocidad_salto, resistencia, balon_control, balon_distribucion, recuperacion, partido'
+	Note: 'fuerza, velocidad_salto, resistencia, balon_control, balon_distribucion, recuperacion, partido, activacion. activacion es demanda BAJA deliberadamente: un priming no cuenta como dia de alta demanda en la ventana previa a un partido.'
 }
 
 Table ejercicio [headercolor: #175e7a] {
@@ -94,8 +94,9 @@ Table ejercicio [headercolor: #175e7a] {
 	carga_lumbar carga_lumbar [ not null, default: `baja` ]
 	tipo_sesion_id smallint
 	tipo_medicion tipo_medicion [ not null ]
+	descripcion text
 
-	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §14): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→duracion_s, tecnica→reps o duracion_s + calidad. tipo_sesion_id es NULLABLE a proposito (migracion a09181f1ca0e): unico catalogo con creacion de usuario (POST /catalogos/ejercicios), el usuario que crea inline no elige tipo de sesion.'
+	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §15): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→series opcional/duracion_s, tecnica→reps o duracion_s + calidad. tipo_sesion_id es NULLABLE a proposito (migracion a09181f1ca0e): unico catalogo con creacion de usuario (POST /catalogos/ejercicios), el usuario que crea inline no elige tipo de sesion. descripcion es PERMANENTE —qué es y cómo se ejecuta— y NO confundir con bloque.nota, que es DE ESTA VEZ (REGLAS_NEGOCIO §15): mezclarlas llena el catalogo de duplicados disfrazados.'
 }
 
 Table zona_corporal [headercolor: #53177a] {
@@ -199,12 +200,14 @@ Table sesion_plan [headercolor: #175e7a] {
 	rpe_objetivo smallint
 	estado estado_sesion_plan [ not null, default: `pendiente` ]
 	clave_import varchar(80)
+	nombre varchar(60)
+	nota text
 
 	indexes {
 		(ciclo_semana_id, clave_import) [ unique, note: 'PARCIAL: WHERE clave_import IS NOT NULL' ]
 	}
 
-	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga. fecha_prevista es NULLABLE desde que el cumplimiento pasó a medirse por composición semanal, no por fecha exacta (REGLAS_NEGOCIO §13): un plan puede vivir solo dentro de una ciclo_semana sin comprometerse a un día. dia_sugerido (0=lunes..6=domingo) es sugerencia de UI, no obligación — CHECK dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6. estado se PERSISTE, no se deriva: descartado lo declara el usuario y cumplido/movido los escribe resolver_estado_de_plan() cada vez que una sesion se crea, cambia de fecha o se borra. movido = existe una sesion contra este plan pero su fecha cae en un dia distinto al dia_sugerido; sigue contando para el cumplimiento semanal. clave_import es {dia_sugerido}-{tipo_sesion.codigo} y solo la asigna el importador de plan semanal (docs/feature_1_session_plan_json/PLAN_IMPORT.md): su indice unico es PARCIAL para que los planes creados a mano (clave NULL) no choquen entre si. Un plan en cumplido o movido NUNCA se reemplaza al reimportar.'
+	Note: 'El plan se registra ANTES. El delta contra la sesión real es la señal de fatiga. fecha_prevista es NULLABLE desde que el cumplimiento pasó a medirse por composición semanal, no por fecha exacta (REGLAS_NEGOCIO §13): un plan puede vivir solo dentro de una ciclo_semana sin comprometerse a un día. dia_sugerido (0=lunes..6=domingo) es sugerencia de UI, no obligación — CHECK dia_sugerido IS NULL OR dia_sugerido BETWEEN 0 AND 6. estado se PERSISTE, no se deriva: descartado lo declara el usuario y cumplido/movido los escribe resolver_estado_de_plan() cada vez que una sesion se crea, cambia de fecha o se borra. movido = existe una sesion contra este plan pero su fecha cae en un dia distinto al dia_sugerido; sigue contando para el cumplimiento semanal. clave_import es {dia_sugerido}-{tipo_sesion.codigo} y solo la asigna el importador de plan semanal (docs/PLAN_IMPORT.md): su indice unico es PARCIAL para que los planes creados a mano (clave NULL) no choquen entre si. Un plan en cumplido o movido NUNCA se reemplaza al reimportar. nombre es la etiqueta legible ("Priming pre-partido"): el tipo sigue siendo el catalogo cerrado que alimenta demanda/espaciado/semáforo, lo descriptivo va aca. nota es el contexto de esta semana: a diferencia de ejercicio.descripcion (se crea una vez con el ejercicio), nombre y nota cambian semana a semana y se reemplazan al reimportar.'
 }
 
 Table bloque_plan [headercolor: #175e7a] {
@@ -218,12 +221,13 @@ Table bloque_plan [headercolor: #175e7a] {
 	peso_objetivo_kg numeric(5,2)
 	distancia_objetivo_m numeric(5,1)
 	duracion_objetivo_s integer
+	nota varchar(120)
 
 	indexes {
 		(sesion_plan_id, orden) [ unique ]
 	}
 
-	Note: 'Objetivo del bloque real (REGLAS_NEGOCIO §14). series/reps_min/reps_max quedaron nullable desde que existen distancia_objetivo_m y duracion_objetivo_s: cual aplica lo determina ejercicio.tipo_medicion. Sin calidad_objetivo a proposito: la calidad es una medida de ejecucion real, no algo que se planifique de antemano.'
+	Note: 'Objetivo del bloque real (REGLAS_NEGOCIO §15). series/reps_min/reps_max quedaron nullable desde que existen distancia_objetivo_m y duracion_objetivo_s: cual aplica lo determina ejercicio.tipo_medicion. Sin calidad_objetivo a proposito: la calidad es una medida de ejecucion real, no algo que se planifique de antemano. nota es DE ESTA VEZ ("al 60-70%", "con la zurda") y se precarga hacia bloque.nota al registrar; NO confundir con ejercicio.descripcion, que es PERMANENTE (REGLAS_NEGOCIO §15).'
 }
 
 Table sesion [headercolor: #175e7a] {
@@ -258,12 +262,13 @@ Table bloque [headercolor: #175e7a] {
 	peso_kg numeric(5,2)
 	rpe smallint [ note: 'Nullable, pero si viene: CHECK entre 1 y 10' ]
 	dolor_lumbar boolean [ not null, default: false ]
+	nota varchar(120)
 
 	indexes {
 		(sesion_id, orden) [ unique ]
 	}
 
-	Note: 'Antes se llamaba serie: mide "N series x M reps", pero un bloque de tecnica o distancia no tiene series ni reps en ese sentido (REGLAS_NEGOCIO §14). series/reps son nullable: cuales de los 5 campos de medicion aplican los determina ejercicio.tipo_medicion, validado en el service (no hay CHECK cruzando a otra tabla).'
+	Note: 'Antes se llamaba serie: mide "N series x M reps", pero un bloque de tecnica o distancia no tiene series ni reps en ese sentido (REGLAS_NEGOCIO §15). series/reps son nullable: cuales de los 5 campos de medicion aplican los determina ejercicio.tipo_medicion, validado en el service (no hay CHECK cruzando a otra tabla).'
 }
 
 Table partido [headercolor: #175e7a] {

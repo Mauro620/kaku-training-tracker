@@ -321,6 +321,10 @@ cubre la regla anterior).
 Ninguna de las dos reglas se evalúa si `dia_sugerido` es `NULL`: un plan sin
 día sugerido no compromete nada, no hay fecha candidata que validar.
 
+`activacion` es demanda **baja** deliberadamente: una sesión de priming no
+cuenta como día de alta demanda en la ventana previa a un partido ni activa
+la regla de fuerza.
+
 ---
 
 ## 14. Redondeo y nulos
@@ -345,7 +349,7 @@ Postgres no puede consultar otra tabla).
 |---|---|---|
 | `carga` | `series`, `reps`, `peso_kg` | Sentadilla explosiva: 4×6 @ 80kg |
 | `distancia` | `reps`, `distancia_m` | Sprint acelerativo: 6 reps de 20m |
-| `tiempo` | `duracion_s` | Plancha Copenhague: 40s |
+| `tiempo` | `series` (opcional), `duracion_s` | Plancha Copenhague: 3×30s |
 | `tecnica` | `reps` o `duracion_s`, + `calidad` (1-5) | Control con muro: 20 reps, calidad 4 |
 
 Todos los `tipo_medicion` aceptan `rpe` y `dolor_lumbar` (el real; el
@@ -353,6 +357,19 @@ objetivo en `bloque_plan` no tiene ni `dolor_lumbar` ni `calidad`, ver
 `docs/schema.dbml`). Un campo fuera de la lista permitida para el
 `tipo_medicion` del `ejercicio_id` del bloque es un
 `InvarianteDeNegocioError` (422), no un `CHECK` de tabla.
+
+**Nota de bloque vs. descripción de ejercicio.** Son dos cosas distintas y
+no se mezclan:
+
+- `ejercicio.descripcion` → **PERMANENTE**: qué es y cómo se ejecuta.
+  Vive una sola vez en el catálogo.
+- `bloque_plan.nota` / `bloque.nota` → **DE ESTA VEZ**: "al 60-70%", "con
+  la zurda", "remo si no salen las dominadas". Vive colgada del bloque.
+
+Lo que está terminantemente prohibido es empaquetar la nota en el nombre
+del ejercicio ("Regate en conos al 60-70% (salida controlada)"): eso es un
+duplicado disfrazado, y es exactamente lo que la deduplicación difusa del
+importador (PLAN_IMPORT §6.1) está pensada para prevenir.
 
 **Catálogo de ejercicio, caso especial**: a diferencia de `tipo_sesion` o
 `zona_corporal`, `ejercicio` es el único catálogo que el usuario puede
