@@ -3,7 +3,7 @@
 Planear es trabajo de escritorio; registrar es trabajo de campo. Este modulo
 existe para que el domingo se cargue la semana entera de una sola vez y en la
 cancha solo haya que confirmar numeros sobre filas que ya existen
-(docs/feature_1_session_plan_json/PLAN_IMPORT.md).
+(docs/PLAN_IMPORT.md).
 
 Dos invariantes gobiernan todo lo de abajo:
 
@@ -15,6 +15,8 @@ Dos invariantes gobiernan todo lo de abajo:
    midieron con el anterior.
 """
 
+import re
+import unicodedata
 import uuid
 from collections import Counter
 from datetime import timedelta
@@ -42,14 +44,16 @@ async def importar_plan_semanal(
     session: AsyncSession, usuario_id: uuid.UUID, payload: PlanSemanalImport
 ) -> ImportacionResultado:
     tipos = await _resolver_tipos(session, payload)
-    ejercicios, ejercicios_creados = await _resolver_ejercicios(session, payload)
+    ejercicios, ejercicios_creados, avisos_ejercicios = await _resolver_ejercicios(
+        session, payload
+    )
     _validar_bloques(payload, ejercicios)
 
     ciclo, avisos_ciclo = await _resolver_ciclo(session, usuario_id, payload)
     semana = await _resolver_semana(session, ciclo, payload)
 
     ejecutadas, previas, advertencias = await _liberar_claves(session, semana, payload)
-    advertencias = [*avisos_ciclo, *advertencias]
+    advertencias = [*avisos_ejercicios, *avisos_ciclo, *advertencias]
 
     creadas = 0
     reemplazadas = 0
@@ -126,16 +130,47 @@ async def _resolver_tipos(
     return catalogo
 
 
+_PARENESIS = re.compile(r"\([^)]*\)")
+_PORCENTAJE = re.compile(r"\b\d+(?:\.\d+)?\s*%")
+_ESPACIOS = re.compile(r"\s+")
+
+
+def _normalizar_nombre(nombre: str) -> str:
+    """Identidad difusa de un ejercicio (PLAN_IMPORT.md §6.1): minúsculas,
+    sin tildes, sin paréntesis con su contenido, sin sufijos de porcentaje y
+    espacios colapsados. Es lo que evita que un LLM que escribe
+    `Elevacion de talon` duplique el `Elevación de talón` del catálogo.
+
+    Contrapartida deliberada: "Regate (con conos)" y "Regate (sin conos)"
+    colapsan al mismo. Aceptar el duplicado es peor: el catálogo se llena de
+    basura con cada importación."""
+    texto = unicodedata.normalize("NFD", nombre.lower())
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    texto = _PARENESIS.sub(" ", texto)
+    texto = _PORCENTAJE.sub(" ", texto)
+    return _ESPACIOS.sub(" ", texto).strip()
+
+
 async def _resolver_ejercicios(
     session: AsyncSession, payload: PlanSemanalImport
-) -> tuple[dict[str, Ejercicio], list[str]]:
-    """Busca o crea cada ejercicio por nombre. NUNCA sobrescribe uno existente:
-    si el JSON declara otro `tipo_medicion` para un ejercicio que ya esta en el
-    catalogo, se rechaza la importacion entera. Cambiar el tipo invalidaria los
-    bloques historicos medidos con el anterior (PLAN_IMPORT.md 6)."""
-    resueltos: dict[str, Ejercicio] = {}
+) -> tuple[dict[str, Ejercicio], list[str], list[str]]:
+    """Busca o crea cada ejercicio por su nombre normalizado. NUNCA
+    sobrescribe uno existente: si el JSON declara otro `tipo_medicion` para
+    un ejercicio que ya esta en el catalogo, se rechaza la importacion
+    entera. Cambiar el tipo invalidaria los bloques historicos medidos con
+    el anterior (PLAN_IMPORT.md 6).
+
+    Devuelve los ejercicios por nombre JSON, los nombres de los que se
+    crearon y las advertencias: coincidencias difusas y descripciones que
+    difieren de la del catalogo (se conserva la existente, §4.1)."""
+    resueltos: dict[str, Ejercicio] = {}  # por nombre tal como vino en el JSON
+    index: dict[str, Ejercicio] = {}  # por nombre normalizado
     creados: list[str] = []
+    advertencias: list[str] = []
     conflictos: list[str] = []
+
+    for existente in await repo.listar_ejercicios(session):
+        index.setdefault(_normalizar_nombre(existente.nombre), existente)
 
     for sesion_json in payload.sesiones:
         for bloque in sesion_json.bloques:
@@ -149,9 +184,8 @@ async def _resolver_ejercicios(
                     )
                 continue
 
-            ejercicio = await repo.obtener_ejercicio_por_nombre(
-                session, bloque.ejercicio
-            )
+            clave = _normalizar_nombre(bloque.ejercicio)
+            ejercicio = index.get(clave)
             if ejercicio is None:
                 ejercicio = await repo.crear_ejercicio(
                     session,
@@ -160,12 +194,25 @@ async def _resolver_ejercicios(
                     descripcion=bloque.descripcion,
                 )
                 creados.append(bloque.ejercicio)
-            elif ejercicio.tipo_medicion is not bloque.tipo_medicion:
-                conflictos.append(
-                    f"{bloque.ejercicio}: ya existe con tipo_medicion="
-                    f"{ejercicio.tipo_medicion.value}, el JSON declara "
-                    f"{bloque.tipo_medicion.value}"
-                )
+                index[clave] = ejercicio
+            else:
+                if ejercicio.tipo_medicion is not bloque.tipo_medicion:
+                    conflictos.append(
+                        f"{bloque.ejercicio}: ya existe con tipo_medicion="
+                        f"{ejercicio.tipo_medicion.value}, el JSON declara "
+                        f"{bloque.tipo_medicion.value}"
+                    )
+                elif ejercicio.nombre != bloque.ejercicio:
+                    advertencias.append(
+                        f"{bloque.ejercicio}: coincide con el ejercicio "
+                        f"existente '{ejercicio.nombre}': se usa ese."
+                    )
+                if bloque.descripcion and ejercicio.descripcion != bloque.descripcion:
+                    advertencias.append(
+                        f"{bloque.ejercicio}: la descripcion del JSON difiere "
+                        f"de la guardada: se conserva la del catalogo. "
+                        f"Editala desde el detalle del ejercicio."
+                    )
             resueltos[bloque.ejercicio] = ejercicio
 
     if conflictos:
@@ -173,7 +220,7 @@ async def _resolver_ejercicios(
             "un ejercicio existente no cambia de tipo_medicion: "
             + "; ".join(conflictos)
         )
-    return resueltos, creados
+    return resueltos, creados, list(dict.fromkeys(advertencias))
 
 
 def _validar_bloques(
@@ -369,6 +416,10 @@ async def _crear_plan(
         duracion_min_est=sesion_json.duracion_min,
         rpe_objetivo=sesion_json.rpe_objetivo,
         clave_import=sesion_json.clave_import,
+        # Etiqueta legible y contexto de la semana (PLAN_IMPORT.md §2.3):
+        # cambian semana a semana y se reemplazan al reimportar.
+        nombre=sesion_json.nombre,
+        nota=sesion_json.nota,
     )
     for orden, bloque in enumerate(sesion_json.bloques, start=1):
         reps_min, reps_max = bloque.rango_reps
@@ -383,6 +434,9 @@ async def _crear_plan(
             peso_objetivo_kg=bloque.peso_kg,
             distancia_objetivo_m=bloque.distancia_m,
             duracion_objetivo_s=bloque.duracion_s,
+            # DE ESTA VEZ: la precarga hacia bloque.nota la hace el front
+            # al registrar (PLAN_IMPORT.md §2.4).
+            nota=bloque.nota,
         )
     return plan
 

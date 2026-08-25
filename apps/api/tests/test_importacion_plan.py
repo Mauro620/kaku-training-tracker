@@ -128,6 +128,13 @@ async def test_importa_el_ejemplo_del_documento(
     }
     assert all(p.estado is EstadoSesionPlan.pendiente for p in planes)
 
+    # Nombre y nota del plan (§2.3) y nota del bloque (§2.4) quedan guardados.
+    priming = next(p for p in planes if p.clave_import == "0-activacion")
+    assert priming.nombre == "Priming pre-partido"
+    assert priming.nota is not None and "9pm" in priming.nota
+    await sesion.refresh(priming, attribute_names=["bloques_planeados"])
+    assert any(b.nota == "Submaximo, ~70%" for b in priming.bloques_planeados)
+
 
 async def test_la_composicion_se_deriva_de_las_sesiones(
     cliente: AsyncClient, sesion: AsyncSession
@@ -385,6 +392,34 @@ async def test_rechaza_cambiar_el_tipo_medicion_de_un_ejercicio_existente(
     assert "tipo_medicion" in respuesta.json()["detail"]
 
 
+async def test_la_deteccion_difusa_reusa_el_ejercicio_del_catalogo(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """Minúsculas, sin tildes y sin paréntesis (PLAN_IMPORT.md §6.1): un LLM
+    que escribe `hip thrust` o `Elevacion de talon` no duplica el catálogo."""
+    payload = _payload_minimo()
+    payload["sesiones"][0]["bloques"].append(
+        {
+            "ejercicio": "elevacion de talon (rumano)",
+            "tipo_medicion": "carga",
+            "series": 3,
+            "reps": 15,
+        }
+    )
+    respuesta = await _importar(cliente, payload)
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["ejercicios_creados"] == []
+    assert any("Elevación de talón" in a for a in cuerpo["advertencias"])
+
+    # No se creó un duplicado con la escritura del JSON.
+    assert (
+        await sesion.scalar(
+            select(Ejercicio).where(Ejercicio.nombre == "elevacion de talon (rumano)")
+        )
+    ) is None
+
+
 # ------------------------------------------------------------- validación --
 
 
@@ -527,7 +562,11 @@ async def test_la_descripcion_solo_se_usa_al_crear_el_ejercicio(
     ]
     respuesta = await _importar(cliente, payload)
     assert respuesta.status_code == 200
-    assert respuesta.json()["ejercicios_creados"] == ["Pase largo diagonal"]
+    cuerpo = respuesta.json()
+    assert cuerpo["ejercicios_creados"] == ["Pase largo diagonal"]
+    # Se conserva la del catálogo, pero *se avisa* (§4.1): si no, el usuario
+    # cree que su descripcion quedo guardada y no es asi.
+    assert any("Hip thrust" in a and "descripcion" in a for a in cuerpo["advertencias"])
 
     nuevo = await sesion.scalar(
         select(Ejercicio).where(Ejercicio.nombre == "Pase largo diagonal")
