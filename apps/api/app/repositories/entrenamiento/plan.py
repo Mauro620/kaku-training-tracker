@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import cast
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -47,6 +47,26 @@ async def actualizar_estado(
     plan.estado = estado
     await session.flush()
     return plan
+
+
+async def contar_ejecutados_de_ciclo(session: AsyncSession, ciclo_id: int) -> int:
+    """Planes del ciclo (cualquier semana) que ya se ejecutaron. Es lo que
+    decide si todavia se puede mover `ciclo.fecha_inicio`: una vez que hay
+    algo hecho, correr la fecha cambiaria a que dia absoluto corresponde cada
+    `dia_sugerido` y recalcularia mal el `cumplido`/`movido` del historico."""
+    return (
+        await session.scalar(
+            select(func.count())
+            .select_from(SesionPlan)
+            .join(CicloSemana, CicloSemana.id == SesionPlan.ciclo_semana_id)
+            .where(
+                CicloSemana.ciclo_id == ciclo_id,
+                SesionPlan.estado.in_(
+                    [EstadoSesionPlan.cumplido, EstadoSesionPlan.movido]
+                ),
+            )
+        )
+    ) or 0
 
 
 async def listar_por_semana_y_claves(

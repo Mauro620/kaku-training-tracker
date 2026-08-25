@@ -62,6 +62,28 @@ async def listar_por_usuario(
     return list(resultado.all())
 
 
+async def actualizar(
+    session: AsyncSession,
+    ciclo: Ciclo,
+    *,
+    objetivo: str,
+    fecha_inicio: date,
+    semanas: int,
+) -> Ciclo:
+    """`numero` no se toca: es la identidad del ciclo para el usuario.
+    `fecha_fin_prevista` es generada y la recalcula Postgres."""
+    ciclo.objetivo = objetivo
+    ciclo.fecha_inicio = fecha_inicio
+    ciclo.semanas = semanas
+    await session.flush()
+    # fecha_fin_prevista es Computed: el UPDATE la deja expirada (no vino con
+    # RETURNING como el INSERT de crear). Sin refrescarla aca, el primer
+    # acceso pasa a ser un lazy-load fuera del greenlet async y revienta con
+    # MissingGreenlet. Lo toca `validar_espaciado`, que la usa como rango.
+    await session.refresh(ciclo, attribute_names=["fecha_fin_prevista"])
+    return ciclo
+
+
 async def cerrar(session: AsyncSession, ciclo: Ciclo, fecha_cierre_real: date) -> Ciclo:
     """Atómico con `estado=cerrado`: sin esto, el CHECK de la tabla
     (fecha_cierre_real IS NULL OR estado = cerrado) rechazaría un cierre

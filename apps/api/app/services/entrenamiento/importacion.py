@@ -45,10 +45,11 @@ async def importar_plan_semanal(
     ejercicios, ejercicios_creados = await _resolver_ejercicios(session, payload)
     _validar_bloques(payload, ejercicios)
 
-    ciclo = await _resolver_ciclo(session, usuario_id, payload)
+    ciclo, avisos_ciclo = await _resolver_ciclo(session, usuario_id, payload)
     semana = await _resolver_semana(session, ciclo, payload)
 
     ejecutadas, previas, advertencias = await _liberar_claves(session, semana, payload)
+    advertencias = [*avisos_ciclo, *advertencias]
 
     creadas = 0
     reemplazadas = 0
@@ -198,24 +199,74 @@ def _validar_bloques(
 
 async def _resolver_ciclo(
     session: AsyncSession, usuario_id: uuid.UUID, payload: PlanSemanalImport
-) -> Ciclo:
-    """Busca por `numero` o crea. Un ciclo que ya existe NO se redefine: su
-    `fecha_inicio` es de donde sale el rango de fechas de todas sus semanas, y
-    moverla desde la importacion de una sola semana correria el calendario de
-    sesiones que ya se registraron."""
+) -> tuple[Ciclo, list[str]]:
+    """Busca por `numero` o crea. Devuelve `(ciclo, advertencias)`.
+
+    Un ciclo existente SI se corrige, pero solo mientras no tenga nada
+    ejecutado. `fecha_inicio` es de donde sale el rango de fechas de todas sus
+    semanas (REGLAS_NEGOCIO §13.1), asi que moverla cambia a que dia absoluto
+    corresponde cada `dia_sugerido`. Con planes ya cumplidos eso recalcularia
+    mal el historico; sin nada hecho no hay historico que romper, y bloquearlo
+    dejaba al usuario sin forma de arreglar una fecha mal puesta salvo borrar
+    el ciclo entero.
+    """
+    fecha_inicio = anclar_a_lunes(payload.ciclo.fecha_inicio)
     ciclo = await repo.obtener_ciclo_por_numero(
         session, usuario_id, payload.ciclo.numero
     )
-    if ciclo is not None:
-        return ciclo
-    return await repo.crear_ciclo(
+    if ciclo is None:
+        creado = await repo.crear_ciclo(
+            session,
+            usuario_id=usuario_id,
+            numero=payload.ciclo.numero,
+            objetivo=payload.ciclo.objetivo,
+            fecha_inicio=fecha_inicio,
+            semanas=payload.ciclo.semanas,
+        )
+        return creado, []
+
+    if (
+        ciclo.fecha_inicio == fecha_inicio
+        and ciclo.objetivo == payload.ciclo.objetivo
+        and ciclo.semanas == payload.ciclo.semanas
+    ):
+        return ciclo, []
+
+    ejecutados = await repo.contar_planes_ejecutados_de_ciclo(session, ciclo.id)
+    if ejecutados:
+        return ciclo, [
+            f"El ciclo {ciclo.numero} ya tiene {ejecutados} sesion(es) "
+            f"ejecutada(s): se conservan sus datos "
+            f"(inicio {ciclo.fecha_inicio}, {ciclo.semanas} semanas) y se "
+            f"ignora lo que trae el JSON. Mover la fecha de inicio ahora "
+            f"correria el calendario del historico."
+        ]
+
+    # Achicar `semanas` por debajo de las que ya existen las dejaria fuera del
+    # rango del ciclo y sus planes invisibles, asi que se rechaza en vez de
+    # romper en silencio.
+    maximo = await repo.numero_maximo_de_semana(session, ciclo.id)
+    if maximo is not None and payload.ciclo.semanas < maximo:
+        raise InvarianteDeNegocioError(
+            f"el ciclo {ciclo.numero} ya tiene una semana {maximo}: no se "
+            f"puede achicar a {payload.ciclo.semanas} semanas"
+        )
+
+    anterior = ciclo.fecha_inicio
+    actualizado = await repo.actualizar_ciclo(
         session,
-        usuario_id=usuario_id,
-        numero=payload.ciclo.numero,
+        ciclo,
         objetivo=payload.ciclo.objetivo,
-        fecha_inicio=anclar_a_lunes(payload.ciclo.fecha_inicio),
+        fecha_inicio=fecha_inicio,
         semanas=payload.ciclo.semanas,
     )
+    avisos = []
+    if anterior != fecha_inicio:
+        avisos.append(
+            f"El ciclo {ciclo.numero} se movio del {anterior} al "
+            f"{fecha_inicio}: cambian las fechas de todas sus semanas."
+        )
+    return actualizado, avisos
 
 
 async def _resolver_semana(

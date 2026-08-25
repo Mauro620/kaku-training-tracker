@@ -2,7 +2,7 @@
 
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import CicloSemana
@@ -61,6 +61,17 @@ async def listar_por_ciclo(session: AsyncSession, ciclo_id: int) -> list[CicloSe
         .order_by(CicloSemana.numero)
     )
     return list(resultado.all())
+
+
+async def numero_maximo(session: AsyncSession, ciclo_id: int) -> int | None:
+    """La semana mas alta que existe. Achicar `ciclo.semanas` por debajo de
+    esto dejaria semanas fuera del rango del ciclo y sus planes invisibles."""
+    return cast(
+        "int | None",
+        await session.scalar(
+            select(func.max(CicloSemana.numero)).where(CicloSemana.ciclo_id == ciclo_id)
+        ),
+    )
 
 
 async def actualizar(

@@ -57,6 +57,7 @@ obtener_ciclo_por_id = _ciclo.obtener_por_id
 obtener_ciclo_por_numero = _ciclo.obtener_por_numero
 listar_ciclos_por_usuario = _ciclo.listar_por_usuario
 cerrar_ciclo = _ciclo.cerrar
+actualizar_ciclo = _ciclo.actualizar
 
 crear_ciclo_semana = _ciclo_semana.crear
 obtener_ciclo_semana_por_id = _ciclo_semana.obtener_por_id
@@ -64,6 +65,7 @@ obtener_ciclo_semana_por_numero = _ciclo_semana.obtener_por_numero
 listar_ciclo_semanas_por_ciclo = _ciclo_semana.listar_por_ciclo
 actualizar_ciclo_semana = _ciclo_semana.actualizar
 eliminar_ciclo_semana = _ciclo_semana.eliminar
+numero_maximo_de_semana = _ciclo_semana.numero_maximo
 
 reemplazar_composicion = _composicion.reemplazar
 listar_composicion_por_semana = _composicion.listar_por_semana
@@ -77,12 +79,15 @@ listar_planes_por_ciclo_semana = _plan.listar_por_ciclo_semana
 eliminar_sesion_plan = _plan.eliminar
 actualizar_estado_sesion_plan = _plan.actualizar_estado
 listar_planes_por_semana_y_claves = _plan.listar_por_semana_y_claves
+contar_planes_ejecutados_de_ciclo = _plan.contar_ejecutados_de_ciclo
 
 __all__ = [
+    "actualizar_ciclo",
     "actualizar_ciclo_semana",
     "actualizar_estado_sesion_plan",
     "actualizar_sesion",
     "cerrar_ciclo",
+    "contar_planes_ejecutados_de_ciclo",
     "contar_sesiones_por_tipo_en_rango",
     "crear_bloque",
     "crear_bloque_plan",
@@ -113,6 +118,7 @@ __all__ = [
     "listar_tipos_sesion",
     "listar_ultimas_sesiones",
     "listar_zonas_corporales",
+    "numero_maximo_de_semana",
     "obtener_ciclo_por_id",
     "obtener_ciclo_por_numero",
     "obtener_ciclo_semana_por_id",

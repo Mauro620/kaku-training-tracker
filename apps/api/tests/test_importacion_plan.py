@@ -546,3 +546,90 @@ async def test_la_descripcion_solo_se_usa_al_crear_el_ejercicio(
     )
     assert existente is not None
     assert existente.descripcion != "ESTO NO DEBE GUARDARSE"
+
+
+async def test_reimportar_corrige_la_fecha_de_inicio_si_no_hay_nada_ejecutado(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """Sin historico no hay calendario que romper, y bloquearlo dejaba al
+    usuario sin forma de arreglar una fecha mal puesta salvo borrar el ciclo."""
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 31
+    payload["ciclo"]["fecha_inicio"] = "2026-08-17"
+    primera = await _importar(cliente, payload)
+    assert primera.status_code == 200
+
+    payload["ciclo"]["fecha_inicio"] = "2026-08-24"
+    segunda = await _importar(cliente, payload)
+    assert segunda.status_code == 200
+    assert any(
+        "se movio del 2026-08-17 al 2026-08-24" in a
+        for a in segunda.json()["advertencias"]
+    )
+
+    ciclo = await sesion.get(Ciclo, segunda.json()["ciclo_id"])
+    assert ciclo is not None
+    assert ciclo.fecha_inicio == date(2026, 8, 24)
+
+    # El plan del dia 0 se movio con el ciclo.
+    encontrados = await cliente.get("/api/v1/planes", params={"fecha": "2026-08-24"})
+    assert [p["clave_import"] for p in encontrados.json()] == ["0-fuerza"]
+
+
+async def test_no_mueve_el_ciclo_si_ya_hay_algo_ejecutado(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 32
+    payload["ciclo"]["fecha_inicio"] = "2026-08-17"
+    primera = await _importar(cliente, payload)
+
+    plan = await sesion.scalar(
+        select(SesionPlan).where(
+            SesionPlan.ciclo_semana_id == primera.json()["ciclo_semana_id"]
+        )
+    )
+    assert plan is not None
+    await cliente.post(
+        "/api/v1/sesiones",
+        json={
+            "id": str(uuid.uuid4()),
+            "idempotency_key": str(uuid.uuid4()),
+            "sesion_plan_id": plan.id,
+            "fecha": "2026-08-17",
+            "tipo_sesion_id": plan.tipo_sesion_id,
+            "duracion_min": 60,
+            "rpe": 8,
+            "bloques": [],
+        },
+    )
+
+    payload["ciclo"]["fecha_inicio"] = "2026-08-24"
+    segunda = await _importar(cliente, payload)
+    assert segunda.status_code == 200
+    assert any(
+        "ya tiene 1 sesion(es) ejecutada(s)" in a
+        for a in segunda.json()["advertencias"]
+    )
+
+    ciclo = await sesion.get(Ciclo, segunda.json()["ciclo_id"])
+    assert ciclo is not None
+    assert ciclo.fecha_inicio == date(2026, 8, 17)  # intacto
+
+
+async def test_no_deja_achicar_las_semanas_por_debajo_de_las_que_existen(
+    cliente: AsyncClient,
+) -> None:
+    """Achicarlas dejaria las ultimas fuera del rango del ciclo y sus planes
+    invisibles: se rechaza en vez de romper en silencio."""
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 33
+    payload["ciclo"]["semanas"] = 4
+    payload["semana"]["numero"] = 3
+    assert (await _importar(cliente, payload)).status_code == 200
+
+    payload["semana"]["numero"] = 1
+    payload["ciclo"]["semanas"] = 2
+    respuesta = await _importar(cliente, payload)
+    assert respuesta.status_code == 422
+    assert "no se puede achicar" in respuesta.json()["detail"]
