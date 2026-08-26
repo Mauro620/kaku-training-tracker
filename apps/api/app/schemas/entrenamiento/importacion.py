@@ -11,7 +11,7 @@ cambie de `tipo_medicion`) lo valida el service.
 """
 
 from datetime import date
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import Field, model_validator
 
@@ -28,6 +28,12 @@ from app.schemas.types import (
 )
 
 VERSION_SOPORTADA = 2
+
+# Los tres exports documentados en PLAN_IMPORT.md §9. `str` y no un `Enum`:
+# un enum en el path param hace que FastAPI devuelva 422 ante un valor
+# desconocido, y el spec exige 404 (ver design). El membership check en el
+# router es todo el "registro" que este recurso necesita.
+EXPORT_RECURSOS: frozenset[str] = frozenset({"ejercicios", "reglas", "ejemplo"})
 
 
 class CicloImport(SchemaBase):
@@ -179,3 +185,13 @@ class ImportacionResultado(ReadBase):
     sesiones_omitidas: int
     ejercicios_creados: list[str] = Field(default_factory=list)
     advertencias: list[str] = Field(default_factory=list)
+
+
+class ExportRead(ReadBase):
+    """Respuesta de `GET /planes/importar/export/{recurso}` (PLAN_IMPORT.md
+    §9). `contenido` siempre es un string listo para pegar: JSON serializado
+    para `ejercicios`/`ejemplo`, markdown para `reglas`."""
+
+    recurso: str
+    formato: Literal["json", "markdown"]
+    contenido: str

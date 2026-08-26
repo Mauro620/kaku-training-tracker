@@ -106,6 +106,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sueno/ultimos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve los ultimos N dias de registros de sueño (incluyendo hoy).
+         * @description Para H3 de la revision de UI: la pantalla Hoy pide 14 dias para
+         *     la grilla/deuda. Limito a 60 para no tirar queries absurdas.
+         *
+         *     La fecha "hoy" la calcula el server con la zona del proyecto, no
+         *     la del cliente: el mismo registro de sueño corresponde a la misma
+         *     fila para todos los usuarios en la misma zona.
+         */
+        get: operations["ultimos_n_dias_api_v1_sueno_ultimos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sueno/{fecha}": {
         parameters: {
             query?: never;
@@ -175,6 +200,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/molestias/{molestia_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Elimina una molestia. */
+        delete: operations["eliminar_molestia_api_v1_molestias__molestia_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/habitos/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista TODOS los habitos del usuario (incluyendo archivados). Ajustes. */
+        get: operations["listar_todos_habitos_api_v1_habitos_all_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/habitos": {
         parameters: {
             query?: never;
@@ -185,6 +244,46 @@ export interface paths {
         /** Lista los hábitos activos del usuario. */
         get: operations["listar_habitos_api_v1_habitos_get"];
         put?: never;
+        /** Crea un habito del usuario. */
+        post: operations["crear_habito_api_v1_habitos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/habitos/{habito_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Modifica nombre / orden / activo. activo=false ARCHIVA el habito. */
+        patch: operations["actualizar_habito_api_v1_habitos__habito_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/habitos/reordenar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reordena habitos aplicando el orden del array `ids`.
+         * @description El cliente envia la lista de ids en el orden que quiere. El
+         *     server asigna `orden = indice` a cada uno. Items que no esten en
+         *     la lista mantienen su posicion actual.
+         */
+        put: operations["reordenar_habitos_api_v1_habitos_reordenar_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -295,6 +394,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sesiones/ultimas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ultimas N sesiones registradas, de la mas reciente a la mas vieja.
+         * @description El historico de la pantalla Entreno. Tope de 50 para no traer el
+         *     ciclo entero sin querer.
+         */
+        get: operations["listar_ultimas_api_v1_sesiones_ultimas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sesiones/{sesion_id}": {
         parameters: {
             query?: never;
@@ -349,6 +469,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogos/ejercicios/{ejercicio_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edita nombre y descripcion. tipo_medicion NO es editable.
+         * @description `tipo_medicion` queda afuera del payload: cambiarlo invalidaria los
+         *     bloques historicos, que se midieron con el anterior (REGLAS_NEGOCIO §15).
+         */
+        patch: operations["actualizar_ejercicio_api_v1_catalogos_ejercicios__ejercicio_id__patch"];
+        trace?: never;
+    };
     "/api/v1/catalogos/zonas-corporales": {
         parameters: {
             query?: never;
@@ -358,6 +499,23 @@ export interface paths {
         };
         /** Lista las zonas corporales sembradas. */
         get: operations["listar_zonas_corporales_api_v1_catalogos_zonas_corporales_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogos/tipos-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los tipos de test fisico sembrados. */
+        get: operations["listar_tipos_test_api_v1_catalogos_tipos_test_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -436,6 +594,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ciclos/semanas/{semana_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reemplaza fase/rpe_objetivo/volumen_pct de la semana (numero inmutable). */
+        put: operations["actualizar_semana_api_v1_ciclos_semanas__semana_id__put"];
+        post?: never;
+        /** Elimina la semana, su composicion y sus planes. Las sesiones reales ya registradas no se borran, solo pierden la referencia al plan. */
+        delete: operations["eliminar_semana_api_v1_ciclos_semanas__semana_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ciclos/semanas/{semana_id}/planes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los planes de la semana, con sus bloques objetivo. */
+        get: operations["listar_planes_de_semana_api_v1_ciclos_semanas__semana_id__planes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ciclos/semanas/{semana_id}/composicion": {
         parameters: {
             query?: never;
@@ -489,10 +682,418 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/planes/importar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importa la planificación de una semana completa desde un JSON.
+         * @description Crea o reemplaza los planes de una semana en una sola operación. Es idempotente por `{dia}-{tipo}`: reimportar la misma semana reemplaza en vez de duplicar. Los planes ya ejecutados (`cumplido` o `movido`) nunca se tocan; se omiten y se reportan como advertencia. El formato está en docs/feature_1_session_plan_json/PLAN_IMPORT.md.
+         */
+        post: operations["importar_semana_api_v1_planes_importar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planes/importar/export/{recurso}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exporta un recurso para armar el prompt del LLM (PLAN_IMPORT.md §9).
+         * @description `recurso` es uno de `ejercicios`, `reglas`, `ejemplo`. Cada uno devuelve un `contenido` listo para pegar. Un `recurso` desconocido responde 404.
+         */
+        get: operations["exportar_recurso_api_v1_planes_importar_export__recurso__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planes/{plan_id}/descartar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * El usuario declara que un plan no se va a hacer.
+         * @description Única transición de estado que elige una persona: `cumplido` y `movido` los resuelve el sistema contra la sesión real. Un plan ya ejecutado no se puede descartar.
+         */
+        patch: operations["descartar_api_v1_planes__plan_id__descartar_patch"];
+        trace?: never;
+    };
+    "/api/v1/alimentos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista el catalogo de alimentos del sistema. */
+        get: operations["listar_alimentos_api_v1_alimentos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recetas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las recetas activas del usuario. */
+        get: operations["listar_recetas_api_v1_recetas_get"];
+        put?: never;
+        /** Crea una receta del usuario. */
+        post: operations["crear_receta_api_v1_recetas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recetas/{receta_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una receta del usuario. */
+        get: operations["obtener_receta_api_v1_recetas__receta_id__get"];
+        /** Reemplaza una receta completa (cabecera + items). */
+        put: operations["actualizar_receta_api_v1_recetas__receta_id__put"];
+        post?: never;
+        /** Elimina una receta del usuario. */
+        delete: operations["eliminar_receta_api_v1_recetas__receta_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recetas/{receta_id}/macros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Calcula los macros de una receta (derivados, no almacenados). */
+        get: operations["macros_de_receta_api_v1_recetas__receta_id__macros_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/comidas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las comidas de un dia con macros agregados. */
+        get: operations["listar_comidas_del_dia_api_v1_comidas_get"];
+        put?: never;
+        /** Registra una comida (con o sin receta). */
+        post: operations["registrar_comida_api_v1_comidas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/comidas/{comida_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devuelve una comida con sus macros calculados. */
+        get: operations["obtener_comida_api_v1_comidas__comida_id__get"];
+        put?: never;
+        post?: never;
+        /** Elimina una comida. */
+        delete: operations["eliminar_comida_api_v1_comidas__comida_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/despensa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los alimentos que el usuario lleva a casa. */
+        get: operations["listar_despensa_api_v1_despensa_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/despensa/{alimento_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reemplaza (imprescindible, en_stock) para un alimento. */
+        put: operations["upsert_despensa_api_v1_despensa__alimento_id__put"];
+        post?: never;
+        /** Quita un alimento de la despensa del usuario. */
+        delete: operations["eliminar_de_despensa_api_v1_despensa__alimento_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/despensa/lista-de-mercado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Items imprescindibles sin stock (lo que hay que comprar). */
+        get: operations["lista_de_mercado_api_v1_despensa_lista_de_mercado_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tests fisicos de una fecha. */
+        get: operations["listar_tests_api_v1_tests_get"];
+        put?: never;
+        /** Registra un test fisico con sus intentos. */
+        post: operations["registrar_test_api_v1_tests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tests/{test_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un test fisico, con sus intentos. */
+        get: operations["obtener_test_api_v1_tests__test_id__get"];
+        put?: never;
+        post?: never;
+        /** Elimina un test fisico y sus intentos. */
+        delete: operations["eliminar_test_api_v1_tests__test_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tests/{test_id}/resultado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mejor, media, pct_decremento (solo rsa_30m) y pct_cambio. */
+        get: operations["obtener_resultado_test_api_v1_tests__test_id__resultado_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/medidas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las medidas corporales del usuario, mas reciente primero. */
+        get: operations["listar_medidas_api_v1_medidas_get"];
+        put?: never;
+        /** Registra (upsert) la medida corporal de una fecha. */
+        post: operations["registrar_medida_api_v1_medidas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partidos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista los partidos del usuario, mas reciente primero. */
+        get: operations["listar_partidos_api_v1_partidos_get"];
+        put?: never;
+        /** Registra la ficha de un partido sobre una sesion existente. */
+        post: operations["registrar_partido_api_v1_partidos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partidos/{partido_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un partido. */
+        get: operations["obtener_partido_api_v1_partidos__partido_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/semana": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve la data cruda por dia para el grid de cumplimiento semanal.
+         * @description Rango inclusivo en ambos extremos. La UI envia tipicamente
+         *     lunes..domingo (7 dias). El cap esta en 31 dias para no tirar queries
+         *     absurdas; alcanza para un mes.
+         */
+        get: operations["cierre_semana_api_v1_semana_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AlimentoRead
+         * @description `id` es integer (catalogo cerrado, ~40 filas). Si en algun momento
+         *     cambia a uuid, hay que migrar el modelo y este schema.
+         */
+        AlimentoRead: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            grupo: components["schemas"]["GrupoAlimento"];
+            estado_pesaje: components["schemas"]["EstadoPesaje"];
+            /** Kcal 100G */
+            kcal_100g: string;
+            /** Proteina 100G */
+            proteina_100g: string;
+            /** Carbo 100G */
+            carbo_100g: string;
+            /** Grasa 100G */
+            grasa_100g: string;
+            /** Fibra 100G */
+            fibra_100g: string | null;
+            /** Fuente */
+            fuente: string | null;
+        };
+        /**
+         * BienestarDiaSchema
+         * @description True si el usuario completo los 4 sliders de Hooper ese dia.
+         */
+        BienestarDiaSchema: {
+            /** Registrado */
+            registrado: boolean;
+        };
+        /**
+         * BloqueImport
+         * @description `tipo_medicion` determina que campos acepta el bloque (PLAN_IMPORT.md 4).
+         *     Mandar uno que no aplica es un error, no algo que se ignora en silencio.
+         */
+        BloqueImport: {
+            /** Ejercicio */
+            ejercicio: string;
+            tipo_medicion: components["schemas"]["TipoMedicion"];
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Series */
+            series?: number | null;
+            /** Reps */
+            reps?: number | null;
+            /** Reps Min */
+            reps_min?: number | null;
+            /** Reps Max */
+            reps_max?: number | null;
+            /** Peso Kg */
+            peso_kg?: number | string | null;
+            /** Distancia M */
+            distancia_m?: number | string | null;
+            /** Duracion S */
+            duracion_s?: number | null;
+            /** Nota */
+            nota?: string | null;
+        };
         /** BloquePlanRead */
         BloquePlanRead: {
             /** Id */
@@ -515,6 +1116,8 @@ export interface components {
             distancia_objetivo_m: string | null;
             /** Duracion Objetivo S */
             duracion_objetivo_s: number | null;
+            /** Nota */
+            nota: string | null;
         };
         /**
          * BloquePlanSinPlanCreate
@@ -568,6 +1171,8 @@ export interface components {
             rpe: number | null;
             /** Dolor Lumbar */
             dolor_lumbar: boolean;
+            /** Nota */
+            nota: string | null;
         };
         /**
          * BloqueSinSesionCreate
@@ -598,6 +1203,8 @@ export interface components {
              * @default false
              */
             dolor_lumbar: boolean;
+            /** Nota */
+            nota?: string | null;
         };
         /**
          * CargaLumbar
@@ -632,6 +1239,28 @@ export interface components {
             semanas: number;
             /** @default planificado */
             estado: components["schemas"]["EstadoCiclo"];
+        };
+        /**
+         * CicloImport
+         * @description `numero` es la identidad del ciclo para el usuario (UNIQUE). Si ya
+         *     existe, el resto de los campos se ignoran: un ciclo en curso no se
+         *     redefine desde una importacion de una sola semana.
+         */
+        CicloImport: {
+            /** Numero */
+            numero: number;
+            /** Objetivo */
+            objetivo: string;
+            /**
+             * Fecha Inicio
+             * Format: date
+             */
+            fecha_inicio: string;
+            /**
+             * Semanas
+             * @default 4
+             */
+            semanas: number;
         };
         /** CicloRead */
         CicloRead: {
@@ -694,6 +1323,144 @@ export interface components {
             volumen_pct: number;
         };
         /**
+         * CicloSemanaUpdate
+         * @description PUT reemplaza completo, igual que sesion y composicion: `numero` no
+         *     se edita (identidad de la semana dentro del ciclo, de ahi se deriva su
+         *     rango de fechas).
+         */
+        CicloSemanaUpdate: {
+            /** Rpe Objetivo Min */
+            rpe_objetivo_min?: number | null;
+            /** Rpe Objetivo Max */
+            rpe_objetivo_max?: number | null;
+            fase: components["schemas"]["FaseCiclo"];
+            /**
+             * Volumen Pct
+             * @default 100
+             */
+            volumen_pct: number;
+        };
+        /**
+         * CierreSemanaRead
+         * @description Una lista de 7 dias (o N si el caller pide mas). El cliente
+         *     decide el tamano del rango.
+         */
+        CierreSemanaRead: {
+            /** Dias */
+            dias: components["schemas"]["DiaCierreSchema"][];
+        };
+        /**
+         * ComidaConMacrosRead
+         * @description Comida + sus macros derivados. Usado por el endpoint
+         *     /comidas/{id} (la UI muestra el detalle con macros).
+         */
+        ComidaConMacrosRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            momento: components["schemas"]["MomentoComida"];
+            /** Receta Id */
+            receta_id: number | null;
+            /** Nota */
+            nota: string | null;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Items */
+            items: components["schemas"]["ComidaItemRead"][];
+            macros: components["schemas"]["MacroTotalRead"];
+        };
+        /**
+         * ComidaCreate
+         * @description `idempotency_key` lo genera el cliente (Fase 5, offline-first). Es
+         *     la unica unicidad real: un usuario registra varias comidas en el mismo
+         *     (fecha, momento), no hay PK natural que proteger.
+         *
+         *     `receta_id` XOR `items`: ambos opcionales en el schema (no podemos
+         *     leer receta en el schema), pero el validador temprano rechaza la
+         *     combinacion invalida con 422 legible. La otra mitad (sin receta + sin
+         *     items) la valida el servicio.
+         */
+        ComidaCreate: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            momento: components["schemas"]["MomentoComida"];
+            /** Receta Id */
+            receta_id?: number | null;
+            /** Nota */
+            nota?: string | null;
+            /** Items */
+            items?: components["schemas"]["ComidaItemCreate"][];
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+        };
+        /** ComidaItemCreate */
+        ComidaItemCreate: {
+            /** Alimento Id */
+            alimento_id: number;
+            /** Cantidad G */
+            cantidad_g: number | string;
+        };
+        /** ComidaItemRead */
+        ComidaItemRead: {
+            /** Id */
+            id: number;
+            /** Alimento Id */
+            alimento_id: number;
+            /** Cantidad G */
+            cantidad_g: string;
+        };
+        /** ComidaRead */
+        ComidaRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            momento: components["schemas"]["MomentoComida"];
+            /** Receta Id */
+            receta_id: number | null;
+            /** Nota */
+            nota: string | null;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Items */
+            items: components["schemas"]["ComidaItemRead"][];
+        };
+        /**
+         * ComidasDelDiaRead
+         * @description Lista de comidas de un dia + macros agregados del dia.
+         *     Un solo GET devuelve todo lo que la UI necesita.
+         */
+        ComidasDelDiaRead: {
+            /** Comidas */
+            comidas: components["schemas"]["ComidaRead"][];
+            macros_del_dia: components["schemas"]["MacroTotalRead"];
+        };
+        /**
          * ComposicionItem
          * @description Un tipo de sesión con su cantidad objetivo en la semana.
          */
@@ -730,11 +1497,72 @@ export interface components {
          * @enum {string}
          */
         Demanda: "alta" | "media" | "baja";
+        /**
+         * DespensaListaDeMercadoRead
+         * @description Vista especializada: solo lo que hay que comprar (imprescindible +
+         *     sin stock). Se devuelve como una lista de items para que la UI no
+         *     tenga que filtrar el DespensaRead.
+         */
+        DespensaListaDeMercadoRead: {
+            /** Items */
+            items: components["schemas"]["DespensaRead"][];
+        };
+        /**
+         * DespensaRead
+         * @description Read no expone `usuario_id` (siempre es el autenticado) ni la PK
+         *     compuesta. La UI lista por nombre de alimento.
+         */
+        DespensaRead: {
+            /** Alimento Id */
+            alimento_id: number;
+            /** Alimento Nombre */
+            alimento_nombre: string;
+            /** Imprescindible */
+            imprescindible: boolean;
+            /** En Stock */
+            en_stock: boolean;
+        };
+        /**
+         * DespensaUpsert
+         * @description PUT reemplaza el par (imprescindible, en_stock) para un alimento.
+         *     Si el alimento no estaba en la despensa del usuario, se crea.
+         */
+        DespensaUpsert: {
+            /**
+             * Imprescindible
+             * @default false
+             */
+            imprescindible: boolean;
+            /**
+             * En Stock
+             * @default true
+             */
+            en_stock: boolean;
+        };
+        /**
+         * DiaCierreSchema
+         * @description Una unidad minima: los datos crudos de las 5 dimensiones para
+         *     un dia. La UI deriva las flags cumplidas y las pinta.
+         */
+        DiaCierreSchema: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            sueno: components["schemas"]["SuenoDiaSchema"];
+            sesion: components["schemas"]["SesionDiaSchema"];
+            hidratacion: components["schemas"]["HidratacionDiaSchema"];
+            habitos: components["schemas"]["HabitosDiaSchema"];
+            bienestar: components["schemas"]["BienestarDiaSchema"];
+        };
         /** EjercicioCreate */
         EjercicioCreate: {
             /** Nombre */
             nombre: string;
             tipo_medicion: components["schemas"]["TipoMedicion"];
+            /** Descripcion */
+            descripcion?: string | null;
         };
         /** EjercicioRead */
         EjercicioRead: {
@@ -748,6 +1576,22 @@ export interface components {
             /** Tipo Sesion Id */
             tipo_sesion_id: number | null;
             tipo_medicion: components["schemas"]["TipoMedicion"];
+            /** Descripcion */
+            descripcion: string | null;
+        };
+        /**
+         * EjercicioUpdate
+         * @description Sin `tipo_medicion` a proposito: cambiarlo invalidaria los bloques
+         *     historicos, que se midieron con el anterior (REGLAS_NEGOCIO §15).
+         *
+         *     Los campos son opcionales y None significa "no tocar". Para borrar la
+         *     descripcion se manda string vacio.
+         */
+        EjercicioUpdate: {
+            /** Nombre */
+            nombre?: string | null;
+            /** Descripcion */
+            descripcion?: string | null;
         };
         /**
          * EstadoCiclo
@@ -755,14 +1599,68 @@ export interface components {
          */
         EstadoCiclo: "planificado" | "activo" | "cerrado";
         /**
+         * EstadoPesaje
+         * @enum {string}
+         */
+        EstadoPesaje: "crudo" | "cocido";
+        /**
+         * EstadoSesionPlan
+         * @description Estado de ejecucion de un `sesion_plan`.
+         *
+         *     `descartado` lo declara el usuario. `cumplido` y `movido` los escribe el
+         *     service de sesion (`resolver_estado_de_plan`) cada vez que una sesion se
+         *     crea, cambia de fecha o se borra: la columna es la fuente de verdad y el
+         *     importador la lee directo, sin join contra `sesion`.
+         * @enum {string}
+         */
+        EstadoSesionPlan: "pendiente" | "cumplido" | "movido" | "descartado";
+        /**
+         * ExportRead
+         * @description Respuesta de `GET /planes/importar/export/{recurso}` (PLAN_IMPORT.md
+         *     §9). `contenido` siempre es un string listo para pegar: JSON serializado
+         *     para `ejercicios`/`ejemplo`, markdown para `reglas`.
+         */
+        ExportRead: {
+            /** Recurso */
+            recurso: string;
+            /**
+             * Formato
+             * @enum {string}
+             */
+            formato: "json" | "markdown";
+            /** Contenido */
+            contenido: string;
+        };
+        /**
          * FaseCiclo
          * @enum {string}
          */
         FaseCiclo: "readaptacion" | "carga" | "descarga";
+        /**
+         * GrupoAlimento
+         * @description `verdura` es el único grupo que cuenta para pct_comidas_con_vegetal.
+         * @enum {string}
+         */
+        GrupoAlimento: "proteina_animal" | "lacteo" | "cereal" | "leguminosa" | "tuberculo" | "verdura" | "fruta" | "grasa" | "procesado";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HabitoCreate */
+        HabitoCreate: {
+            /** Nombre */
+            nombre: string;
+            /**
+             * Activo
+             * @default true
+             */
+            activo: boolean;
+            /**
+             * Orden
+             * @default 0
+             */
+            orden: number;
         };
         /** HabitoRead */
         HabitoRead: {
@@ -791,6 +1689,8 @@ export interface components {
             fecha: string;
             /** Valor */
             valor: boolean;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
         };
         /** HabitoRegistroRead */
         HabitoRegistroRead: {
@@ -803,6 +1703,41 @@ export interface components {
             fecha: string;
             /** Valor */
             valor: boolean;
+            /** Idempotency Key */
+            idempotency_key: string | null;
+        };
+        /**
+         * HabitoReordenar
+         * @description El cliente manda la lista en el orden que quiere. El server
+         *     actualiza el campo `orden` de cada habito segun la posicion en
+         *     la lista. Items que no esten en la lista mantienen su orden
+         *     anterior (no los borramos).
+         */
+        HabitoReordenar: {
+            /** Ids */
+            ids: number[];
+        };
+        /** HabitoUpdate */
+        HabitoUpdate: {
+            /** Nombre */
+            nombre?: string | null;
+            /** Activo */
+            activo?: boolean | null;
+            /** Orden */
+            orden?: number | null;
+        };
+        /**
+         * HabitosDiaSchema
+         * @description marcados cuenta los True de la fecha. activos es el total de
+         *     habitos activos del usuario (constante para todos los dias del
+         *     rango, pero la repetimos por dia para que la UI no haga otro
+         *     fetch).
+         */
+        HabitosDiaSchema: {
+            /** Marcados */
+            marcados: number;
+            /** Activos */
+            activos: number;
         };
         /** HealthRead */
         HealthRead: {
@@ -816,6 +1751,56 @@ export interface components {
              * @enum {string}
              */
             base_de_datos: "ok" | "sin_conexion";
+        };
+        /**
+         * HidratacionDiaSchema
+         * @description null = no hay registro de hidratacion ese dia.
+         */
+        HidratacionDiaSchema: {
+            /** Ml Totales */
+            ml_totales: number | null;
+            /** Objetivo Ml */
+            objetivo_ml: number;
+        };
+        /**
+         * ImportacionResultado
+         * @description Lo que devuelve el endpoint (PLAN_IMPORT.md 7).
+         *
+         *     `advertencias` no bloquea: son cosas que el usuario probablemente quiera
+         *     revisar, no razones para rechazar la semana entera.
+         *
+         *     `ciclo_semana_inicio` / `ciclo_semana_fin` se calculan desde
+         *     `ciclo.fecha_inicio` y `ciclo_semana.numero`: le devuelven al cliente el
+         *     rango de fechas que la importacion efectivamente cubrio, para que el
+         *     usuario sepa en que ventana cae lo que acaba de planificar (sin esto, una
+         *     importacion de "semana 2" en un ciclo que arranca el lunes se ve
+         *     visualmente igual a una de "semana 1" hasta que abris el detalle).
+         */
+        ImportacionResultado: {
+            /** Ciclo Id */
+            ciclo_id: number;
+            /** Ciclo Semana Id */
+            ciclo_semana_id: number;
+            /**
+             * Ciclo Semana Inicio
+             * Format: date
+             */
+            ciclo_semana_inicio: string;
+            /**
+             * Ciclo Semana Fin
+             * Format: date
+             */
+            ciclo_semana_fin: string;
+            /** Sesiones Creadas */
+            sesiones_creadas: number;
+            /** Sesiones Reemplazadas */
+            sesiones_reemplazadas: number;
+            /** Sesiones Omitidas */
+            sesiones_omitidas: number;
+            /** Ejercicios Creados */
+            ejercicios_creados?: string[];
+            /** Advertencias */
+            advertencias?: string[];
         };
         /**
          * LoginRequest
@@ -833,8 +1818,60 @@ export interface components {
             password: string;
         };
         /**
+         * MacroTotalRead
+         * @description Macros derivados (REGLAS_NEGOCIO §12). No se almacenan: se calculan
+         *     al leer. Por eso viven como Read aca y no en el modelo.
+         */
+        MacroTotalRead: {
+            /** Kcal */
+            kcal: string;
+            /** Proteina */
+            proteina: string;
+            /** Carbo */
+            carbo: string;
+            /** Grasa */
+            grasa: string;
+            /** Fibra */
+            fibra: string;
+        };
+        /** MedidaCorporalCreate */
+        MedidaCorporalCreate: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Peso Kg */
+            peso_kg: number | string;
+            /** Fc Reposo */
+            fc_reposo?: number | null;
+        };
+        /** MedidaCorporalRead */
+        MedidaCorporalRead: {
+            /** Id */
+            id: number;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Peso Kg */
+            peso_kg: string;
+            /** Fc Reposo */
+            fc_reposo: number | null;
+            origen: components["schemas"]["OrigenDato"];
+        };
+        /**
          * MolestiaCreate
          * @description Sin molestia no hay fila: no existe un Create con intensidad 0.
+         *
+         *     `idempotency_key` lo genera el cliente (Fase 5, offline-first). Nullable
+         *     para admitir backfill historico (Fase 9, Notion).
          */
         MolestiaCreate: {
             /**
@@ -848,6 +1885,8 @@ export interface components {
             intensidad: number;
             /** Nota */
             nota?: string | null;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
         };
         /** MolestiaRead */
         MolestiaRead: {
@@ -869,7 +1908,14 @@ export interface components {
             intensidad: number;
             /** Nota */
             nota: string | null;
+            /** Idempotency Key */
+            idempotency_key: string | null;
         };
+        /**
+         * MomentoComida
+         * @enum {string}
+         */
+        MomentoComida: "desayuno" | "media_manana" | "almuerzo" | "merienda" | "cena";
         /**
          * OrigenDato
          * @enum {string}
@@ -885,6 +1931,132 @@ export interface components {
             unidad: string | null;
             /** Descripcion */
             descripcion: string;
+        };
+        /**
+         * PartidoCreate
+         * @description Un partido ES una sesion existente (REGLAS_NEGOCIO): `sesion_id`
+         *     referencia una sesion ya creada, duracion y RPE viven ahi.
+         */
+        PartidoCreate: {
+            /**
+             * Sesion Id
+             * Format: uuid
+             */
+            sesion_id: string;
+            /** Rival */
+            rival?: string | null;
+            /** Formato */
+            formato?: string | null;
+            /** Minutos Jugados */
+            minutos_jugados: number;
+            /**
+             * Goles
+             * @default 0
+             */
+            goles: number;
+            /**
+             * Asistencias
+             * @default 0
+             */
+            asistencias: number;
+            /** Recuperaciones */
+            recuperaciones?: number | null;
+            /** Salio Bien */
+            salio_bien?: string | null;
+            /** A Ajustar */
+            a_ajustar?: string | null;
+        };
+        /** PartidoRead */
+        PartidoRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Sesion Id
+             * Format: uuid
+             */
+            sesion_id: string;
+            /** Rival */
+            rival: string | null;
+            /** Formato */
+            formato: string | null;
+            /** Minutos Jugados */
+            minutos_jugados: number;
+            /** Goles */
+            goles: number;
+            /** Asistencias */
+            asistencias: number;
+            /** Recuperaciones */
+            recuperaciones: number | null;
+            /** Salio Bien */
+            salio_bien: string | null;
+            /** A Ajustar */
+            a_ajustar: string | null;
+        };
+        /** PlanSemanalImport */
+        PlanSemanalImport: {
+            /** Version */
+            version: number;
+            ciclo: components["schemas"]["CicloImport"];
+            semana: components["schemas"]["SemanaImport"];
+            /** Sesiones */
+            sesiones: components["schemas"]["SesionImport"][];
+        };
+        /** RecetaCreate */
+        RecetaCreate: {
+            /** Nombre */
+            nombre: string;
+            momento_default?: components["schemas"]["MomentoComida"] | null;
+            /** Items */
+            items: components["schemas"]["RecetaItemCreate"][];
+        };
+        /**
+         * RecetaItemCreate
+         * @description `(alimento_id, cantidad_g)` que forman la receta.
+         *
+         *     El backend valida que el alimento exista (servicio). `cantidad_g > 0` lo
+         *     valida Pydantic aca para devolver 422 antes de tocar la base; el CHECK
+         *     de Postgres es el cinturon de seguridad.
+         */
+        RecetaItemCreate: {
+            /** Alimento Id */
+            alimento_id: number;
+            /** Cantidad G */
+            cantidad_g: number | string;
+        };
+        /** RecetaItemRead */
+        RecetaItemRead: {
+            /** Id */
+            id: number;
+            /** Alimento Id */
+            alimento_id: number;
+            /** Cantidad G */
+            cantidad_g: string;
+        };
+        /** RecetaRead */
+        RecetaRead: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            momento_default: components["schemas"]["MomentoComida"] | null;
+            /** Activa */
+            activa: boolean;
+            /** Items */
+            items: components["schemas"]["RecetaItemRead"][];
+        };
+        /**
+         * RecetaUpdate
+         * @description PUT reemplaza la receta entera.
+         */
+        RecetaUpdate: {
+            /** Nombre */
+            nombre: string;
+            momento_default?: components["schemas"]["MomentoComida"] | null;
+            /** Items */
+            items: components["schemas"]["RecetaItemCreate"][];
         };
         /**
          * ReemplazarComposicionRequest
@@ -908,6 +2080,9 @@ export interface components {
         /**
          * RegistroBienestarCreate
          * @description Los cuatro ítems del Hooper. En los cuatro, 1 es bueno y 5 es malo.
+         *
+         *     `idempotency_key` lo genera el cliente (Fase 5, offline-first). Nullable
+         *     para admitir backfill historico (Fase 9, Notion).
          */
         RegistroBienestarCreate: {
             /**
@@ -923,6 +2098,8 @@ export interface components {
             dolor_muscular: number;
             /** Estres */
             estres: number;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
         };
         /** RegistroBienestarRead */
         RegistroBienestarRead: {
@@ -948,11 +2125,17 @@ export interface components {
             estres: number;
             /** Hooper */
             hooper: number;
+            /** Idempotency Key */
+            idempotency_key: string | null;
         };
         /**
          * RegistroHidratacionCreate
          * @description `cantidad_ml` es lo que se toma en ESTE tap (ej. un termo de 750ml),
          *     no el total del día: se suma a lo ya registrado.
+         *
+         *     `idempotency_key` lo genera el cliente (Fase 5, offline-first). Cuando la
+         *     cola reintenta con la misma key, el server no vuelve a sumar: idempotente
+         *     contra el doble envio.
          */
         RegistroHidratacionCreate: {
             /**
@@ -962,6 +2145,8 @@ export interface components {
             fecha: string;
             /** Cantidad Ml */
             cantidad_ml: number;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
         };
         /** RegistroHidratacionRead */
         RegistroHidratacionRead: {
@@ -979,10 +2164,16 @@ export interface components {
             fecha: string;
             /** Ml Totales */
             ml_totales: number;
+            /** Idempotency Key */
+            idempotency_key: string | null;
         };
         /**
          * RegistroSuenoCreate
          * @description `usuario_id` no viaja en el cuerpo: sale del usuario autenticado.
+         *
+         *     `idempotency_key` lo genera el cliente (Fase 5, offline-first). Si el
+         *     cliente no lo manda, el backend igual lo acepta y le genera uno antes
+         *     de la cola.
          */
         RegistroSuenoCreate: {
             /**
@@ -1004,6 +2195,8 @@ export interface components {
             celular_fuera?: boolean | null;
             /** @default manual */
             origen: components["schemas"]["OrigenDato"];
+            /** Idempotency Key */
+            idempotency_key?: string | null;
         };
         /** RegistroSuenoRead */
         RegistroSuenoRead: {
@@ -1034,6 +2227,38 @@ export interface components {
             origen: components["schemas"]["OrigenDato"];
             /** Horas Sueno */
             horas_sueno: string;
+            /** Idempotency Key */
+            idempotency_key: string | null;
+        };
+        /** ResultadoTestRead */
+        ResultadoTestRead: {
+            /** Mejor */
+            mejor: string;
+            /** Media */
+            media: string;
+            /** Pct Decremento */
+            pct_decremento: string | null;
+            /** Pct Cambio */
+            pct_cambio: string | null;
+        };
+        /** RpeObjetivoImport */
+        RpeObjetivoImport: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number;
+        };
+        /** SemanaImport */
+        SemanaImport: {
+            /** Numero */
+            numero: number;
+            fase: components["schemas"]["FaseCiclo"];
+            rpe_objetivo?: components["schemas"]["RpeObjetivoImport"] | null;
+            /**
+             * Volumen Pct
+             * @default 100
+             */
+            volumen_pct: number;
         };
         /**
          * SesionCreate
@@ -1067,6 +2292,39 @@ export interface components {
             nota?: string | null;
             /** Bloques */
             bloques?: components["schemas"]["BloqueSinSesionCreate"][] | null;
+        };
+        /**
+         * SesionDiaSchema
+         * @description True si hay al menos una sesion de cualquier tipo ese dia. La
+         *     composicion de la sesion (fuerza, velocidad, etc.) vive en la
+         *     pestana Entreno (no aca).
+         */
+        SesionDiaSchema: {
+            /** Registrada */
+            registrada: boolean;
+        };
+        /**
+         * SesionImport
+         * @description `tipo` es el `codigo` de `tipo_sesion`, no su id: el JSON lo escribe
+         *     una persona (o un LLM) y no puede conocer ids de la base.
+         */
+        SesionImport: {
+            /** Dia */
+            dia: number;
+            /** Tipo */
+            tipo: string;
+            /** Nombre */
+            nombre?: string | null;
+            /** Nota */
+            nota?: string | null;
+            /** Objetivo */
+            objetivo?: string | null;
+            /** Duracion Min */
+            duracion_min?: number | null;
+            /** Rpe Objetivo */
+            rpe_objetivo?: number | null;
+            /** Bloques */
+            bloques?: components["schemas"]["BloqueImport"][];
         };
         /**
          * SesionPlanCreate
@@ -1115,6 +2373,13 @@ export interface components {
             duracion_min_est: number | null;
             /** Rpe Objetivo */
             rpe_objetivo: number | null;
+            estado: components["schemas"]["EstadoSesionPlan"];
+            /** Clave Import */
+            clave_import: string | null;
+            /** Nombre */
+            nombre: string | null;
+            /** Nota */
+            nota: string | null;
             /** Bloques Planeados */
             bloques_planeados?: components["schemas"]["BloquePlanRead"][];
         };
@@ -1180,6 +2445,76 @@ export interface components {
             bloques?: components["schemas"]["BloqueSinSesionCreate"][] | null;
         };
         /**
+         * SuenoDiaSchema
+         * @description null = no hay registro de sueno ese dia. horas = 0 si no hay.
+         */
+        SuenoDiaSchema: {
+            /** Horas */
+            horas: string | null;
+            /** Objetivo H */
+            objetivo_h: string;
+        };
+        /**
+         * TestFisicoCreate
+         * @description `idempotency_key` la genera el cliente: `(usuario_id, tipo_test_id,
+         *     fecha)` no es unico a proposito (se puede repetir un test el mismo
+         *     dia), asi que la key es la unica proteccion contra reintentos
+         *     duplicados de la cola.
+         */
+        TestFisicoCreate: {
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tipo Test Id */
+            tipo_test_id: number;
+            /** Superficie */
+            superficie?: string | null;
+            /** Condiciones */
+            condiciones?: string | null;
+            /** Valores */
+            valores: (number | string)[];
+        };
+        /** TestFisicoRead */
+        TestFisicoRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Usuario Id
+             * Format: uuid
+             */
+            usuario_id: string;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Tipo Test Id */
+            tipo_test_id: number;
+            /** Superficie */
+            superficie: string | null;
+            /** Condiciones */
+            condiciones: string | null;
+            /** Intentos */
+            intentos?: components["schemas"]["TestIntentoRead"][];
+        };
+        /** TestIntentoRead */
+        TestIntentoRead: {
+            /** Numero */
+            numero: number;
+            /** Valor */
+            valor: string;
+        };
+        /**
          * TipoMedicion
          * @description Determina que campos acepta un bloque de este ejercicio
          *     (REGLAS_NEGOCIO §15): carga->series/reps/peso_kg,
@@ -1197,6 +2532,19 @@ export interface components {
             /** Nombre */
             nombre: string;
             demanda: components["schemas"]["Demanda"];
+        };
+        /** TipoTestRead */
+        TipoTestRead: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Unidad */
+            unidad: string;
+            /** Mejor Es Mayor */
+            mejor_es_mayor: boolean;
         };
         /**
          * TokenResponse
@@ -1432,6 +2780,38 @@ export interface operations {
             };
         };
     };
+    ultimos_n_dias_api_v1_sueno_ultimos_get: {
+        parameters: {
+            query?: {
+                /** @description Cantidad de dias hacia atras */
+                dias?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistroSuenoRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     leer_sueno_api_v1_sueno__fecha__get: {
         parameters: {
             query?: never;
@@ -1592,6 +2972,55 @@ export interface operations {
             };
         };
     };
+    eliminar_molestia_api_v1_molestias__molestia_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                molestia_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_todos_habitos_api_v1_habitos_all_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HabitoRead"][];
+                };
+            };
+        };
+    };
     listar_habitos_api_v1_habitos_get: {
         parameters: {
             query?: never;
@@ -1608,6 +3037,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HabitoRead"][];
+                };
+            };
+        };
+    };
+    crear_habito_api_v1_habitos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HabitoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HabitoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_habito_api_v1_habitos__habito_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                habito_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HabitoUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HabitoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reordenar_habitos_api_v1_habitos_reordenar_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HabitoReordenar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1836,6 +3364,38 @@ export interface operations {
             };
         };
     };
+    listar_ultimas_api_v1_sesiones_ultimas_get: {
+        parameters: {
+            query?: {
+                /** @description Cuantas sesiones traer */
+                limite?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     obtener_sesion_api_v1_sesiones__sesion_id__get: {
         parameters: {
             query?: never;
@@ -2004,6 +3564,42 @@ export interface operations {
             };
         };
     };
+    actualizar_ejercicio_api_v1_catalogos_ejercicios__ejercicio_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id del ejercicio */
+                ejercicio_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EjercicioUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EjercicioRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     listar_zonas_corporales_api_v1_catalogos_zonas_corporales_get: {
         parameters: {
             query?: never;
@@ -2020,6 +3616,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ZonaCorporalRead"][];
+                };
+            };
+        };
+    };
+    listar_tipos_test_api_v1_catalogos_tipos_test_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TipoTestRead"][];
                 };
             };
         };
@@ -2209,6 +3825,101 @@ export interface operations {
             };
         };
     };
+    actualizar_semana_api_v1_ciclos_semanas__semana_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CicloSemanaUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CicloSemanaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_semana_api_v1_ciclos_semanas__semana_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_planes_de_semana_api_v1_ciclos_semanas__semana_id__planes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                semana_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionPlanRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     obtener_composicion_api_v1_ciclos_semanas__semana_id__composicion_get: {
         parameters: {
             query?: never;
@@ -2358,6 +4069,855 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SesionPlanRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    importar_semana_api_v1_planes_importar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanSemanalImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportacionResultado"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportar_recurso_api_v1_planes_importar_export__recurso__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recurso: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    descartar_api_v1_planes__plan_id__descartar_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id del sesion_plan */
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionPlanRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_alimentos_api_v1_alimentos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlimentoRead"][];
+                };
+            };
+        };
+    };
+    listar_recetas_api_v1_recetas_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecetaRead"][];
+                };
+            };
+        };
+    };
+    crear_receta_api_v1_recetas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecetaCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecetaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_receta_api_v1_recetas__receta_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receta_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecetaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_receta_api_v1_recetas__receta_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receta_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecetaUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecetaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_receta_api_v1_recetas__receta_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receta_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    macros_de_receta_api_v1_recetas__receta_id__macros_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receta_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MacroTotalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_comidas_del_dia_api_v1_comidas_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local del dia */
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComidasDelDiaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registrar_comida_api_v1_comidas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComidaCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComidaRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_comida_api_v1_comidas__comida_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comida_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComidaConMacrosRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_comida_api_v1_comidas__comida_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comida_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_despensa_api_v1_despensa_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DespensaRead"][];
+                };
+            };
+        };
+    };
+    upsert_despensa_api_v1_despensa__alimento_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alimento_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DespensaUpsert"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_de_despensa_api_v1_despensa__alimento_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alimento_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lista_de_mercado_api_v1_despensa_lista_de_mercado_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DespensaListaDeMercadoRead"];
+                };
+            };
+        };
+    };
+    listar_tests_api_v1_tests_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local del registro */
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestFisicoRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registrar_test_api_v1_tests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestFisicoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestFisicoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_test_api_v1_tests__test_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                test_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestFisicoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_test_api_v1_tests__test_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                test_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_resultado_test_api_v1_tests__test_id__resultado_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                test_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultadoTestRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_medidas_api_v1_medidas_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedidaCorporalRead"][];
+                };
+            };
+        };
+    };
+    registrar_medida_api_v1_medidas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedidaCorporalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedidaCorporalRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_partidos_api_v1_partidos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartidoRead"][];
+                };
+            };
+        };
+    };
+    registrar_partido_api_v1_partidos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartidoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartidoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_partido_api_v1_partidos__partido_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partido_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartidoRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cierre_semana_api_v1_semana_get: {
+        parameters: {
+            query: {
+                /** @description Fecha local de inicio del rango (YYYY-MM-DD) */
+                desde: string;
+                /** @description Fecha local de fin del rango (YYYY-MM-DD) */
+                hasta: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CierreSemanaRead"];
                 };
             };
             /** @description Validation Error */

@@ -12,3 +12,5 @@ node_modules/
 .next/
 dist/
 *.egg-info/
+# Local AI runtime state
+.atl/

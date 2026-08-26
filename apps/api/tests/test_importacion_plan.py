@@ -30,8 +30,22 @@ from app.models import (
     Usuario,
 )
 from app.models.enums import EstadoSesionPlan, TipoMedicion
+from app.repositories.catalogo import ejercicio as repo_ejercicio
+from app.services.entrenamiento.importacion import construir_export
 
 RUTA_EJEMPLO = Path(__file__).resolve().parents[3] / "docs" / "plan-ejemplo.json"
+RUTA_DOC_REGLAS = Path(__file__).resolve().parents[3] / "docs" / "PLAN_IMPORT.md"
+RUTA_REGLAS_EMPAQUETADAS = (
+    Path(__file__).resolve().parents[1] / "app" / "resources" / "reglas-import.md"
+)
+# Literal exacto de la línea de `sesion.tipo` en docs/PLAN_IMPORT.md §5. El
+# recurso empaquetado reemplaza este bloque por `{{TIPOS_SESION}}`; en tiempo
+# de ejecución se reinyecta desde el catálogo vivo, nunca desde este literal.
+LITERAL_TIPOS_SESION = (
+    "**`sesion.tipo`** — `fuerza`, `velocidad_salto`, `resistencia`,\n"
+    "`balon_control`, `balon_distribucion`, `recuperacion`, `partido`,\n"
+    "`activacion`."
+)
 
 
 @pytest.fixture
@@ -666,3 +680,165 @@ async def test_no_deja_achicar_las_semanas_por_debajo_de_las_que_existen(
     respuesta = await _importar(cliente, payload)
     assert respuesta.status_code == 422
     assert "no se puede achicar" in respuesta.json()["detail"]
+
+
+# ------------------------------------------------------- exports para LLM --
+
+
+TIPOS_SESION_SEMBRADOS = (
+    "fuerza",
+    "velocidad_salto",
+    "resistencia",
+    "balon_control",
+    "balon_distribucion",
+    "recuperacion",
+    "partido",
+    "activacion",
+)
+
+
+async def test_construir_export_ejercicios_refleja_el_catalogo(
+    sesion: AsyncSession,
+) -> None:
+    """Sale de `listar_ejercicios`, no de una lista hardcodeada (spec: "MUST
+    NOT invent, filter, or hardcode entries")."""
+    creado = await repo_ejercicio.crear(
+        sesion,
+        nombre="Zancada búlgara con mancuernas",
+        tipo_medicion=TipoMedicion.carga,
+        descripcion="Pie trasero elevado, bajada controlada.",
+    )
+    await sesion.commit()
+
+    export = await construir_export(sesion, "ejercicios")
+
+    assert export.recurso == "ejercicios"
+    assert export.formato == "json"
+    catalogo = json.loads(export.contenido)
+    fila = next(e for e in catalogo if e["nombre"] == creado.nombre)
+    assert fila["tipo_medicion"] == "carga"
+    assert fila["descripcion"] == "Pie trasero elevado, bajada controlada."
+
+
+async def test_construir_export_ejemplo_devuelve_el_recurso_empaquetado(
+    sesion: AsyncSession,
+) -> None:
+    """`ejemplo` es el archivo empaquetado, verbatim (spec: "MUST return the
+    packaged example plan resource verbatim, unmodified")."""
+    export = await construir_export(sesion, "ejemplo")
+
+    assert export.recurso == "ejemplo"
+    assert export.formato == "json"
+    esperado = RUTA_REGLAS_EMPAQUETADAS.parent.joinpath("plan-ejemplo.json").read_text(
+        encoding="utf-8"
+    )
+    assert export.contenido == esperado
+
+
+async def test_construir_export_reglas_inyecta_los_tipos_de_sesion_vivos(
+    sesion: AsyncSession,
+) -> None:
+    """El bloque de tipos de sesión sale del catálogo en tiempo de request,
+    nunca de un string congelado (spec: "MUST be rendered from that live
+    catalog, never from a frozen string")."""
+    export = await construir_export(sesion, "reglas")
+
+    assert export.recurso == "reglas"
+    assert export.formato == "markdown"
+    assert "{{TIPOS_SESION}}" not in export.contenido
+    for codigo in TIPOS_SESION_SEMBRADOS:
+        assert f"`{codigo}`" in export.contenido
+
+
+@pytest.mark.parametrize("recurso", ["ejercicios", "reglas", "ejemplo"])
+async def test_export_autenticado_devuelve_200_y_contenido_no_vacio(
+    cliente: AsyncClient, recurso: str
+) -> None:
+    respuesta = await cliente.get(f"/api/v1/planes/importar/export/{recurso}")
+    assert respuesta.status_code == 200, respuesta.text
+    cuerpo = respuesta.json()
+    assert cuerpo["recurso"] == recurso
+    assert cuerpo["contenido"]
+
+
+async def test_export_sin_token_devuelve_401() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as sin_auth:
+        respuesta = await sin_auth.get("/api/v1/planes/importar/export/reglas")
+    assert respuesta.status_code == 401
+
+
+async def test_export_recurso_desconocido_devuelve_404(cliente: AsyncClient) -> None:
+    respuesta = await cliente.get("/api/v1/planes/importar/export/cualquier-otra-cosa")
+    assert respuesta.status_code == 404
+
+
+async def test_export_path_traversal_devuelve_404(cliente: AsyncClient) -> None:
+    """`recurso` solo se compara contra el allowlist, nunca se concatena a un
+    path de filesystem (threat matrix: path traversal)."""
+    respuesta = await cliente.get(
+        "/api/v1/planes/importar/export/..%2F..%2Fetc%2Fpasswd"
+    )
+    assert respuesta.status_code == 404
+
+
+async def test_las_rutas_existentes_de_planes_no_se_ven_afectadas(
+    cliente: AsyncClient,
+) -> None:
+    """La ruta nueva (`GET /importar/export/{recurso}`) no debe hacer sombra
+    ni ser tapada por `""`, `/importar` ni `/{plan_id}/descartar` (threat
+    matrix: routing)."""
+    payload = _payload_minimo()
+    payload["ciclo"]["numero"] = 41
+
+    creada = await cliente.post(
+        "/api/v1/planes",
+        json={
+            "dia_sugerido": 2,
+            "tipo_sesion_id": None,
+            "objetivo": "Ruta regresion",
+            "duracion_min_est": None,
+            "rpe_objetivo": None,
+            "bloques": [],
+            "ciclo_semana_id": None,
+        },
+    )
+    assert creada.status_code == 422, creada.text  # falta tipo_sesion_id valido
+
+    importada = await _importar(cliente, payload)
+    assert importada.status_code == 200, importada.text
+
+    listado = await cliente.get("/api/v1/planes", params={"fecha": "2026-09-01"})
+    assert listado.status_code == 200
+
+    plan = await cliente.get("/api/v1/planes/importar/export/reglas")
+    assert plan.status_code == 200
+
+    descartado = await cliente.patch("/api/v1/planes/999999/descartar")
+    assert descartado.status_code == 404
+
+
+async def test_el_ejemplo_exportado_se_puede_reimportar(cliente: AsyncClient) -> None:
+    """Cierre del loop end-to-end (spec "Round trip"): lo que `ejemplo`
+    devuelve tiene que ser justo lo que `/planes/importar` acepta, sin
+    ediciones."""
+    export = await cliente.get("/api/v1/planes/importar/export/ejemplo")
+    assert export.status_code == 200, export.text
+
+    payload = json.loads(export.json()["contenido"])
+    respuesta = await _importar(cliente, payload)
+    assert respuesta.status_code == 200, respuesta.text
+    assert respuesta.json()["sesiones_creadas"] == 7
+
+
+def test_reglas_empaquetadas_coinciden_con_el_documento() -> None:
+    """`reglas-import.md` (PLAN_IMPORT.md §9) es una copia verbatim del
+    documento salvo el bloque de `sesion.tipo`, reemplazado por
+    `{{TIPOS_SESION}}` para inyectarse en runtime desde el catálogo vivo. Si
+    el documento cambia y el paquete no se actualiza, este test se entera."""
+    if not RUTA_DOC_REGLAS.exists():
+        pytest.skip("docs/ no está presente en este entorno (ej. imagen Docker)")
+    doc = RUTA_DOC_REGLAS.read_text(encoding="utf-8")
+    plantilla = RUTA_REGLAS_EMPAQUETADAS.read_text(encoding="utf-8")
+    assert "{{TIPOS_SESION}}" in plantilla
+    assert plantilla.replace("{{TIPOS_SESION}}", LITERAL_TIPOS_SESION) == doc

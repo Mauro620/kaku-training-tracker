@@ -915,6 +915,31 @@ export function useImportarPlanSemanal() {
   });
 }
 
+// ---------- llm-export-endpoints: exports para pegarle a un LLM ----------
+//
+// No es un hook de react-query: es un click deliberado ("dame los 3 para el
+// LLM"), nunca debe servir un catalogo cacheado. Recibe el cliente HTTP como
+// parametro (mismo patron que endpointDesdeApi en lib/sync/outbox.ts) para
+// poder testearlo con un fake sin mockear el modulo @/lib/api/client.
+
+export type ExportRead = {
+  recurso: string;
+  formato: "json" | "markdown";
+  contenido: string;
+};
+
+const RECURSOS_EXPORT_LLM = ["ejercicios", "reglas", "ejemplo"] as const;
+
+export async function obtenerExportsLLM(
+  cliente: { get: (path: string) => Promise<ExportRead> } = api,
+): Promise<ExportRead[]> {
+  return Promise.all(
+    RECURSOS_EXPORT_LLM.map((recurso) =>
+      cliente.get(`/planes/importar/export/${recurso}`),
+    ),
+  );
+}
+
 export function useDescartarPlan() {
   const qc = useQueryClient();
   return useMutation({

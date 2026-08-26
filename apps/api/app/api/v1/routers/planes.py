@@ -2,18 +2,23 @@
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.models import SesionPlan, Usuario
 from app.schemas.entrenamiento.importacion import (
+    EXPORT_RECURSOS,
+    ExportRead,
     ImportacionResultado,
     PlanSemanalImport,
 )
 from app.schemas.entrenamiento.plan import SesionPlanCreate, SesionPlanRead
-from app.services.entrenamiento.importacion import importar_plan_semanal
+from app.services.entrenamiento.importacion import (
+    construir_export,
+    importar_plan_semanal,
+)
 from app.services.entrenamiento.plan import (
     crear_sesion_plan,
     descartar_plan,
@@ -69,6 +74,26 @@ async def importar_semana(
     sesion: AsyncSession = Depends(get_session),
 ) -> ImportacionResultado:
     return await importar_plan_semanal(sesion, usuario.id, payload)
+
+
+@router.get(
+    "/importar/export/{recurso}",
+    response_model=ExportRead,
+    summary="Exporta un recurso para armar el prompt del LLM (PLAN_IMPORT.md §9).",
+    description=(
+        "`recurso` es uno de `ejercicios`, `reglas`, `ejemplo`. Cada uno "
+        "devuelve un `contenido` listo para pegar. Un `recurso` desconocido "
+        "responde 404."
+    ),
+)
+async def exportar_recurso(
+    recurso: str,
+    _usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> ExportRead:
+    if recurso not in EXPORT_RECURSOS:
+        raise HTTPException(status_code=404, detail="Recurso no encontrado")
+    return await construir_export(sesion, recurso)
 
 
 @router.patch(

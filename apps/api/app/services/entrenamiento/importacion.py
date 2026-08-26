@@ -15,6 +15,8 @@ Dos invariantes gobiernan todo lo de abajo:
    midieron con el anterior.
 """
 
+import importlib.resources
+import json
 import re
 import unicodedata
 import uuid
@@ -28,16 +30,57 @@ from app.models import Ciclo, CicloSemana, Ejercicio, SesionPlan, TipoSesion
 from app.models.enums import EstadoSesionPlan
 from app.repositories import entrenamiento as repo
 from app.schemas.entrenamiento.importacion import (
+    ExportRead,
     ImportacionResultado,
     PlanSemanalImport,
     SesionImport,
 )
+from app.services.catalogo import entrenamiento as catalogo
 from app.services.entrenamiento.bloque import validar_campos
 from app.services.entrenamiento.ciclo import anclar_a_lunes
 from app.services.entrenamiento.espaciado import evaluar_espaciado
 from app.services.entrenamiento.plan import resolver_estado_de_plan
 
 ESTADOS_EJECUTADOS = (EstadoSesionPlan.cumplido, EstadoSesionPlan.movido)
+
+
+def _leer_recurso_empaquetado(nombre: str) -> str:
+    """`importlib.resources` y no `Path(__file__).parents[N]`: la imagen
+    Docker copia `app/` pero no `docs/` (ver design), así que el paquete
+    tiene que traer sus propios datos y leerlos sin asumir un cwd."""
+    return (
+        importlib.resources.files("app.resources").joinpath(nombre).read_text("utf-8")
+    )
+
+
+async def construir_export(session: AsyncSession, recurso: str) -> ExportRead:
+    """Los tres exports de PLAN_IMPORT.md §9. El router valida `recurso`
+    contra `EXPORT_RECURSOS` antes de llamar acá; esta función asume un valor
+    válido."""
+    if recurso == "ejercicios":
+        ejercicios = await catalogo.listar_ejercicios(session)
+        contenido = json.dumps(
+            [
+                {
+                    "nombre": e.nombre,
+                    "tipo_medicion": e.tipo_medicion.value,
+                    "descripcion": e.descripcion,
+                }
+                for e in ejercicios
+            ],
+            ensure_ascii=False,
+        )
+        return ExportRead(recurso=recurso, formato="json", contenido=contenido)
+
+    if recurso == "ejemplo":
+        contenido = _leer_recurso_empaquetado("plan-ejemplo.json")
+        return ExportRead(recurso=recurso, formato="json", contenido=contenido)
+
+    tipos = await catalogo.listar_tipos_sesion(session)
+    bloque = "**`sesion.tipo`** — " + ", ".join(f"`{t.codigo}`" for t in tipos) + "."
+    plantilla = _leer_recurso_empaquetado("reglas-import.md")
+    contenido = plantilla.replace("{{TIPOS_SESION}}", bloque)
+    return ExportRead(recurso=recurso, formato="markdown", contenido=contenido)
 
 
 async def importar_plan_semanal(
