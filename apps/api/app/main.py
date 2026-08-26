@@ -25,13 +25,18 @@ from app.api.v1.routers import (
     sueno_router,
 )
 from app.core.config import get_settings
-from app.core.exceptions import InvarianteDeNegocioError, RecursoNoEncontradoError
+from app.core.exceptions import (
+    ConflictoDeNegocioError,
+    InvarianteDeNegocioError,
+    RecursoNoEncontradoError,
+)
 
 # Excepción de dominio -> status HTTP. Único lugar del proyecto que traduce
 # entre las dos: los servicios nunca importan HTTPException (AGENTS.md §5).
 _STATUS_POR_EXCEPCION = {
     InvarianteDeNegocioError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     RecursoNoEncontradoError: status.HTTP_404_NOT_FOUND,
+    ConflictoDeNegocioError: status.HTTP_409_CONFLICT,
 }
 
 
