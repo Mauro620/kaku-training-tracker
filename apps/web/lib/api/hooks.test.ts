@@ -230,6 +230,24 @@ describe("useActualizarEjercicio - invalidacion", () => {
     expect(invalidatedKeys).toContainEqual(ejercicioKey);
     expect(invalidatedKeys).toContainEqual(catalogosKey);
   });
+
+  // C-1 fix: editar un ejercicio invalida sesiones y planes que lo referencian,
+  // asi el detalle de sesion/plan refresca y muestra la descripcion nueva.
+  it("invalida ['sesion'] y ['planes'] ademas del catalogo y el ejercicio", () => {
+    const invalidatedKeys: (string | number)[][] = [];
+    const mockInvalidate = vi.fn((query) => {
+      invalidatedKeys.push(query.queryKey);
+      return Promise.resolve();
+    });
+
+    void mockInvalidate({ queryKey: ["ejercicio", 42] });
+    void mockInvalidate({ queryKey: ["catalogos", "ejercicios"] });
+    void mockInvalidate({ queryKey: ["sesion"] });
+    void mockInvalidate({ queryKey: ["planes"] });
+
+    expect(invalidatedKeys).toContainEqual(["sesion"]);
+    expect(invalidatedKeys).toContainEqual(["planes"]);
+  });
 });
 
 // Test de tipo para SesionDetalleRead (compile-time check)

@@ -764,6 +764,11 @@ export function useActualizarEjercicio(id: number) {
     onSuccess: (data) => {
       qc.setQueryData(["ejercicio", id], data);
       void qc.invalidateQueries({ queryKey: ["catalogos", "ejercicios"] });
+      // Editar un ejercicio puede cambiar su descripcion / carga_lumbar /
+      // patron en sesiones y planes que ya lo tienen cacheado: invalida
+      // ambos para que la vista de detalle de sesion / plan se refresque.
+      void qc.invalidateQueries({ queryKey: ["sesion"] });
+      void qc.invalidateQueries({ queryKey: ["planes"] });
     },
   });
 }
