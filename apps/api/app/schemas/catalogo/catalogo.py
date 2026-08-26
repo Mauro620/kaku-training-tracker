@@ -138,6 +138,26 @@ class EjercicioUpdate(SchemaBase):
     activo: bool | None = None
 
 
+class EjercicioFusionarCreate(SchemaBase):
+    """Body de `POST /catalogos/ejercicios/{id}/fusionar`: pide el `destino_id`
+    del ejercicio que se queda. El `origen_id` viene del path. `extra=forbid`
+    (heredado de `SchemaBase`) impide que el cliente mande campos irrelevantes
+    y filtra ruido temprano."""
+
+    destino_id: int = Field(..., description="id del ejercicio que se queda")
+
+
+class FusionResultadoRead(ReadBase):
+    """Respuesta de la fusion: confirma los ids y reporta la cantidad de filas
+    tocadas en cada tabla. Los conteos permiten al frontend mostrar "se
+    reasignaron N bloques" sin pedir el detalle del ejercicio destino aparte."""
+
+    bloques_reasignados: int
+    bloques_plan_reasignados: int
+    origen_id: int
+    destino_id: int
+
+
 class ZonaCorporalRead(ReadBase):
     id: int
     nombre: str

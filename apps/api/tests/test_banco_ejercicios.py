@@ -34,12 +34,14 @@ from app.repositories.entrenamiento import sesion as repo_sesion
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
     EjercicioDetalleRead,
+    EjercicioFusionarCreate,
     EjercicioHistorialItem,
     EjercicioListItem,
     EjercicioListRead,
     EjercicioPosibleDuplicado,
     EjercicioRead,
     EjercicioUpdate,
+    FusionResultadoRead,
 )
 
 
@@ -262,6 +264,37 @@ def test_schema_ejercicio_read_incluye_activo() -> None:
         activo=True,
     )
     assert lectura.activo is True
+
+
+# ------------------------------------------- schemas R7.2 (fusion) -----
+
+
+def test_schema_ejercicio_fusionar_create_destino_id_requerido() -> None:
+    """`EjercicioFusionarCreate` exige `destino_id` (no acepta omitirlo ni
+    pasar None). El error de Pydantic menciona el campo faltante."""
+    with pytest.raises(ValidationError) as exc:
+        EjercicioFusionarCreate()  # type: ignore[call-arg]
+    errores = [err for err in exc.value.errors() if "destino_id" in str(err)]
+    assert errores, f"no se menciono destino_id en los errores: {exc.value.errors()}"
+
+    # Caso contrario: con destino_id valido, instancia ok.
+    valido = EjercicioFusionarCreate(destino_id=42)
+    assert valido.destino_id == 42
+
+
+def test_schema_fusion_resultado_shape() -> None:
+    """`FusionResultadoRead` expone los 4 campos del contrato: origen, destino
+    y los dos conteos de filas reasignadas."""
+    resultado = FusionResultadoRead(
+        origen_id=1,
+        destino_id=2,
+        bloques_reasignados=3,
+        bloques_plan_reasignados=2,
+    )
+    assert resultado.origen_id == 1
+    assert resultado.destino_id == 2
+    assert resultado.bloques_reasignados == 3
+    assert resultado.bloques_plan_reasignados == 2
 
 
 # ------------------------------------------------ repositorio R6.2 (Q1) --
