@@ -13,7 +13,7 @@ import {
 import {
   useActualizarSesion,
   useDuplicarSesion,
-  useEjercicios,
+  useEjerciciosList,
   useEliminarSesion,
   useSesion,
   useTiposSesion,
@@ -69,7 +69,7 @@ export function SesionDetalle({ sesionId, onCerrar }: Props) {
 
 function SesionDetalleForm({ sesion, onCerrar }: { sesion: Sesion; onCerrar: () => void }) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const actualizar = useActualizarSesion(sesion.id);
   const eliminar = useEliminarSesion();
   const duplicar = useDuplicarSesion();
@@ -218,7 +218,7 @@ function SesionDetalleForm({ sesion, onCerrar }: { sesion: Sesion; onCerrar: () 
               key={b.localId}
               bloque={b}
               orden={idx + 1}
-              ejercicios={ejercicios.data ?? []}
+              ejercicios={ejercicios.data?.items ?? []}
               onChange={(c) => actualizarBloque(b.localId, c)}
               onEliminar={() => eliminarBloque(b.localId)}
               onDuplicar={() => duplicarBloque(b.localId)}

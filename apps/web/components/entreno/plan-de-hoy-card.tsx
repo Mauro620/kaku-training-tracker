@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BentoCard } from "@/components/ui/bento-card";
 import { SelectorSesionSemana } from "@/components/entreno/selector-sesion-semana";
 import {
-  useEjercicios,
+  useEjerciciosList,
   useTiposSesion,
   type Sesion,
   type SesionPlan,
@@ -34,7 +34,7 @@ export function PlanDeHoyCard({
   onVerSesion,
 }: Props) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const [eligiendoOtra, setEligiendoOtra] = useState(false);
 
   const nombreTipo = (id: number) =>
@@ -71,7 +71,7 @@ export function PlanDeHoyCard({
           plan={pendiente}
           tipoNombre={nombreTipo(pendiente.tipo_sesion_id)}
           nombreEjercicio={(id) =>
-            ejercicios.data?.find((e) => e.id === id)?.nombre ?? `Ejercicio ${id}`
+            ejercicios.data?.items.find((e) => e.id === id)?.nombre ?? `Ejercicio ${id}`
           }
           onEmpezar={() => onEmpezar(pendiente)}
         />

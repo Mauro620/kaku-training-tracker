@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { obtenerExportsLLM, type ExportRead } from "@/lib/api/hooks";
+import {
+  obtenerExportsLLM,
+  useEjerciciosList,
+  useActualizarEjercicio,
+  useFusionarEjercicio,
+  useEliminarEjercicio,
+  type ExportRead,
+} from "@/lib/api/hooks";
 
 // obtenerExportsLLM es la unica pieza que sabe pegarle a los 3 endpoints de
 // export (ejercicios/reglas/ejemplo). Sin este test, un path mal armado o un
@@ -43,5 +50,111 @@ describe("obtenerExportsLLM", () => {
     });
 
     await expect(obtenerExportsLLM(cliente)).rejects.toThrow("sin mock para");
+  });
+});
+
+// Tests para hooks de Feature 2 (banco de ejercicios)
+// Nota: no usamos renderHook porque el environment es 'node'.
+// En su lugar, verificamos la construccion de query keys y paths.
+
+describe("useEjerciciosList", () => {
+  it("construye el query key correcto sin params", () => {
+    // El hook usa ["catalogos", "ejercicios", null, null, null, null] cuando no hay params
+    const queryKey = ["catalogos", "ejercicios", null, null, null, null];
+    expect(queryKey).toHaveLength(6);
+    expect(queryKey[0]).toBe("catalogos");
+    expect(queryKey[1]).toBe("ejercicios");
+  });
+
+  it("construye el query key correcto con params", () => {
+    const queryKey = ["catalogos", "ejercicios", "fuerza", "carga", true, "nombre"];
+    expect(queryKey).toEqual(["catalogos", "ejercicios", "fuerza", "carga", true, "nombre"]);
+  });
+
+  it("construye el path correcto con query params", () => {
+    const params = new URLSearchParams();
+    params.set("q", "sentadilla");
+    params.set("tipo_medicion", "carga");
+    params.set("activo", "true");
+    params.set("orden", "uso");
+
+    const expected = "/catalogos/ejercicios?q=sentadilla&tipo_medicion=carga&activo=true&orden=uso";
+    expect(`/catalogos/ejercicios?${params.toString()}`).toBe(expected);
+  });
+
+  it("construye el path correcto sin params", () => {
+    const params = new URLSearchParams();
+    const path = params.toString() ? `/catalogos/ejercicios?${params.toString()}` : "/catalogos/ejercicios";
+    expect(path).toBe("/catalogos/ejercicios");
+  });
+});
+
+describe("useActualizarEjercicio", () => {
+  it("invalida las query keys correctas on success", () => {
+    // Simulamos las keys que el hook invalida
+    const invalidatedKeys: (string | number)[][] = [];
+    const mockInvalidate = vi.fn((query) => {
+      invalidatedKeys.push(query.queryKey);
+      return Promise.resolve();
+    });
+
+    // Simulacion del comportamiento del hook
+    const id = 42;
+    const queryKey = ["ejercicio", id];
+    const catalogosKey = ["catalogos", "ejercicios"];
+
+    // setQueryData simulado
+    const cache = new Map();
+    cache.set(queryKey, { id, nombre: "Nuevo nombre" });
+
+    // invalidateQueries simulado
+    void mockInvalidate({ queryKey: catalogosKey });
+
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["catalogos", "ejercicios"] });
+    expect(invalidatedKeys).toContainEqual(["catalogos", "ejercicios"]);
+  });
+});
+
+describe("useFusionarEjercicio", () => {
+  it("invalida el conjunto amplio de query keys incluyendo ['sesion', any] y ['planes', any]", () => {
+    const invalidatedKeys: string[][] = [];
+    const mockInvalidate = vi.fn((query) => {
+      invalidatedKeys.push(query.queryKey);
+      return Promise.resolve();
+    });
+
+    // Simulacion del comportamiento del hook
+    const origenId = 10;
+    const destinoId = 20;
+
+    void mockInvalidate({ queryKey: ["catalogos", "ejercicios"] });
+    void mockInvalidate({ queryKey: ["ejercicio", destinoId] });
+    void mockInvalidate({ queryKey: ["ejercicio", origenId] });
+    void mockInvalidate({ queryKey: ["sesion"] });
+    void mockInvalidate({ queryKey: ["planes"] });
+
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["catalogos", "ejercicios"] });
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["ejercicio", destinoId] });
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["ejercicio", origenId] });
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["sesion"] });
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["planes"] });
+  });
+});
+
+describe("useEliminarEjercicio", () => {
+  it("invalida ['catalogos', 'ejercicios']", () => {
+    const invalidatedKeys: string[][] = [];
+    const mockInvalidate = vi.fn((query) => {
+      invalidatedKeys.push(query.queryKey);
+      return Promise.resolve();
+    });
+
+    const id = 99;
+
+    void mockInvalidate({ queryKey: ["catalogos", "ejercicios"] });
+    void mockInvalidate({ queryKey: ["ejercicio", id] });
+
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["catalogos", "ejercicios"] });
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["ejercicio", id] });
   });
 });

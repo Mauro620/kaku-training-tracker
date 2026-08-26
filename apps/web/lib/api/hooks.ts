@@ -99,6 +99,241 @@ export type Ejercicio = {
   tipo_medicion: TipoMedicion;
 };
 
+// ---------- Feature 2: Banco de ejercicios y detalle ----------
+// Tipos espejo del backend (handshake.md). Los decimales van como string
+// para evitar perdida de precision en JSON.
+
+export type EjercicioListRead = {
+  items: EjercicioListItem[];
+  total: number;
+};
+
+export type EjercicioListItem = {
+  id: number;
+  nombre: string;
+  patron: string | null;
+  carga_lumbar: "alta" | "media" | "baja";
+  tipo_sesion_id: number | null;
+  tipo_medicion: TipoMedicion;
+  descripcion: string | null;
+  activo: boolean;
+  usos: number;
+  ultima_vez: string | null; // YYYY-MM-DD
+};
+
+export type EjercicioDetalleRead = {
+  id: number;
+  nombre: string;
+  patron: string | null;
+  carga_lumbar: "alta" | "media" | "baja";
+  tipo_sesion_id: number | null;
+  tipo_medicion: TipoMedicion;
+  descripcion: string | null;
+  activo: boolean;
+  historial: EjercicioHistorialItem[];
+  posibles_duplicados: EjercicioPosibleDuplicado[];
+};
+
+export type EjercicioHistorialItem = {
+  sesion_id: string; // UUID
+  fecha: string; // YYYY-MM-DD
+  bloque_id: number;
+  orden: number;
+  series: number | null;
+  reps: number | null;
+  peso_kg: string | null; // Decimal como string
+};
+
+export type EjercicioPosibleDuplicado = {
+  id: number;
+  nombre: string;
+  similitud: number; // 0..1, ordenado desc
+};
+
+export type EjercicioCreate = {
+  nombre: string; // 1..80 chars
+  tipo_medicion: TipoMedicion;
+  descripcion?: string | null;
+  patron?: string | null; // max 40 chars
+  carga_lumbar?: "alta" | "media" | "baja" | null;
+};
+
+export type EjercicioUpdate = {
+  nombre?: string; // 1..80 chars
+  descripcion?: string | null; // "" se guarda como null
+  patron?: string | null; // max 40 chars
+  carga_lumbar?: "alta" | "media" | "baja" | null;
+  activo?: boolean;
+};
+
+export type EjercicioRead = {
+  id: number;
+  nombre: string;
+  patron: string | null;
+  carga_lumbar: "alta" | "media" | "baja";
+  tipo_sesion_id: number | null;
+  tipo_medicion: TipoMedicion;
+  descripcion: string | null;
+  activo: boolean;
+};
+
+export type EjercicioFusionarCreate = {
+  destino_id: number;
+};
+
+export type FusionResultadoRead = {
+  origen_id: number;
+  destino_id: number;
+  bloques_reasignados: number;
+  bloques_plan_reasignados: number;
+};
+
+// Detalle de sesion
+export type SesionDetalleRead = {
+  id: string; // UUID
+  usuario_id: string; // UUID
+  sesion_plan_id: number | null;
+  fecha: string; // YYYY-MM-DD
+  tipo_sesion: SesionTipoRead;
+  duracion_min: number;
+  rpe: number;
+  nota: string | null;
+  carga_srpe: number;
+  registrado_en: string; // ISO-8601 con microsegundos
+  plan: PlanDetalleEnSesionRead | null;
+  delta: SesionDeltaRead | null;
+  bloques: BloqueDetalleRead[];
+  bloques_no_ejecutados: BloqueNoEjecutadoRead[];
+  molestias: MolestiaDetalleRead[];
+};
+
+export type SesionTipoRead = {
+  id: number;
+  codigo: string;
+  nombre: string;
+};
+
+export type SesionDeltaRead = {
+  duracion_min: number | null;
+  rpe: number | null;
+  carga_srpe: number | null;
+};
+
+export type PlanDetalleEnSesionRead = {
+  id: number;
+  nombre: string | null;
+  objetivo: string | null;
+  nota: string | null;
+  duracion_min_est: number | null;
+  rpe_objetivo: number | null;
+  estado: "pendiente" | "cumplido" | "movido" | "descartado";
+  dia_sugerido: number | null;
+  ciclo: PlanCicloEnSesionRead | null;
+};
+
+export type PlanCicloEnSesionRead = {
+  numero: number;
+  objetivo: string;
+  semana: number;
+  fase: "readaptacion" | "carga" | "descarga";
+};
+
+export type BloqueDetalleRead = {
+  id: number;
+  sesion_id: string; // UUID
+  orden: number;
+  series: number | null;
+  reps: number | null;
+  distancia_m: string | null; // Decimal como string
+  duracion_s: number | null;
+  calidad: number | null;
+  peso_kg: string | null; // Decimal como string
+  rpe: number | null;
+  dolor_lumbar: boolean;
+  ejercicio: BloqueEjercicioEnDetalleRead;
+  objetivo: BloqueObjetivoRead | null;
+  delta: BloqueDeltaRead;
+};
+
+export type BloqueEjercicioEnDetalleRead = {
+  id: number;
+  nombre: string;
+  tipo_medicion: TipoMedicion;
+  descripcion: string | null;
+  carga_lumbar: "alta" | "media" | "baja";
+};
+
+export type BloqueObjetivoRead = {
+  id: number;
+  orden: number;
+  series: number | null;
+  reps_min: number | null;
+  reps_max: number | null;
+  peso_objetivo_kg: string | null;
+  distancia_objetivo_m: string | null;
+  duracion_objetivo_s: number | null;
+  nota: string | null;
+};
+
+export type BloqueDeltaRead = {
+  series: number | null;
+  reps: number | null;
+  peso_kg: string | null; // Decimal como string
+  distancia_m: string | null;
+  duracion_s: number | null;
+};
+
+export type BloqueNoEjecutadoRead = {
+  orden: number;
+  ejercicio_id: number;
+  ejercicio_nombre: string;
+  objetivo: BloqueObjetivoRead;
+};
+
+export type MolestiaDetalleRead = {
+  zona: string;
+  intensidad: number;
+};
+
+// Detalle de plan
+export type PlanDetalleRead = {
+  id: number;
+  usuario_id: string; // UUID
+  ciclo_semana_id: number | null;
+  ciclo: PlanCicloEnPlanRead | null;
+  fecha_prevista: string | null; // YYYY-MM-DD
+  dia_sugerido: number | null;
+  tipo_sesion_id: number;
+  objetivo: string | null;
+  duracion_min_est: number | null;
+  rpe_objetivo: number | null;
+  estado: "pendiente" | "cumplido" | "movido" | "descartado";
+  clave_import: string | null;
+  nombre: string | null;
+  nota: string | null;
+  bloques_planeados: BloquePlanDetalleRead[];
+};
+
+export type PlanCicloEnPlanRead = {
+  numero: number;
+  semana: number;
+  fase: "readaptacion" | "carga" | "descarga";
+};
+
+export type BloquePlanDetalleRead = {
+  id: number;
+  sesion_plan_id: number;
+  orden: number;
+  series: number | null;
+  reps_min: number | null;
+  reps_max: number | null;
+  peso_objetivo_kg: string | null;
+  distancia_objetivo_m: string | null;
+  duracion_objetivo_s: number | null;
+  nota: string | null;
+  ejercicio: BloqueEjercicioEnDetalleRead;
+};
+
 export type ZonaCorporal = {
   id: number;
   nombre: string;
@@ -458,10 +693,24 @@ export function useTiposSesion() {
   });
 }
 
-export function useEjercicios() {
+/**
+ * Lista de ejercicios con paginacion basica. El endpoint devuelve
+ * { items, total } en lugar de un array directo.
+ * staleTime: Infinity porque es un catalogo que cambia poco.
+ */
+export function useEjerciciosList(q?: string | null, tipo_medicion?: TipoMedicion | null, activo?: boolean, orden?: string) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (tipo_medicion) params.set("tipo_medicion", tipo_medicion);
+  if (activo !== undefined) params.set("activo", String(activo));
+  if (orden) params.set("orden", orden);
+
+  const queryString = params.toString();
+  const path = queryString ? `/catalogos/ejercicios?${queryString}` : "/catalogos/ejercicios";
+
   return useQuery({
-    queryKey: ["catalogos", "ejercicios"],
-    queryFn: () => api.get<Ejercicio[]>("/catalogos/ejercicios"),
+    queryKey: ["catalogos", "ejercicios", q ?? null, tipo_medicion ?? null, activo ?? null, orden ?? null],
+    queryFn: () => api.get<EjercicioListRead>(path),
     staleTime: Infinity,
   });
 }
@@ -484,6 +733,87 @@ export function useZonasCorporales() {
     queryKey: ["catalogos", "zonas-corporales"],
     queryFn: () => api.get<ZonaCorporal[]>("/catalogos/zonas-corporales"),
     staleTime: Infinity,
+  });
+}
+
+// ---------- Feature 2: Banco de ejercicios ----------
+
+/**
+ * Detalle de un ejercicio por ID.
+ * staleTime: 5min porque puede cambiar si el usuario lo edita.
+ */
+export function useEjercicio(id: number | null) {
+  return useQuery({
+    queryKey: ["ejercicio", id],
+    queryFn: () => api.get<EjercicioDetalleRead>(`/catalogos/ejercicios/${id}`),
+    enabled: id !== null,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Actualiza un ejercicio (PATCH).
+ * Invalida ["catalogos", "ejercicios"] y ["ejercicio", id].
+ */
+export function useActualizarEjercicio(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: EjercicioUpdate) =>
+      api.patch<EjercicioRead>(`/catalogos/ejercicios/${id}`, cuerpo),
+    onSuccess: (data) => {
+      qc.setQueryData(["ejercicio", id], data);
+      void qc.invalidateQueries({ queryKey: ["catalogos", "ejercicios"] });
+    },
+  });
+}
+
+/**
+ * Fusiona un ejercicio (origen) en otro (destino).
+ * Invalida catalogos, ambos ejercicios, y cualquier sesion/plan que los referencie.
+ */
+export function useFusionarEjercicio(origenId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: { destino_id: number }) =>
+      api.post<FusionResultadoRead>(`/catalogos/ejercicios/${origenId}/fusionar`, cuerpo),
+    onSuccess: (data) => {
+      // Invalidamos todo lo que pueda haber cambiado:
+      void qc.invalidateQueries({ queryKey: ["catalogos", "ejercicios"] });
+      void qc.invalidateQueries({ queryKey: ["ejercicio", data.destino_id] });
+      void qc.invalidateQueries({ queryKey: ["ejercicio", origenId] });
+      void qc.invalidateQueries({ queryKey: ["sesion"] }); // cualquier sesion que lo use
+      void qc.invalidateQueries({ queryKey: ["planes"] }); // cualquier plan que lo use
+    },
+  });
+}
+
+/**
+ * Elimina un ejercicio (DELETE).
+ * Invalida ["catalogos", "ejercicios"].
+ */
+export function useEliminarEjercicio(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<void>(`/catalogos/ejercicios/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["catalogos", "ejercicios"] });
+      void qc.invalidateQueries({ queryKey: ["ejercicio", id] });
+    },
+  });
+}
+
+// ---------- Feature 2: Detalle de plan ----------
+
+/**
+ * Detalle de un plan por ID.
+ * staleTime: 5min porque puede cambiar si el usuario lo edita.
+ */
+export function usePlanDetalle(id: number | null) {
+  return useQuery({
+    queryKey: ["plan", id],
+    queryFn: () => api.get<PlanDetalleRead>(`/planes/${id}`),
+    enabled: id !== null,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

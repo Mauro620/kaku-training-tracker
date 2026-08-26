@@ -12,7 +12,7 @@ import {
 } from "@/components/entreno/bloque-editor";
 import {
   useCrearSesion,
-  useEjercicios,
+  useEjerciciosList,
   useSesionesDeFecha,
   useTiposSesion,
   useUltimasSesiones,
@@ -43,7 +43,7 @@ type Props = {
  */
 export function SesionForm({ fecha, planes, pedido = null }: Props) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const sesionesDeHoy = useSesionesDeFecha(fecha);
   const ultimas = useUltimasSesiones(10);
   const crear = useCrearSesion(fecha);
@@ -324,7 +324,7 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
             key={b.localId}
             bloque={b}
             orden={idx + 1}
-            ejercicios={ejercicios.data ?? []}
+            ejercicios={ejercicios.data?.items ?? []}
             onChange={(c) => actualizarBloque(b.localId, c)}
             onEliminar={() => eliminarBloque(b.localId)}
             onDuplicar={() => duplicarBloque(b.localId)}

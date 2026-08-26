@@ -14,7 +14,7 @@ import {
   useCrearSemana,
   useCumplimiento,
   useDescartarPlan,
-  useEjercicios,
+  useEjerciciosList,
   useEliminarSemana,
   usePlanesDeSemana,
   useReemplazarComposicion,
@@ -407,7 +407,7 @@ function CrearPlanForm({
   onListo: () => void;
 }) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const crear = useCrearPlan(semanaId);
 
   const [tipoSesionId, setTipoSesionId] = useState<number | null>(null);
@@ -530,7 +530,7 @@ function CrearPlanForm({
               key={b.localId}
               bloque={b}
               orden={idx}
-              ejercicios={ejercicios.data ?? []}
+              ejercicios={ejercicios.data?.items ?? []}
               onChange={(cambio) =>
                 setBloques((arr) =>
                   arr.map((it, i) => (i === idx ? { ...it, ...cambio } : it)),

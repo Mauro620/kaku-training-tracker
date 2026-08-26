@@ -6,7 +6,7 @@ import { BentoCard } from "@/components/ui/bento-card";
 import { EstadoPlanPill } from "@/components/entreno/estado-plan-pill";
 import {
   useDescartarPlan,
-  useEjercicios,
+  useEjerciciosList,
   useTiposSesion,
   type SesionPlan,
 } from "@/lib/api/hooks";
@@ -21,7 +21,7 @@ type Props = { planes: SesionPlan[]; diaDeHoy: number | null };
  */
 export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const [abierto, setAbierto] = useState<number | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
   const descartar = useDescartarPlan();
@@ -116,7 +116,7 @@ export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
                         className="flex items-center justify-between gap-2 text-[13px]"
                       >
                         <span className="min-w-0 truncate text-text-primary">
-                          {ejercicios.data?.find((e) => e.id === b.ejercicio_id)
+                          {ejercicios.data?.items.find((e) => e.id === b.ejercicio_id)
                             ?.nombre ?? `Ejercicio ${b.ejercicio_id}`}
                         </span>
                         <span className="shrink-0 tabular text-text-secondary">
