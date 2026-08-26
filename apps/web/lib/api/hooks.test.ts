@@ -91,31 +91,64 @@ describe("useEjerciciosList", () => {
   // Bug fix de runtime: mientras la rama backend no este mergeada a main,
   // GET /catalogos/ejercicios devuelve el array viejo Ejercicio[]. El select
   // del hook normaliza a { items, total } para que los call sites que hacen
-  // .items.find() no exploten.
+  // .items.find() no exploten. Ademas rellena campos faltantes (activo=true,
+  // usos=0, ultima_vez=null) para que el filtrado local del banco no
+  // oculte todo cuando el backend viejo no devuelve esos campos.
   it("select normaliza el shape viejo (array directo) a { items, total }", () => {
     const shapeViejo = [
       { id: 1, nombre: "Sentadilla", tipo_medicion: "carga" },
       { id: 2, nombre: "Press", tipo_medicion: "carga" },
     ];
-    // Simulacion del select que aplica useEjerciciosList.
+    // Replica del select del hook.
+    type RawItem = Record<string, unknown>;
     const normalizado = Array.isArray(shapeViejo)
-      ? { items: shapeViejo, total: shapeViejo.length }
+      ? {
+          items: (shapeViejo as RawItem[]).map((raw) => ({
+            id: raw.id,
+            nombre: raw.nombre,
+            patron: (raw.patron as string | null) ?? null,
+            carga_lumbar: (raw.carga_lumbar as "alta" | "media" | "baja") ?? "baja",
+            tipo_sesion_id: (raw.tipo_sesion_id as number | null) ?? null,
+            tipo_medicion: raw.tipo_medicion,
+            descripcion: (raw.descripcion as string | null) ?? null,
+            activo: (raw.activo as boolean) ?? true,
+            usos: (raw.usos as number) ?? 0,
+            ultima_vez: (raw.ultima_vez as string | null) ?? null,
+          })),
+          total: shapeViejo.length,
+        }
       : shapeViejo;
     expect(normalizado.items).toHaveLength(2);
     expect(normalizado.total).toBe(2);
-    expect(normalizado.items?.[0]?.nombre).toBe("Sentadilla");
+    expect(normalizado.items[0]?.nombre).toBe("Sentadilla");
+    // Defaults seguros: el banco no debe filtrar como archivado lo que
+    // el backend viejo no nos devolvio como activo.
+    expect(normalizado.items[0]?.activo).toBe(true);
+    expect(normalizado.items[1]?.activo).toBe(true);
+    expect(normalizado.items[0]?.usos).toBe(0);
   });
 
   it("select deja intacto el shape nuevo { items, total }", () => {
     const shapeNuevo = {
-      items: [{ id: 1, nombre: "Sentadilla", tipo_medicion: "carga" }],
+      items: [
+        {
+          id: 1,
+          nombre: "Sentadilla",
+          tipo_medicion: "carga",
+          activo: true,
+          usos: 5,
+        },
+      ],
       total: 1,
     };
-    const normalizado = Array.isArray(shapeNuevo)
-      ? { items: shapeNuevo, total: shapeNuevo.length }
-      : shapeNuevo;
+    // El select no transforma cuando ya viene con el wrapper.
+    const normalizado = Array.isArray(shapeNuevo) ? { items: shapeNuevo, total: shapeNuevo.length } : shapeNuevo;
     expect(normalizado.items).toHaveLength(1);
     expect(normalizado.total).toBe(1);
+    // Como no entro por el branch Array.isArray, items sigue siendo el
+    // objeto wrapper original (no se re-envuelve).
+    expect(normalizado.items).toBe(shapeNuevo.items);
+    expect(normalizado.total).toBe(shapeNuevo.total);
   });
 });
 

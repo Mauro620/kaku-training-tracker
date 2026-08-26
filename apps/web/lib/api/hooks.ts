@@ -718,7 +718,25 @@ export function useEjerciciosList(q?: string | null, tipo_medicion?: TipoMedicio
     // { items, total } normalizado.
     select: (data) => {
       if (Array.isArray(data)) {
-        return { items: data as unknown as EjercicioListItem[], total: data.length };
+        // Normalizar shape viejo (sin activo, sin usos, sin ultima_vez) a
+        // el shape nuevo. El backend viejo no soporta archivado, asi que
+        // todos los items son activos. usos=0 / ultima_vez=null tambien
+        // son defaults seguros.
+        const items: EjercicioListItem[] = (data as Array<Record<string, unknown>>).map(
+          (raw) => ({
+            id: raw.id as number,
+            nombre: (raw.nombre as string) ?? "",
+            patron: (raw.patron as string | null) ?? null,
+            carga_lumbar: (raw.carga_lumbar as "alta" | "media" | "baja") ?? "baja",
+            tipo_sesion_id: (raw.tipo_sesion_id as number | null) ?? null,
+            tipo_medicion: (raw.tipo_medicion as EjercicioListItem["tipo_medicion"]) ?? "carga",
+            descripcion: (raw.descripcion as string | null) ?? null,
+            activo: (raw.activo as boolean) ?? true,
+            usos: (raw.usos as number) ?? 0,
+            ultima_vez: (raw.ultima_vez as string | null) ?? null,
+          }),
+        );
+        return { items, total: items.length };
       }
       return data;
     },
