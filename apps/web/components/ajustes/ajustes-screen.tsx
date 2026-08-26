@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Dumbbell, Plus } from "lucide-react";
 
 import { useHabitosAjustes } from "@/lib/api/hooks";
 import type { Habito } from "@/lib/api/hooks";
@@ -41,6 +42,27 @@ export function AjustesScreen() {
 
   return (
     <div className="space-y-6">
+      {/* Seccion Catalogo */}
+      <section className="rounded-2xl border border-border-subtle bg-surface-primary p-4">
+        <header className="mb-3 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-text-primary">
+            Catalogo
+          </h2>
+        </header>
+        <Link
+          href="/entreno/ejercicios"
+          className="flex items-center justify-between rounded-xl border border-border-subtle bg-surface-secondary p-3 transition hover:bg-surface-secondary/80"
+        >
+          <div className="flex items-center gap-3">
+            <Dumbbell className="h-5 w-5 text-text-secondary" />
+            <span className="text-[14px] font-medium text-text-primary">
+              Banco de ejercicios
+            </span>
+          </div>
+          <ChevronRight className="h-5 w-5 text-text-secondary" />
+        </Link>
+      </section>
+
       <section>
         <header className="mb-3 flex items-center justify-between">
           <h2 className="text-[15px] font-semibold text-text-primary">
