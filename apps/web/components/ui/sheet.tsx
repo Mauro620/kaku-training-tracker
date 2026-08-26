@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 type Props = HTMLAttributes<HTMLDivElement> & {
@@ -47,44 +48,24 @@ export function Sheet({ open, onClose, title, children, className = "", ...rest 
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
+    const scrollY = window.scrollY;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
 
-  // Reset scroll al abrir SOLO si quedo cerca del final. Hay tres fuentes
-  // que pueden dejar el scroll al fondo en algunos navegadores:
-  // 1. React 19 + scrollIntoView automatico al montar el nodo.
-  // 2. El focus automatico del sheet container (tabIndex=-1).
-  // 3. El focus de un input interior (autoFocus).
-  //
-  // Si el scroll quedo al fondo (maximo), lo reseteamos al inicio durante
-  // los primeros 200ms tras el open. Si el scroll es chico (porque el
-  // usuario ya empezo a scrollear), no tocamos nada.
-  useEffect(() => {
-    if (!open) return;
-    let raf = 0;
-    const start = performance.now();
-    const tick = () => {
-      const el = contentRef.current;
-      if (!el) return;
-      if (performance.now() - start > 200) return;
-      // Si el scroll esta cerca del fondo (>= 95% del maximo), es
-      // automatico del navegador, no del usuario. Lo reseteamos.
-      const max = el.scrollHeight - el.clientHeight;
-      if (max > 0 && el.scrollTop >= max * 0.95) {
-        el.scrollTop = 0;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+  // El sheet vive en un portal al body, separado del arbol scrolleable de la
+  // lista. Resetear en layout effect garantiza que cada apertura empieza en
+  // el nombre del ejercicio, antes de que el navegador pinte el contenido.
+  useLayoutEffect(() => {
+    if (open && contentRef.current) contentRef.current.scrollTop = 0;
   }, [open]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <>
       {/* Overlay con backdrop blur */}
       <div
@@ -125,6 +106,7 @@ export function Sheet({ open, onClose, title, children, className = "", ...rest 
         {/* Contenido */}
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
