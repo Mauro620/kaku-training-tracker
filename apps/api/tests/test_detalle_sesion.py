@@ -101,6 +101,7 @@ async def _crear_sesion_simple(
     fecha: date | None = None,
     duracion_min: int = 60,
     rpe: int = 7,
+    nota: str | None = None,
 ) -> Sesion:
     """Crea una sesion sin bloques. El test agrega bloques / plan por separado."""
     return await repo_sesion.crear(
@@ -113,7 +114,7 @@ async def _crear_sesion_simple(
         tipo_sesion_id=tipo_sesion_id,
         duracion_min=duracion_min,
         rpe=rpe,
-        nota=None,
+        nota=nota,
     )
 
 

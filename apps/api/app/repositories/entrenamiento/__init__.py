@@ -52,6 +52,9 @@ from app.repositories.entrenamiento.sesion import (
     listar_ultimas as listar_ultimas_sesiones,
 )
 from app.repositories.entrenamiento.sesion import (
+    obtener_con_detalle as obtener_sesion_con_detalle,
+)
+from app.repositories.entrenamiento.sesion import (
     obtener_por_id as obtener_sesion_por_id,
 )
 from app.repositories.entrenamiento.sesion import (
@@ -130,6 +133,7 @@ __all__ = [
     "obtener_ciclo_semana_por_id",
     "obtener_ciclo_semana_por_numero",
     "obtener_ejercicio_por_nombre",
+    "obtener_sesion_con_detalle",
     "obtener_sesion_plan_por_id",
     "obtener_sesion_por_id",
     "obtener_sesion_por_plan",
