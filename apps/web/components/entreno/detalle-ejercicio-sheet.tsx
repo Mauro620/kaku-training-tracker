@@ -45,12 +45,17 @@ export function DetalleEjercicioSheet({
   const [descripcionValue, setDescripcionValue] = useState("");
 
   // Sincronizar descripcion cuando llega un ejercicio distinto al actual
+  // Solo re-sincronizamos cuando cambia el id del ejercicio; cambios en otros
+  // campos no deben pisar lo que el usuario esta editando.
+  const ejercicioIdActual = ejercicio?.id;
   useEffect(() => {
     if (ejercicio) {
       setDescripcionValue(ejercicio.descripcion ?? "");
       setEditandoDescripcion(false);
     }
-  }, [ejercicio?.id]);
+    // ejercicio se lee dentro pero queremos que reaccione solo al id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ejercicioIdActual]);
 
   if (!ejercicioId || !open) return null;
 
