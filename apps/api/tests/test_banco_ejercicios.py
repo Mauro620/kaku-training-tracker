@@ -11,15 +11,25 @@ los tests de integracion no podrian confiar en que el router acepta/rechaza
 lo que corresponde.
 """
 
-from __future__ import annotations
-
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import date
 from decimal import Decimal
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dependencies import get_usuario_actual
+from app.db.session import get_session
+from app.main import app
+from app.models import Ejercicio, TipoSesion, Usuario
+from app.models.enums import TipoMedicion
+from app.repositories.catalogo import ejercicio as repo_ejercicio
+from app.repositories.entrenamiento import bloque as repo_bloque
+from app.repositories.entrenamiento import sesion as repo_sesion
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
     EjercicioDetalleRead,
@@ -30,6 +40,79 @@ from app.schemas.catalogo.catalogo import (
     EjercicioRead,
     EjercicioUpdate,
 )
+
+
+@pytest.fixture
+async def cliente(sesion: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """Cliente HTTP contra `app` con la sesion de pytest y el usuario seed."""
+    usuario = await sesion.scalar(select(Usuario))
+
+    async def _sesion_de_prueba() -> AsyncGenerator[AsyncSession, None]:
+        yield sesion
+
+    app.dependency_overrides[get_session] = _sesion_de_prueba
+    app.dependency_overrides[get_usuario_actual] = lambda: usuario
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            yield c
+    finally:
+        app.dependency_overrides.clear()
+
+
+async def _ids_base(sesion: AsyncSession) -> tuple[uuid.UUID, int]:
+    usuario_id = await sesion.scalar(select(Usuario.id))
+    tipo_sesion_id = await sesion.scalar(
+        select(TipoSesion.id).where(TipoSesion.codigo == "fuerza")
+    )
+    assert usuario_id is not None and tipo_sesion_id is not None
+    return usuario_id, tipo_sesion_id
+
+
+async def _crear_sesion_con_bloques(
+    sesion: AsyncSession,
+    usuario_id: uuid.UUID,
+    tipo_sesion_id: int,
+    ejercicio_id: int,
+    *,
+    fecha: date,
+    cantidad_bloques: int = 1,
+    serie: int = 1,
+    peso_kg: Decimal | None = Decimal("80.0"),
+    duracion_min: int = 60,
+    rpe: int = 8,
+) -> uuid.UUID:
+    """Crea una sesion con N bloques del ejercicio. Usado para darle
+    historial/uso al ejercicio en los tests."""
+    sesion_db = await repo_sesion.crear(
+        sesion,
+        sesion_id=uuid.uuid4(),
+        idempotency_key=uuid.uuid4(),
+        usuario_id=usuario_id,
+        sesion_plan_id=None,
+        fecha=fecha,
+        tipo_sesion_id=tipo_sesion_id,
+        duracion_min=duracion_min,
+        rpe=rpe,
+        nota=None,
+    )
+    for i in range(cantidad_bloques):
+        await repo_bloque.crear(
+            sesion,
+            sesion_id=sesion_db.id,
+            ejercicio_id=ejercicio_id,
+            orden=serie + i,
+            series=3,
+            reps=8,
+            distancia_m=None,
+            duracion_s=None,
+            calidad=None,
+            peso_kg=peso_kg,
+            rpe=None,
+            dolor_lumbar=False,
+        )
+    return sesion_db.id
+
 
 # ----------------------------------------------------- schemas R6.1 ----
 
@@ -178,6 +261,345 @@ def test_schema_ejercicio_read_incluye_activo() -> None:
         activo=True,
     )
     assert lectura.activo is True
+
+
+# ------------------------------------------------ repositorio R6.2 (Q1) --
+
+
+async def test_listar_filtrado_devuelve_los_sembrados(sesion: AsyncSession) -> None:
+    """El seed tiene 29 ejercicios. Con `activo=true` (default) los lista
+    todos en `items`, y `total` refleja la cantidad total sin paginar."""
+    items, total = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    ejercicios = [fila[0] for fila in items]
+    nombres = [e.nombre for e in ejercicios]
+    assert total == 29
+    assert len(items) == 29
+    assert "Hip thrust" in nombres
+    assert "Elevación de talón" in nombres
+
+
+async def test_listar_filtrado_q_ya_normalizado_matchea(sesion: AsyncSession) -> None:
+    """El repo recibe el `q` ya normalizado desde el service. La
+    normalizacion de acentos vive en el service (no en Postgres, que no
+    trae `unaccent` instalado). El test que verifica que `q='elevacion'` y
+    `q='elevación'` producen lo mismo vive en el service."""
+    items, total = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q="elevacion",
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    assert total == 1
+    assert len(items) == 1
+    assert items[0][0].nombre == "Elevación de talón"
+
+
+async def test_listar_filtrado_por_tipo_medicion(sesion: AsyncSession) -> None:
+    """Filtra exactamente los ejercicios del `tipo_medicion` pedido."""
+    items_carga, total_carga = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=TipoMedicion.carga,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    assert total_carga > 0
+    assert all(fila[0].tipo_medicion is TipoMedicion.carga for fila in items_carga)
+
+    items_tecnica, _total_tecnica = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=TipoMedicion.tecnica,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    assert all(fila[0].tipo_medicion is TipoMedicion.tecnica for fila in items_tecnica)
+    # Sin solapamiento entre tipos disjuntos.
+    nombres_carga = {fila[0].nombre for fila in items_carga}
+    nombres_tecnica = {fila[0].nombre for fila in items_tecnica}
+    assert nombres_carga.isdisjoint(nombres_tecnica)
+
+
+async def test_listar_filtrado_default_excluye_archivados(
+    sesion: AsyncSession,
+) -> None:
+    """`activo=true` (default) NO lista los archivados. `activo=false` los
+    lista y oculta los activos."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    pallof.activo = False
+    await sesion.flush()
+
+    items_default, _ = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    assert all(fila[0].nombre != "Pallof press" for fila in items_default)
+
+    items_archivados, total_archivados = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=False,
+        orden="nombre",
+    )
+    nombres_archivados = [fila[0].nombre for fila in items_archivados]
+    assert "Pallof press" in nombres_archivados
+    assert total_archivados == 1
+
+
+async def test_listar_filtrado_incluye_usos_y_ultima_vez(
+    sesion: AsyncSession,
+) -> None:
+    """La query agrega `usos` (count de filas de `bloque`) y `ultima_vez`
+    (max(sesion.fecha)). Sin uso: 0 y None. Con 2 sesiones: 2 usos y la
+    ultima fecha."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    # Sin uso previo.
+    items_sin, _ = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    pallof_fila_sin = next(f for f in items_sin if f[0].nombre == "Pallof press")
+    _, usos_sin, ultima_sin = pallof_fila_sin
+    assert usos_sin == 0
+    assert ultima_sin is None
+
+    # Con dos sesiones: 1+2 = 3 bloques, ultima = fecha mas reciente.
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, pallof.id, fecha=date(2026, 8, 10)
+    )
+    await _crear_sesion_con_bloques(
+        sesion,
+        usuario_id,
+        tipo_sesion_id,
+        pallof.id,
+        fecha=date(2026, 8, 18),
+        cantidad_bloques=2,
+    )
+    items_con, _ = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    pallof_fila_con = next(f for f in items_con if f[0].nombre == "Pallof press")
+    _, usos_con, ultima_con = pallof_fila_con
+    assert usos_con == 3
+    assert ultima_con == date(2026, 8, 18)
+
+
+async def test_listar_filtrado_orden_uso(sesion: AsyncSession) -> None:
+    """`orden='uso'` ordena por `usos DESC, nombre`."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    hip = await sesion.scalar(select(Ejercicio).where(Ejercicio.nombre == "Hip thrust"))
+    assert pallof is not None and hip is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    # Pallof: 3 usos. Hip thrust: 1 uso.
+    for _ in range(3):
+        await _crear_sesion_con_bloques(
+            sesion, usuario_id, tipo_sesion_id, pallof.id, fecha=date(2026, 8, 10)
+        )
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, hip.id, fecha=date(2026, 8, 11)
+    )
+
+    items, _ = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="uso",
+    )
+    pallof_idx = next(i for i, f in enumerate(items) if f[0].nombre == "Pallof press")
+    hip_idx = next(i for i, f in enumerate(items) if f[0].nombre == "Hip thrust")
+    assert pallof_idx < hip_idx
+    assert items[pallof_idx][1] == 3
+    assert items[hip_idx][1] == 1
+
+
+async def test_listar_filtrado_orden_reciente(sesion: AsyncSession) -> None:
+    """`orden='reciente'` ordena por `ultima_vez DESC NULLS LAST`."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    hip = await sesion.scalar(select(Ejercicio).where(Ejercicio.nombre == "Hip thrust"))
+    assert pallof is not None and hip is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    # Hip: ultima = 2026-08-20. Pallof: ultima = 2026-08-15.
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, pallof.id, fecha=date(2026, 8, 15)
+    )
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, hip.id, fecha=date(2026, 8, 20)
+    )
+
+    items, _ = await repo_ejercicio.listar_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="reciente",
+    )
+    # Solo nos importan los dos que tienen uso.
+    nombres_ordenados = [
+        f[0].nombre for f in items if f[0].nombre in ("Pallof press", "Hip thrust")
+    ]
+    assert nombres_ordenados == ["Hip thrust", "Pallof press"]
+
+
+# ---------------- repositorio R6.3 (detalle / historial / duplicados) ----
+
+
+async def test_listar_historial_devuelve_top_5_ordenado_desc(
+    sesion: AsyncSession,
+) -> None:
+    """Crea 7 ejecuciones del mismo ejercicio; `listar_historial(limite=5)`
+    devuelve las 5 mas recientes ordenadas por fecha DESC."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    for i in range(7):
+        await _crear_sesion_con_bloques(
+            sesion,
+            usuario_id,
+            tipo_sesion_id,
+            pallof.id,
+            fecha=date(2026, 7, 1 + i),
+        )
+
+    historial = await repo_ejercicio.listar_historial(sesion, pallof.id, limite=5)
+    assert len(historial) == 5
+    # El primero es el mas reciente: 2026-07-07.
+    assert historial[0].fecha == date(2026, 7, 7)
+    # Orden estrictamente descendente.
+    fechas = [h.fecha for h in historial]
+    assert fechas == sorted(fechas, reverse=True)
+
+
+async def test_listar_historial_vacio_sin_usos(sesion: AsyncSession) -> None:
+    """Un ejercicio nunca usado tiene historial vacio."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    historial = await repo_ejercicio.listar_historial(sesion, pallof.id, limite=5)
+    assert historial == []
+
+
+async def test_listar_posibles_duplicados_mismo_tipo_distinto_id(
+    sesion: AsyncSession,
+) -> None:
+    """Candidatos a duplicado: mismo `tipo_medicion`, `id != self_id`,
+    `activo = true`. No incluye al propio ni a los de otro tipo."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    # "Pallof Press" archivado y "Sentadilla explosiva" (mismo tipo carga) activo.
+    sentadilla = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Sentadilla explosiva")
+    )
+    assert sentadilla is not None
+    pallof.activo = False
+    await sesion.flush()
+
+    # Crear un candidato extra para asegurarnos de que filtra por activo=true.
+    extra = await repo_ejercicio.crear(
+        sesion,
+        nombre="Pallof press variante",
+        tipo_medicion=TipoMedicion.carga,
+        descripcion=None,
+    )
+    await sesion.flush()
+
+    candidatos = await repo_ejercicio.listar_posibles_duplicados(sesion, pallof)
+    nombres = {c.id: c.nombre for c in candidatos}
+    # El propio archivado NO debe aparecer.
+    assert pallof.id not in nombres
+    # El candidato activo del mismo tipo SI.
+    assert extra.id in nombres
+    # Sentadilla tambien (mismo tipo carga, activo).
+    assert sentadilla.id in nombres
+
+
+async def test_contar_usos_cuenta_filas_de_bloque(sesion: AsyncSession) -> None:
+    """`contar_usos` cuenta filas de `bloque` (no `bloque_plan`). Crea 3
+    sesiones con 2 bloques del mismo ejercicio = 6 usos."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    for i in range(3):
+        await _crear_sesion_con_bloques(
+            sesion,
+            usuario_id,
+            tipo_sesion_id,
+            pallof.id,
+            fecha=date(2026, 8, 1 + i),
+            cantidad_bloques=2,
+            serie=1,
+        )
+
+    assert await repo_ejercicio.contar_usos(sesion, pallof.id) == 6
+
+
+async def test_archivar_ejercicio_actualiza_activo(sesion: AsyncSession) -> None:
+    """`archivar` es un UPDATE que pone `activo = false`. Verifica el flag."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    assert pallof.activo is True
+
+    await repo_ejercicio.archivar(sesion, pallof)
+    await sesion.flush()
+
+    recargado = await sesion.get(Ejercicio, pallof.id)
+    assert recargado is not None
+    assert recargado.activo is False
 
 
 if __name__ == "__main__":
