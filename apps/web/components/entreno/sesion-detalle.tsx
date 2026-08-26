@@ -18,15 +18,15 @@ import {
   useSesion,
   useTiposSesion,
   type BloqueBorradorPayload,
-  type Sesion,
+  type SesionDetalleRead,
 } from "@/lib/api/hooks";
 
 type Props = { sesionId: string; onCerrar: () => void };
 
-function bloquesABorrador(sesion: Sesion): BloqueBorrador[] {
+function bloquesABorrador(sesion: SesionDetalleRead): BloqueBorrador[] {
   return sesion.bloques.map((b) => ({
     localId: uid(),
-    ejercicio_id: b.ejercicio_id,
+    ejercicio_id: b.ejercicio.id,
     series: b.series,
     reps: b.reps,
     distancia_m: b.distancia_m !== null ? Number(b.distancia_m) : null,
@@ -67,7 +67,7 @@ export function SesionDetalle({ sesionId, onCerrar }: Props) {
   );
 }
 
-function SesionDetalleForm({ sesion, onCerrar }: { sesion: Sesion; onCerrar: () => void }) {
+function SesionDetalleForm({ sesion, onCerrar }: { sesion: SesionDetalleRead; onCerrar: () => void }) {
   const tipos = useTiposSesion();
   const ejercicios = useEjerciciosList();
   const actualizar = useActualizarSesion(sesion.id);
@@ -75,7 +75,7 @@ function SesionDetalleForm({ sesion, onCerrar }: { sesion: Sesion; onCerrar: () 
   const duplicar = useDuplicarSesion();
 
   const [fecha, setFecha] = useState(sesion.fecha);
-  const [tipoSesionId, setTipoSesionId] = useState(sesion.tipo_sesion_id);
+  const [tipoSesionId, setTipoSesionId] = useState(sesion.tipo_sesion.id);
   const [duracionMin, setDuracionMin] = useState(sesion.duracion_min);
   const [rpe, setRpe] = useState(sesion.rpe);
   const [nota, setNota] = useState(sesion.nota ?? "");
