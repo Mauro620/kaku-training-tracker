@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2, Archive, GitMerge, X } from "lucide-react";
 
 import {
@@ -44,12 +44,13 @@ export function DetalleEjercicioSheet({
   const [editandoDescripcion, setEditandoDescripcion] = useState(false);
   const [descripcionValue, setDescripcionValue] = useState("");
 
-  // Sincronizar descripcion cuando cambia el ejercicio
-  useState(() => {
-    if (ejercicio?.descripcion) {
-      setDescripcionValue(ejercicio.descripcion);
+  // Sincronizar descripcion cuando llega un ejercicio distinto al actual
+  useEffect(() => {
+    if (ejercicio) {
+      setDescripcionValue(ejercicio.descripcion ?? "");
+      setEditandoDescripcion(false);
     }
-  });
+  }, [ejercicio?.id]);
 
   if (!ejercicioId || !open) return null;
 
