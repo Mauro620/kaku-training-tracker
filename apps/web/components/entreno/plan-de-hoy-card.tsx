@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { BentoCard } from "@/components/ui/bento-card";
 import { SelectorSesionSemana } from "@/components/entreno/selector-sesion-semana";
+import { DetalleEjercicioSheet } from "@/components/entreno/detalle-ejercicio-sheet";
 import {
-  useEjercicios,
+  useEjerciciosList,
   useTiposSesion,
   type Sesion,
   type SesionPlan,
@@ -34,8 +35,9 @@ export function PlanDeHoyCard({
   onVerSesion,
 }: Props) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const [eligiendoOtra, setEligiendoOtra] = useState(false);
+  const [ejercicioSheetId, setEjercicioSheetId] = useState<number | null>(null);
 
   const nombreTipo = (id: number) =>
     tipos.data?.find((t) => t.id === id)?.nombre ?? "Sesion";
@@ -71,8 +73,9 @@ export function PlanDeHoyCard({
           plan={pendiente}
           tipoNombre={nombreTipo(pendiente.tipo_sesion_id)}
           nombreEjercicio={(id) =>
-            ejercicios.data?.find((e) => e.id === id)?.nombre ?? `Ejercicio ${id}`
+            ejercicios.data?.items.find((e) => e.id === id)?.nombre ?? `Ejercicio ${id}`
           }
+          onAbrirEjercicio={(id) => setEjercicioSheetId(id)}
           onEmpezar={() => onEmpezar(pendiente)}
         />
       ) : (
@@ -99,6 +102,17 @@ export function PlanDeHoyCard({
           onCerrar={() => setEligiendoOtra(false)}
         />
       )}
+
+      <DetalleEjercicioSheet
+        ejercicioId={ejercicioSheetId}
+        open={ejercicioSheetId !== null}
+        onClose={() => setEjercicioSheetId(null)}
+        fallback={
+          ejercicioSheetId !== null
+            ? ejercicios.data?.items.find((e) => e.id === ejercicioSheetId) ?? null
+            : null
+        }
+      />
     </BentoCard>
   );
 }
@@ -107,11 +121,13 @@ function PlanPendiente({
   plan,
   tipoNombre,
   nombreEjercicio,
+  onAbrirEjercicio,
   onEmpezar,
 }: {
   plan: SesionPlan;
   tipoNombre: string;
   nombreEjercicio: (id: number) => string;
+  onAbrirEjercicio: (id: number) => void;
   onEmpezar: () => void;
 }) {
   const meta = [
@@ -122,7 +138,8 @@ function PlanPendiente({
     .join(" · ");
 
   const bloques = plan.bloques_planeados;
-  const nombres = bloques.slice(0, 3).map((b) => nombreEjercicio(b.ejercicio_id));
+  const visibles = bloques.slice(0, 3);
+  const restantes = bloques.length - visibles.length;
 
   return (
     <>
@@ -137,11 +154,24 @@ function PlanPendiente({
       )}
 
       {bloques.length > 0 && (
-        <p className="mt-3 text-[13px] text-text-secondary">
-          {bloques.length} bloque{bloques.length === 1 ? "" : "s"} ·{" "}
-          {nombres.join(", ")}
-          {bloques.length > nombres.length ? "…" : ""}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 text-[13px] text-text-secondary">
+          <span>
+            {bloques.length} bloque{bloques.length === 1 ? "" : "s"} ·{" "}
+          </span>
+          {visibles.map((b, idx) => (
+            <span key={b.id} className="inline-flex items-center">
+              <button
+                type="button"
+                onClick={() => onAbrirEjercicio(b.ejercicio_id)}
+                className="text-text-primary hover:underline"
+              >
+                {nombreEjercicio(b.ejercicio_id)}
+              </button>
+              {idx < visibles.length - 1 && <span className="mx-1 text-text-secondary">,</span>}
+            </span>
+          ))}
+          {restantes > 0 && <span className="text-text-secondary"> · +{restantes}</span>}
+        </div>
       )}
 
       <button

@@ -26,3 +26,20 @@ function formatFechaLocal(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/**
+ * Formatea una fecha YYYY-MM-DD a formato largo en español:
+ * "Miércoles 26 de agosto"
+ * Usa la hora local del sistema para evitar drift de TZ.
+ */
+export function formatearFechaLarga(iso: string): string {
+  // Agregamos T00:00:00 para evitar que el parseo UTC nos mueva el día
+  const d = new Date(iso + "T00:00:00");
+  const diaSemana = DIAS[d.getDay()];
+  const diaMes = d.getDate();
+  const mes = MESES[d.getMonth()];
+  return `${diaSemana} ${diaMes} de ${mes}`;
+}

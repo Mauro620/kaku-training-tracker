@@ -1,18 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, FileJson } from "lucide-react";
+import { Calendar, Dumbbell, FileJson } from "lucide-react";
 
 /**
- * Acciones globales del header de Entreno (Fase 4 R3a + R4).
- * - Ciclos vive en /entreno/ciclos, agrupado con la captura de sesion.
+ * Acciones globales del header de Entreno (Fase 4 R3a + R4 + Banco).
+ * - Banco de ejercicios es la entrada principal (especificacion).
  * - Importar plan semanal vive en /entreno/importar (Fase 4 R4): el
  *   pegado de JSON es una operacion de escritorio, deliberada, que
  *   no comparte el flujo de captura diaria.
+ * - Ciclos vive en /entreno/ciclos, agrupado con la captura de sesion.
  */
 export function HeaderAcciones() {
   return (
     <div className="flex items-center gap-2">
+      <Link
+        href="/entreno/ejercicios"
+        aria-label="Ejercicios"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary"
+      >
+        <Dumbbell size={18} strokeWidth={1.8} />
+      </Link>
       <Link
         href="/entreno/importar"
         aria-label="Importar plan semanal"

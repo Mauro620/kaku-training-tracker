@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import { EstadoPlanPill } from "@/components/entreno/estado-plan-pill";
@@ -14,7 +15,7 @@ import {
   useCrearSemana,
   useCumplimiento,
   useDescartarPlan,
-  useEjercicios,
+  useEjerciciosList,
   useEliminarSemana,
   usePlanesDeSemana,
   useReemplazarComposicion,
@@ -288,6 +289,7 @@ function PlanesBloque({ semanaId }: { semanaId: number }) {
 }
 
 function PlanCard({ plan, tipoNombre }: { plan: SesionPlan; tipoNombre: string }) {
+  const router = useRouter();
   // Solo se puede descartar un plan que sigue pendiente: cumplido y movido
   // los resuelve el server contra la sesion real, descartado ya lo decidio
   // el usuario. El server tambien lo valida (PATCH /planes/{id}/descartar
@@ -319,8 +321,15 @@ function PlanCard({ plan, tipoNombre }: { plan: SesionPlan; tipoNombre: string }
           .join(" · ") || "Sin detalle"}
       </p>
 
-      {descartable && !confirmando && (
-        <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => router.push(`/entreno/planes/${plan.id}`)}
+          className="rounded-pill bg-surface-secondary px-3 py-1 text-[11px] font-medium text-text-primary"
+        >
+          Ver detalle
+        </button>
+        {descartable && !confirmando && (
           <button
             type="button"
             onClick={() => setConfirmando(true)}
@@ -328,8 +337,8 @@ function PlanCard({ plan, tipoNombre }: { plan: SesionPlan; tipoNombre: string }
           >
             Descartar
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {confirmando && (
         <div className="mt-2 flex flex-col gap-2 rounded-bento bg-surface-secondary p-2">
@@ -407,7 +416,7 @@ function CrearPlanForm({
   onListo: () => void;
 }) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const crear = useCrearPlan(semanaId);
 
   const [tipoSesionId, setTipoSesionId] = useState<number | null>(null);
@@ -530,7 +539,7 @@ function CrearPlanForm({
               key={b.localId}
               bloque={b}
               orden={idx}
-              ejercicios={ejercicios.data ?? []}
+              ejercicios={ejercicios.data?.items ?? []}
               onChange={(cambio) =>
                 setBloques((arr) =>
                   arr.map((it, i) => (i === idx ? { ...it, ...cambio } : it)),

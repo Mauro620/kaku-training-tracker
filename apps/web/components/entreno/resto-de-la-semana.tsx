@@ -4,9 +4,10 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, MoreVertical } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import { EstadoPlanPill } from "@/components/entreno/estado-plan-pill";
+import { DetalleEjercicioSheet } from "@/components/entreno/detalle-ejercicio-sheet";
 import {
   useDescartarPlan,
-  useEjercicios,
+  useEjerciciosList,
   useTiposSesion,
   type SesionPlan,
 } from "@/lib/api/hooks";
@@ -21,9 +22,10 @@ type Props = { planes: SesionPlan[]; diaDeHoy: number | null };
  */
 export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
   const tipos = useTiposSesion();
-  const ejercicios = useEjercicios();
+  const ejercicios = useEjerciciosList();
   const [abierto, setAbierto] = useState<number | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
+  const [ejercicioSheetId, setEjercicioSheetId] = useState<number | null>(null);
   const descartar = useDescartarPlan();
 
   const otros = planes
@@ -54,7 +56,7 @@ export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
                 <button
                   type="button"
                   onClick={() => setAbierto(estaAbierto ? null : p.id)}
-                  className="flex flex-1 items-center gap-3 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
                   <span className="w-16 shrink-0 text-[11px] uppercase tracking-widest text-text-secondary">
                     {dia}
@@ -110,20 +112,26 @@ export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
                       Sin bloques planeados.
                     </li>
                   ) : (
-                    p.bloques_planeados.map((b) => (
-                      <li
-                        key={b.id}
-                        className="flex items-center justify-between gap-2 text-[13px]"
-                      >
-                        <span className="min-w-0 truncate text-text-primary">
-                          {ejercicios.data?.find((e) => e.id === b.ejercicio_id)
-                            ?.nombre ?? `Ejercicio ${b.ejercicio_id}`}
-                        </span>
-                        <span className="shrink-0 tabular text-text-secondary">
-                          {describirObjetivo(b)}
-                        </span>
-                      </li>
-                    ))
+                    p.bloques_planeados.map((b) => {
+                      const item = ejercicios.data?.items.find((e) => e.id === b.ejercicio_id);
+                      return (
+                        <li
+                          key={b.id}
+                          className="flex items-center justify-between gap-2 text-[13px]"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setEjercicioSheetId(b.ejercicio_id)}
+                            className="min-w-0 flex-1 truncate text-left text-text-primary hover:underline"
+                          >
+                            {item?.nombre ?? `Ejercicio ${b.ejercicio_id}`}
+                          </button>
+                          <span className="shrink-0 tabular text-text-secondary">
+                            {describirObjetivo(b)}
+                          </span>
+                        </li>
+                      );
+                    })
                   )}
                 </ul>
               )}
@@ -131,6 +139,17 @@ export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
           );
         })}
       </div>
+
+      <DetalleEjercicioSheet
+        ejercicioId={ejercicioSheetId}
+        open={ejercicioSheetId !== null}
+        onClose={() => setEjercicioSheetId(null)}
+        fallback={
+          ejercicioSheetId !== null
+            ? ejercicios.data?.items.find((e) => e.id === ejercicioSheetId) ?? null
+            : null
+        }
+      />
     </BentoCard>
   );
 }

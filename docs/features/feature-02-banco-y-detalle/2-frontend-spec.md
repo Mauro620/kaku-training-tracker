@@ -10,6 +10,58 @@ Documentos que gobiernan: `AGENTS.md` §5, `docs/ARCHITECTURE.md` §6,
 
 ---
 
+## 0.1 Decisiones del orquestador (preflight + cierre de fase)
+
+Estas decisiones se tomaron durante el preflight de SDD y el cierre con el
+usuario. El agente de frontend las aplica sin discutirlas.
+
+**Rama de trabajo.** Una rama nueva dedicada, paralela al backend:
+`feature/fe-banco-detalle`, basada en `main`. NO se commitea sobre
+`feature/be-banco-detalle` para que los PRs queden separables.
+
+**Migración del hook `useSesion`.** El backend devolvió un shape nuevo
+(`SesionDetalleRead`) que reemplaza al viejo `Sesion`. Decisión: **reemplazar
+el shape de `useSesion` en el mismo PR y migrar `SesionDetalle.tsx` (el editor
+actual)** para que consuma el detalle real. Razón: no acumular deuda con dos
+hooks paralelos. La pantalla de consulta (`/entreno/sesiones/[id]`) y el editor
+pasan a compartir el mismo `useSesion` con el shape nuevo. Implicación: el
+editor actual tiene que pasar de escribir `Sesion.bloques[]` a
+`SesionDetalleRead.bloques[]` (cada bloque con `ejercicio`, `objetivo` y
+`delta` anidados).
+
+**Patrón de navegación.** Las dos pantallas de detalle nuevas son **rutas
+dedicadas con URL** del estilo `/entreno/sesiones/[id]` y
+`/entreno/planes/[id]`. Razón: detalle de análisis profundo, shareable, back
+nativo del navegador. NO modal full-screen sobre Entreno (lo que hoy hace
+`SesionDetalle.tsx`), NO bottom sheet. El editor de sesión se mantiene como
+modal full-screen porque sigue siendo interacción efímera de captura.
+
+**Acceso al banco.** Doble entrada:
+1. Botón en el header de Entreno (`components/entreno/header-actions.tsx`),
+   visible siempre — es la entrada primaria.
+2. Sección propia en Ajustes, bajo "Catálogo". Entrada secundaria para
+   auditoría.
+
+**Hoja de detalle del banco reutilizable.** Una sola unidad visual (un
+componente `DetalleEjercicioSheet`) que se enchufa desde:
+- la lista del banco (tap en fila),
+- un nombre de ejercicio en el detalle de sesión (4.1 del spec),
+- un nombre de ejercicio en el detalle de plan (espejo de 4.1 para la pantalla
+  previa a ejecutar).
+
+Razón: la pregunta "¿cuánto levanté la última vez?" o "¿cómo era este
+ejercicio?" aparece en al menos tres pantallas; una sola implementación la
+atiende.
+
+**Tipos espejo.** Mantener el patrón manual de `lib/api/hooks.ts`: declarar
+los tipos TypeScript a mano, no regenerar con `openapi-typescript`. Razón:
+coherencia con el resto del frontend (los tipos ya están declarados así para
+Sesion, Bloque, Ejercicio, etc.) y el universo del feature es chico.
+Decisión de desviación respecto a `ARCHITECTURE.md` §5; se documenta en el
+archive-report.
+
+---
+
 ## 0. Qué se construye y por qué
 
 **Banco de ejercicios** — Hoy el catálogo lo alimenta un LLM vía JSON, pero
@@ -238,3 +290,91 @@ no debe romperlo con filtrado local sobre la lista ya cargada.
 5. Los bloques no ejecutados se ven separados de los ejecutados.
 6. Toda lista y sección tiene su estado vacío diseñado.
 7. Nada de esto agregó pasos al registro diario.
+
+---
+
+## 7. Estado de implementación (Slice 1-5)
+
+**Fecha de cierre**: 26 de agosto de 2026
+**Rama**: `feature/fe-banco-detalle`
+**Strategy**: stacked-to-main (5 PRs encadenados)
+**Total LoC**: ~2200 líneas añadidas (22 archivos modificados/creados)
+
+### Rutas añadidas
+
+| Ruta | Descripción | Archivo |
+|------|-------------|---------|
+| `/entreno/ejercicios` | Banco de ejercicios | `apps/web/app/(tabs)/entreno/ejercicios/page.tsx` |
+| `/entreno/sesiones/[id]` | Detalle de sesión (read-only) | `apps/web/app/(tabs)/entreno/sesiones/[id]/page.tsx` |
+| `/entreno/planes/[id]` | Detalle de plan (read-only) | `apps/web/app/(tabs)/entreno/planes/[id]/page.tsx` |
+
+### Hooks añadidos en `lib/api/hooks.ts`
+
+- `useEjerciciosList(q, tipo_medicion, activo, orden)` — lista con filtros
+- `useEjercicio(id)` — detalle de un ejercicio
+- `useActualizarEjercicio(id)` — mutación para editar ejercicio
+- `useFusionarEjercicio(origenId)` — mutación para fusionar ejercicios
+- `useEliminarEjercicio(id)` — mutación para eliminar ejercicio
+- `usePlanDetalle(id)` — detalle de plan con bloques planeados
+
+### Hooks migrados
+
+- `useSesion(id)` — ahora devuelve `SesionDetalleRead` (breaking change). El shape anterior (`Sesion`) fue reemplazado. Todos los consumidores migrados: `sesion-detalle.tsx`, `detalle-sesion-screen.tsx`, `plan-de-hoy-card.tsx`.
+
+### Componentes UI añadidos en `components/ui/`
+
+- `Sheet` — panel deslizante con slide-up, focus trap, animaciones (~80 LoC)
+- `ActionPopoverMenu` — menú de tres puntos con acciones (~97 LoC)
+- `EmptyState` — primitivo para estados vacíos con título, descripción y acción (~47 LoC)
+
+### Componentes de dominio añadidos en `components/entreno/`
+
+- `banco-screen.tsx` — lista con búsqueda, filtros multi-select, empty states (~265 LoC)
+- `detalle-ejercicio-sheet.tsx` — hoja reutilizable con descripción editable, historial, duplicados (~319 LoC)
+- `fusion-ejercicio-dialog.tsx` — dialog con selector de destino filtrado por tipo_medicion, vista previa (~154 LoC)
+- `detalle-sesion-screen.tsx` — pantalla read-only con cabecera, resumen delta, bloques, no_ejecutados, molestias (~430 LoC)
+- `detalle-plan-screen.tsx` — pantalla read-only con estado del plan, bloques planeados (~240 LoC)
+
+### Componentes modificados
+
+- `header-actions.tsx` — botón "Ejercicios" con ícono Dumbbell
+- `ajustes-screen.tsx` — sección Catálogo con tile que enlaza a `/entreno/ejercicios`
+- `ciclo-detalle-screen.tsx` — enlace a `/entreno/planes/[id]` desde planes anidados
+- `sesion-detalle.tsx` — reescrito para consumir `SesionDetalleRead` (editor modal)
+- `entreno-screen.tsx` — navegación a `/entreno/sesiones/[id]` en lugar de modal inline
+- `historico-sesiones.tsx` — navegación a `/entreno/sesiones/[id]`
+- `plan-de-hoy-card.tsx` — lectura de `tipo_sesion.nombre` en lugar de `tipo_sesion_id` directo
+
+### Tests
+
+- `lib/api/hooks.test.ts` — 53 tests (46 originales + 7 nuevos para Slice 5)
+- `lib/fecha.test.ts` — tests para `formatearFechaLarga` con fechas en español
+- Verificación: `pnpm --filter web test` ✅ (53 passed)
+
+### Desviaciones del spec
+
+1. **Tipos manuales vs OpenAPI**: Se mantuvo la decisión de declarar tipos TypeScript a mano en `lib/api/hooks.ts` en lugar de usar `openapi-typescript`. Razón: coherencia con el resto del frontend y el universo del feature es chico. Documentado en §0.1.
+
+2. **EmptyState para "sin historial"**: En `detalle-ejercicio-sheet.tsx`, el caso "Todavía no lo has ejecutado" usa un mensaje simple en lugar de `EmptyState` completo. Se consideró suficiente para ese contexto.
+
+3. **FusionEjercicioDialog local en cada pantalla**: Cada pantalla (`detalle-sesion-screen`, `detalle-plan-screen`) maneja su propio estado para el dialog de fusión. No se compartió estado global porque no es necesario — cada pantalla tiene su propio ciclo de vida.
+
+4. **Invalidación de queries**: El dialog de fusión invalida `["sesion"]` o `["planes"]` según corresponda. La pantalla de detalle se recarga automáticamente gracias a la invalidación.
+
+### Verificación final
+
+```bash
+pnpm --filter web typecheck  # ✅ pasa
+pnpm --filter web lint      # ✅ pasa
+pnpm --filter web test      # ✅ 53 tests passed
+```
+
+### Commits del feature
+
+1. `feat(web): foundation — tipos, hooks, primitivos UI` (Slice 1, ~650 LoC)
+2. `feat(web): banco de ejercicios con busqueda y filtros` (Slice 2, ~700 LoC)
+3. `feat(web): detalle de sesión + migración useSesion` (Slice 3, ~700 LoC)
+4. `feat(web): detalle de plan read-only` (Slice 4, ~400 LoC)
+5. `feat(web): polish — fusion desde sesiones/planes, empty states, tests` (Slice 5, ~350 LoC)
+
+Total: 5 PRs stacked-to-main, ~2800 LoC estimadas, dentro del budget de 800 LoC por PR.
