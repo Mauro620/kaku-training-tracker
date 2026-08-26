@@ -25,10 +25,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
 from app.main import app
-from app.models import Ejercicio, TipoSesion, Usuario
+from app.models import Bloque, BloquePlan, Ejercicio, TipoSesion, Usuario
 from app.models.enums import TipoMedicion
 from app.repositories.catalogo import ejercicio as repo_ejercicio
 from app.repositories.entrenamiento import bloque as repo_bloque
+from app.repositories.entrenamiento import bloque_plan as repo_bloque_plan
 from app.repositories.entrenamiento import sesion as repo_sesion
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
@@ -600,6 +601,143 @@ async def test_archivar_ejercicio_actualiza_activo(sesion: AsyncSession) -> None
     recargado = await sesion.get(Ejercicio, pallof.id)
     assert recargado is not None
     assert recargado.activo is False
+
+
+# ---------------------------------------- repositorio R7.1 (fusion) --
+
+
+async def test_reasignar_bloque_repo_devuelve_rowcount_correcto(
+    sesion: AsyncSession,
+) -> None:
+    """`reasignar_ejercicio` en `bloque`: UPDATE en bulk de la columna
+    `ejercicio_id`. Devuelve el rowcount (cantidad de filas tocadas)."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    hip = await sesion.scalar(select(Ejercicio).where(Ejercicio.nombre == "Hip thrust"))
+    assert pallof is not None and hip is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    # Crea 5 bloques del Pallof press distribuidos en 5 sesiones.
+    for i in range(5):
+        await _crear_sesion_con_bloques(
+            sesion,
+            usuario_id,
+            tipo_sesion_id,
+            pallof.id,
+            fecha=date(2026, 8, 1 + i),
+        )
+
+    # Antes: 5 filas con ejercicio_id = pallof.id.
+    count_antes = await repo_ejercicio.contar_usos(sesion, pallof.id)
+    assert count_antes == 5
+
+    rowcount = await repo_bloque.reasignar_ejercicio(
+        sesion, origen_id=pallof.id, destino_id=hip.id
+    )
+    assert rowcount == 5
+
+    # Despues: pallof queda con 0 usos, hip con 5.
+    assert await repo_ejercicio.contar_usos(sesion, pallof.id) == 0
+    assert await repo_ejercicio.contar_usos(sesion, hip.id) == 5
+
+    # Verificacion punto a punto: cada bloque apunta a destino.
+    from sqlalchemy import select as _select
+
+    bloques_destino = (
+        await sesion.scalars(_select(Bloque).where(Bloque.ejercicio_id == hip.id))
+    ).all()
+    assert len(bloques_destino) == 5
+
+
+async def test_reasignar_bloque_repo_devuelve_cero_si_no_hay_usos(
+    sesion: AsyncSession,
+) -> None:
+    """Sin bloques del origen, rowcount=0. La operacion es no-op pero
+    valida, no rompe."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    hip = await sesion.scalar(select(Ejercicio).where(Ejercicio.nombre == "Hip thrust"))
+    assert pallof is not None and hip is not None
+
+    rowcount = await repo_bloque.reasignar_ejercicio(
+        sesion, origen_id=pallof.id, destino_id=hip.id
+    )
+    assert rowcount == 0
+
+
+async def test_reasignar_bloque_plan_repo_devuelve_rowcount_correcto(
+    sesion: AsyncSession,
+) -> None:
+    """`reasignar_ejercicio` en `bloque_plan`: mismo patron que en bloque,
+    pero sobre la tabla que guarda la planificacion. Necesita un SesionPlan
+    previo como FK target."""
+    from app.repositories.entrenamiento import plan as repo_plan
+
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    hip = await sesion.scalar(select(Ejercicio).where(Ejercicio.nombre == "Hip thrust"))
+    assert pallof is not None and hip is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    # Crea 2 SesionPlan, cada uno con 1 bloque_plan del Pallof press.
+    for i in range(2):
+        plan = await repo_plan.crear(
+            sesion,
+            usuario_id=usuario_id,
+            ciclo_semana_id=None,
+            tipo_sesion_id=tipo_sesion_id,
+            fecha_prevista=date(2026, 8, 1 + i),
+            dia_sugerido=1,
+            objetivo=None,
+            duracion_min_est=60,
+            rpe_objetivo=8,
+        )
+        await repo_bloque_plan.crear(
+            sesion,
+            sesion_plan_id=plan.id,
+            ejercicio_id=pallof.id,
+            orden=1,
+            series=3,
+            reps_min=8,
+            reps_max=10,
+            peso_objetivo_kg=None,
+            distancia_objetivo_m=None,
+            duracion_objetivo_s=None,
+        )
+
+    rowcount = await repo_bloque_plan.reasignar_ejercicio(
+        sesion, origen_id=pallof.id, destino_id=hip.id
+    )
+    assert rowcount == 2
+
+    # Verifica que ambos quedaron apuntando a hip.
+    from sqlalchemy import select as _select
+
+    bloques_destino = (
+        await sesion.scalars(
+            _select(BloquePlan).where(BloquePlan.ejercicio_id == hip.id)
+        )
+    ).all()
+    assert len(bloques_destino) == 2
+
+
+async def test_reasignar_bloque_plan_repo_devuelve_cero_si_no_hay_usos(
+    sesion: AsyncSession,
+) -> None:
+    """Sin bloques_plan del origen, rowcount=0."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    hip = await sesion.scalar(select(Ejercicio).where(Ejercicio.nombre == "Hip thrust"))
+    assert pallof is not None and hip is not None
+
+    rowcount = await repo_bloque_plan.reasignar_ejercicio(
+        sesion, origen_id=pallof.id, destino_id=hip.id
+    )
+    assert rowcount == 0
 
 
 # ------------------------------------------------ services R6.4 ----
