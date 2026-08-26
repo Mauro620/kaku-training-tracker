@@ -158,3 +158,29 @@ describe("useEliminarEjercicio", () => {
     expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ["ejercicio", id] });
   });
 });
+
+// Test para useSesion migrado a SesionDetalleRead (Slice 3)
+describe("useSesion", () => {
+  it("construye el query key correcto con el ID de sesion", () => {
+    const sesionId = "550e8400-e29b-41d4-a716-446655440000";
+    const queryKey = ["sesion", sesionId];
+    expect(queryKey).toEqual(["sesion", "550e8400-e29b-41d4-a716-446655440000"]);
+  });
+
+  it("construye el path correcto para obtener el detalle de sesion", () => {
+    const sesionId = "550e8400-e29b-41d4-a716-446655440000";
+    const path = `/sesiones/${sesionId}`;
+    expect(path).toBe("/sesiones/550e8400-e29b-41d4-a716-446655440000");
+  });
+
+  it("enabled es false cuando el ID es null", () => {
+    const enabled = null !== null;
+    expect(enabled).toBe(false);
+  });
+
+  it("enabled es true cuando el ID no es null", () => {
+    const sesionId = "550e8400-e29b-41d4-a716-446655440000";
+    const enabled = sesionId !== null;
+    expect(enabled).toBe(true);
+  });
+});

@@ -250,6 +250,7 @@ export type BloqueDetalleRead = {
   peso_kg: string | null; // Decimal como string
   rpe: number | null;
   dolor_lumbar: boolean;
+  nota: string | null;
   ejercicio: BloqueEjercicioEnDetalleRead;
   objetivo: BloqueObjetivoRead | null;
   delta: BloqueDeltaRead;
@@ -894,7 +895,7 @@ export function useCrearSesion(fecha: string) {
 export function useSesion(id: string | null) {
   return useQuery({
     queryKey: ["sesion", id],
-    queryFn: () => api.get<Sesion>(`/sesiones/${id}`),
+    queryFn: () => api.get<SesionDetalleRead>(`/sesiones/${id}`),
     enabled: id !== null,
   });
 }
