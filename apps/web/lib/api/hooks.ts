@@ -712,6 +712,16 @@ export function useEjerciciosList(q?: string | null, tipo_medicion?: TipoMedicio
   return useQuery({
     queryKey: ["catalogos", "ejercicios", q ?? null, tipo_medicion ?? null, activo ?? null, orden ?? null],
     queryFn: () => api.get<EjercicioListRead>(path),
+    // Tolerar el shape transitorio mientras la rama backend no este mergeada a
+    // main: si el endpoint devuelve el array viejo Ejercicio[], el cast nos
+    // da `items: undefined` y rompemos consumidores. Devolvemos siempre
+    // { items, total } normalizado.
+    select: (data) => {
+      if (Array.isArray(data)) {
+        return { items: data as unknown as EjercicioListItem[], total: data.length };
+      }
+      return data;
+    },
     staleTime: Infinity,
   });
 }

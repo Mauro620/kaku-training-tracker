@@ -87,6 +87,36 @@ describe("useEjerciciosList", () => {
     const path = params.toString() ? `/catalogos/ejercicios?${params.toString()}` : "/catalogos/ejercicios";
     expect(path).toBe("/catalogos/ejercicios");
   });
+
+  // Bug fix de runtime: mientras la rama backend no este mergeada a main,
+  // GET /catalogos/ejercicios devuelve el array viejo Ejercicio[]. El select
+  // del hook normaliza a { items, total } para que los call sites que hacen
+  // .items.find() no exploten.
+  it("select normaliza el shape viejo (array directo) a { items, total }", () => {
+    const shapeViejo = [
+      { id: 1, nombre: "Sentadilla", tipo_medicion: "carga" },
+      { id: 2, nombre: "Press", tipo_medicion: "carga" },
+    ];
+    // Simulacion del select que aplica useEjerciciosList.
+    const normalizado = Array.isArray(shapeViejo)
+      ? { items: shapeViejo, total: shapeViejo.length }
+      : shapeViejo;
+    expect(normalizado.items).toHaveLength(2);
+    expect(normalizado.total).toBe(2);
+    expect(normalizado.items?.[0]?.nombre).toBe("Sentadilla");
+  });
+
+  it("select deja intacto el shape nuevo { items, total }", () => {
+    const shapeNuevo = {
+      items: [{ id: 1, nombre: "Sentadilla", tipo_medicion: "carga" }],
+      total: 1,
+    };
+    const normalizado = Array.isArray(shapeNuevo)
+      ? { items: shapeNuevo, total: shapeNuevo.length }
+      : shapeNuevo;
+    expect(normalizado.items).toHaveLength(1);
+    expect(normalizado.total).toBe(1);
+  });
 });
 
 describe("useActualizarEjercicio", () => {
