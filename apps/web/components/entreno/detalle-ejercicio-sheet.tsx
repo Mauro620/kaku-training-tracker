@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, Archive, GitMerge, X } from "lucide-react";
+import { Pencil, Trash2, Archive, GitMerge } from "lucide-react";
 
 import {
   useEjercicio,
   useActualizarEjercicio,
   useEliminarEjercicio,
   type EjercicioDetalleRead,
+  type EjercicioListItem,
 } from "@/lib/api/hooks";
 import { formatearFechaLarga } from "@/lib/fecha";
 import { Sheet } from "@/components/ui/sheet";
@@ -20,6 +21,11 @@ type DetalleEjercicioSheetProps = {
   open: boolean;
   onClose: () => void;
   onFusionarClick?: (origenId: number) => void;
+  // Datos del item de lista: cuando el backend actual no expone el endpoint
+  // de detalle (devuelve 405), usamos esto como fallback para que el sheet
+  // muestre al menos nombre, descripcion, patron, carga_lumbar y tipo.
+  // historial y posibles_duplicados quedan vacios hasta que se mergee el backend.
+  fallback?: EjercicioListItem | null;
 };
 
 /**
@@ -29,14 +35,36 @@ type DetalleEjercicioSheetProps = {
  * - Historial top 5 ejecuciones
  * - Posibles duplicados con boton Fusionar
  * - Menu tres puntos: Editar, Archivar, Fusionar, Eliminar
+ *
+ * Si el endpoint GET /catalogos/ejercicios/{id} no existe todavia en el
+ * backend (devuelve 405), el sheet cae al fallback del item de lista y
+ * muestra lo que tiene. La edicion sigue funcionando via PATCH si el
+ * endpoint PATCH existe.
  */
 export function DetalleEjercicioSheet({
   ejercicioId,
   open,
   onClose,
   onFusionarClick,
+  fallback,
 }: DetalleEjercicioSheetProps) {
-  const { data: ejercicio, isLoading } = useEjercicio(ejercicioId);
+  // retry: false para no spamear un endpoint que no existe. Si llega a
+  // existir en el futuro, el usuario abre el sheet de nuevo y se reintenta.
+  const { data: ejercicioDetalle, isLoading, error } = useEjercicio(ejercicioId);
+  const ejercicio: EjercicioDetalleRead | null = ejercicioDetalle ?? (fallback
+    ? {
+        id: fallback.id,
+        nombre: fallback.nombre,
+        patron: fallback.patron,
+        carga_lumbar: fallback.carga_lumbar,
+        tipo_sesion_id: fallback.tipo_sesion_id,
+        tipo_medicion: fallback.tipo_medicion,
+        descripcion: fallback.descripcion,
+        activo: fallback.activo,
+        historial: [],
+        posibles_duplicados: [],
+      }
+    : null);
   const actualizar = useActualizarEjercicio(ejercicioId ?? 0);
   const eliminar = useEliminarEjercicio(ejercicioId ?? 0);
 
@@ -179,7 +207,7 @@ export function DetalleEjercicioSheet({
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !ejercicio) {
     return (
       <Sheet open={open} onClose={onClose} title="Cargando...">
         <div className="space-y-4">
@@ -189,6 +217,18 @@ export function DetalleEjercicioSheet({
             <div className="h-4 w-full rounded bg-surface-secondary" />
           </div>
         </div>
+      </Sheet>
+    );
+  }
+
+  // Si llegamos aca sin ejercicio ni fallback, no hay nada que mostrar.
+  if (!ejercicio) {
+    return (
+      <Sheet open={open} onClose={onClose}>
+        <EmptyState
+          title="Ejercicio no encontrado"
+          description="No pudimos cargar el detalle de este ejercicio."
+        />
       </Sheet>
     );
   }

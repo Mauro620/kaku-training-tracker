@@ -759,6 +759,14 @@ export function useEjercicio(id: number | null) {
     queryFn: () => api.get<EjercicioDetalleRead>(`/catalogos/ejercicios/${id}`),
     enabled: id !== null,
     staleTime: 5 * 60 * 1000,
+    // Si el endpoint no existe todavia (404/405 del backend en main), no
+    // reintentar: gasta requests y llena el log. El sheet tiene fallback.
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
+        return false;
+      }
+      return failureCount < 1;
+    },
   });
 }
 
