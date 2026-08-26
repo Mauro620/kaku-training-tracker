@@ -1,0 +1,167 @@
+{
+  "version": 2,
+  "ciclo": {
+    "numero": 2,
+    "objetivo": "Rehabilitar isquio, mantener fuerza y tecnica, atacar sedentarismo. Sin velocidad maxima hasta alta del fisio.",
+    "fecha_inicio": "2026-09-01",
+    "semanas": 4
+  },
+  "semana": {
+    "numero": 1,
+    "fase": "readaptacion",
+    "rpe_objetivo": { "min": 5, "max": 7 },
+    "volumen_pct": 75
+  },
+  "sesiones": [
+    {
+      "dia": 0,
+      "tipo": "activacion",
+      "nombre": "Priming pre-partido",
+      "objetivo": "Activar sistema nervioso antes del partido sin generar fatiga",
+      "duracion_min": 25,
+      "rpe_objetivo": 5,
+      "nota": "Sesion corta antes del entreno de equipo (9pm). El resto del dia libre para trabajos de la U.",
+      "bloques": [
+        { "ejercicio": "Activacion de gluteo con banda", "tipo_medicion": "carga",
+          "series": 2, "reps": 12,
+          "descripcion": "Banda por encima de las rodillas. Puente y abduccion, buscando sentir el gluteo medio." },
+        { "ejercicio": "Salto CMJ", "tipo_medicion": "distancia", "reps": 3,
+          "nota": "Submaximo, ~70%" },
+        { "ejercicio": "Aceleracion progresiva", "tipo_medicion": "distancia",
+          "reps": 3, "distancia_m": 15,
+          "descripcion": "Subir la velocidad de forma gradual hasta 60-70%. Nunca salida explosiva desde parado." }
+      ]
+    },
+    {
+      "dia": 1,
+      "tipo": "recuperacion",
+      "nombre": "Movilidad y descompresion",
+      "objetivo": "Anti-sedentarismo: descomprimir trapecio y lumbar, activar gluteo, movilidad de isquio",
+      "duracion_min": 30,
+      "rpe_objetivo": 3,
+      "nota": "Ventana 4-6pm. Bajo esfuerzo, alto beneficio. Dejar de dormir boca abajo para el trapecio.",
+      "bloques": [
+        { "ejercicio": "Movilidad cervical", "tipo_medicion": "tiempo", "duracion_s": 300,
+          "descripcion": "Rotaciones y inclinaciones suaves + estiramiento de trapecio y escaleno, sin forzar." },
+        { "ejercicio": "Face pull con banda", "tipo_medicion": "carga",
+          "series": 3, "reps": 15,
+          "descripcion": "Tirar hacia la cara separando las manos al final. Trabaja postura escapular." },
+        { "ejercicio": "Gato-camello", "tipo_medicion": "tiempo", "duracion_s": 300,
+          "descripcion": "En cuadrupedia, alternar flexion y extension lumbar. Cerrar con rotacion lumbar tumbado." },
+        { "ejercicio": "Activacion de gluteo con banda", "tipo_medicion": "carga",
+          "series": 2, "reps": 15 },
+        { "ejercicio": "Movilidad de cadera 90/90", "tipo_medicion": "tiempo", "duracion_s": 240,
+          "descripcion": "Sentado con ambas rodillas a 90 grados, rotar de un lado al otro sin usar las manos." },
+        { "ejercicio": "Respiracion diafragmatica", "tipo_medicion": "tiempo", "duracion_s": 300,
+          "descripcion": "Inhalar 4 s, exhalar 6-8 s. Expandir costillas, no el pecho." }
+      ]
+    },
+    {
+      "dia": 2,
+      "tipo": "partido",
+      "nombre": "Entreno de equipo",
+      "objetivo": "Jugar al 80% con cabeza fria",
+      "duracion_min": 90,
+      "rpe_objetivo": 7,
+      "nota": "Libre 4-7:30pm, ingles 8pm, entreno 8:50pm. Sin doble sesion. Juego posicional, anticipar, sin piques desde cero ni cortes bruscos.",
+      "bloques": [
+        { "ejercicio": "Partido", "tipo_medicion": "tiempo", "duracion_s": 5400,
+          "nota": "Al 80%, sin piques maximos" }
+      ]
+    },
+    {
+      "dia": 3,
+      "tipo": "fuerza",
+      "nombre": "Full-body y core",
+      "objetivo": "Fuerza full-body y core, priorizando musculos clave de futbol y cuidando isquio y lumbar",
+      "duracion_min": 55,
+      "rpe_objetivo": 7,
+      "nota": "Peso muerto y sentadilla pesada en pausa por isquio. Hip thrust como motor principal de cadera.",
+      "bloques": [
+        { "ejercicio": "Hip thrust", "tipo_medicion": "carga",
+          "series": 3, "reps_min": 6, "reps_max": 8, "peso_kg": 90 },
+        { "ejercicio": "Sentadilla goblet", "tipo_medicion": "carga",
+          "series": 3, "reps": 8, "peso_kg": 24,
+          "descripcion": "Mancuerna al pecho, bracing activo. Parar si aparece molestia lumbar." },
+        { "ejercicio": "Dominada", "tipo_medicion": "carga", "series": 3, "reps": 8,
+          "nota": "Remo si no salen las dominadas" },
+        { "ejercicio": "Press con mancuernas", "tipo_medicion": "carga",
+          "series": 3, "reps": 10 },
+        { "ejercicio": "Pallof press", "tipo_medicion": "carga", "series": 3, "reps": 10 },
+        { "ejercicio": "Plancha frontal", "tipo_medicion": "tiempo",
+          "series": 2, "duracion_s": 60 },
+        { "ejercicio": "Bird-dog", "tipo_medicion": "carga", "series": 3, "reps": 8,
+          "descripcion": "Cuadrupedia, extender brazo y pierna contrarios sin rotar la cadera. Core seguro para lumbar." },
+        { "ejercicio": "Dead-bug", "tipo_medicion": "carga", "series": 3, "reps": 8,
+          "descripcion": "Tumbado boca arriba, bajar brazo y pierna contrarios manteniendo la lumbar pegada al piso." },
+        { "ejercicio": "Elevacion de talon", "tipo_medicion": "carga",
+          "series": 3, "reps": 15, "peso_kg": 20 }
+      ]
+    },
+    {
+      "dia": 4,
+      "tipo": "balon_control",
+      "nombre": "Tecnica individual",
+      "objetivo": "Tecnica de bajo riesgo: control, regate controlado, balon parado y pendientes tecnicos",
+      "duracion_min": 50,
+      "rpe_objetivo": 6,
+      "nota": "Cancha pequena con muro o El Dorado. Sin piques maximos ni cortes bruscos.",
+      "bloques": [
+        { "ejercicio": "Control con muro", "tipo_medicion": "tecnica", "duracion_s": 720,
+          "nota": "Primer toque, alternando ambos pies" },
+        { "ejercicio": "Control orientado", "tipo_medicion": "tecnica", "duracion_s": 480 },
+        { "ejercicio": "Regate en conos", "tipo_medicion": "tecnica", "duracion_s": 600,
+          "nota": "Al 60-70%, salida controlada" },
+        { "ejercicio": "Vaselina", "tipo_medicion": "tecnica", "reps": 20,
+          "descripcion": "Golpear por debajo del balon con el cuerpo ligeramente atras para elevarlo sobre el portero." },
+        { "ejercicio": "Cabeceo con timing de carrera", "tipo_medicion": "tecnica", "reps": 15,
+          "descripcion": "Atacar el balon tarde y con los ojos abiertos. Golpear con la frente, no dejar que llegue." },
+        { "ejercicio": "Tiro libre", "tipo_medicion": "tecnica", "reps": 20,
+          "nota": "Desde tu zona habitual" },
+        { "ejercicio": "Penal", "tipo_medicion": "tecnica", "reps": 10,
+          "nota": "Con la zurda" }
+      ]
+    },
+    {
+      "dia": 5,
+      "tipo": "fuerza",
+      "nombre": "Pliometria y piernas",
+      "objetivo": "Pliometria extensiva y fuerza de piernas, version progresiva por isquio",
+      "duracion_min": 50,
+      "rpe_objetivo": 7,
+      "nota": "Solo pliometria extensiva (pogos, saltos bajos). Sin depth jumps ni sprints maximos hasta alta del fisio.",
+      "bloques": [
+        { "ejercicio": "Pogos", "tipo_medicion": "tecnica", "reps": 20,
+          "nota": "3 series de 20" },
+        { "ejercicio": "Salto CMJ", "tipo_medicion": "distancia", "reps": 4 },
+        { "ejercicio": "Salto a cajon bajo", "tipo_medicion": "carga",
+          "series": 3, "reps": 5,
+          "descripcion": "Cajon bajo, aterrizaje suave y silencioso. Bajar caminando, nunca saltando." },
+        { "ejercicio": "Sentadilla bulgara", "tipo_medicion": "carga",
+          "series": 3, "reps": 8,
+          "descripcion": "Pie trasero elevado. Controlada, sin buscar profundidad maxima." },
+        { "ejercicio": "Hip thrust", "tipo_medicion": "carga",
+          "series": 3, "reps": 8, "peso_kg": 90 },
+        { "ejercicio": "Plancha Copenhague", "tipo_medicion": "tiempo",
+          "series": 3, "duracion_s": 30 }
+      ]
+    },
+    {
+      "dia": 6,
+      "tipo": "recuperacion",
+      "nombre": "Descarga",
+      "objetivo": "Movilidad, descarga y skills suaves opcionales",
+      "duracion_min": 30,
+      "rpe_objetivo": 3,
+      "nota": "Dia mas suave. Descanso total si acumulas fatiga.",
+      "bloques": [
+        { "ejercicio": "Movilidad completa", "tipo_medicion": "tiempo", "duracion_s": 900,
+          "nota": "Cadera, tobillo y toracica" },
+        { "ejercicio": "Trote suave", "tipo_medicion": "tiempo", "duracion_s": 480,
+          "nota": "Solo si no molesta" },
+        { "ejercicio": "Tiro libre", "tipo_medicion": "tecnica", "reps": 15,
+          "nota": "Opcional, suave" }
+      ]
+    }
+  ]
+}
