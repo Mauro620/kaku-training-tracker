@@ -50,11 +50,17 @@ export function BancoScreen() {
     return () => clearTimeout(timer);
   }, [q]);
 
-  // Hook de lista de ejercicios
+  // Hook de lista de ejercicios.
+  // Mientras la rama backend no este mergeada a main, el endpoint ignora
+  // los query params y devuelve el universo completo. Por eso filtramos
+  // tambien en cliente: si el backend no soporta los filtros, los
+  // aplicamos localmente sobre el array completo. Cuando el backend se
+  // mergee y soporte los params, el filtrado del cliente sigue
+  // funcionando (es redundante pero consistente).
   const { data, isLoading, error, refetch } = useEjerciciosList(
-    qDebounce || null,
-    tiposSeleccionados.length > 0 ? tiposSeleccionados[0] : null,
-    mostrarArchivados ? undefined : true, // si false, muestra solo activos; si undefined, muestra todos
+    null, // q: el backend actual no lo soporta; filtramos en cliente
+    null,
+    mostrarArchivados ? undefined : true,
     undefined,
   );
 
@@ -127,6 +133,26 @@ export function BancoScreen() {
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+
+  // Filtrado en cliente. Normaliza busqueda y nombre (sin acentos, minusculas)
+  // para que tildes no rompan el matching.
+  const normalizar = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  const itemsFiltrados = items.filter((e) => {
+    if (qDebounce.trim()) {
+      const needle = normalizar(qDebounce);
+      const haystack = `${normalizar(e.nombre)} ${normalizar(e.descripcion ?? "")}`;
+      if (!haystack.includes(needle)) return false;
+    }
+    if (tiposSeleccionados.length > 0 && !tiposSeleccionados.includes(e.tipo_medicion)) {
+      return false;
+    }
+    if (mostrarArchivados && e.activo) return false;
+    if (!mostrarArchivados && !e.activo) return false;
+    return true;
+  });
+
   const hayFiltros = qDebounce.trim() || tiposSeleccionados.length > 0 || mostrarArchivados;
 
   // Empty state: sin ejercicios
@@ -145,14 +171,19 @@ export function BancoScreen() {
   }
 
   // Empty state: sin resultados de busqueda
-  if (items.length === 0 && qDebounce.trim()) {
+  if (itemsFiltrados.length === 0 && (qDebounce.trim() || tiposSeleccionados.length > 0)) {
     return (
       <EmptyState
-        title={`Sin resultados para "${qDebounce.trim()}"`}
-        action={{
-          label: `Crear "${qDebounce.trim()}"`,
-          onClick: handleCrearDesdeBusqueda,
-        }}
+        title={
+          qDebounce.trim()
+            ? `Sin resultados para "${qDebounce.trim()}"`
+            : `Sin ejercicios con esos filtros`
+        }
+        action={
+          qDebounce.trim()
+            ? { label: `Crear "${qDebounce.trim()}"`, onClick: handleCrearDesdeBusqueda }
+            : undefined
+        }
       />
     );
   }
@@ -221,31 +252,33 @@ export function BancoScreen() {
       </div>
 
       {/* Lista de ejercicios */}
-      <ul className="space-y-2">
-        {items.map((ejercicio) => (
+      <ul className="space-y-2 pb-32">
+        {itemsFiltrados.map((ejercicio) => (
           <li key={ejercicio.id}>
             <button
               type="button"
               onClick={() => handleAbrirDetalle(ejercicio.id)}
-              className={`w-full rounded-2xl border border-border-subtle bg-surface-primary p-4 text-left transition hover:bg-surface-secondary ${
+              className={`flex w-full flex-col gap-1 rounded-2xl border border-border-subtle bg-surface-primary p-4 text-left transition hover:bg-surface-secondary ${
                 ejercicio.usos === 0 ? "opacity-60" : ""
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-text-primary">
+              <div className="flex items-start justify-between gap-2">
+                <span className="min-w-0 flex-1 break-words font-medium text-text-primary">
                   {ejercicio.nombre}
                 </span>
-                <span className="rounded-full bg-surface-secondary px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+                <span className="shrink-0 rounded-full bg-surface-secondary px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-text-secondary">
                   {ejercicio.tipo_medicion}
                 </span>
               </div>
-              <div className="mt-1 text-[13px] text-text-secondary">
+              <div className="text-[12px] text-text-secondary">
                 {ejercicio.usos === 0 ? (
                   <span>sin usar</span>
                 ) : (
-                  <span>
-                    {ejercicio.usos} {ejercicio.usos === 1 ? "uso" : "usos"} · ultima{" "}
-                    {ejercicio.ultima_vez ? formatearFechaLarga(ejercicio.ultima_vez) : "N/A"}
+                  <span className="line-clamp-2">
+                    {ejercicio.usos} {ejercicio.usos === 1 ? "uso" : "usos"}
+                    {ejercicio.ultima_vez
+                      ? ` · ultima ${formatearFechaLarga(ejercicio.ultima_vez)}`
+                      : ""}
                   </span>
                 )}
               </div>
@@ -260,6 +293,11 @@ export function BancoScreen() {
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         onFusionarClick={handleFusionarClick}
+        fallback={
+          ejercicioSeleccionadoId !== null
+            ? items.find((e) => e.id === ejercicioSeleccionadoId) ?? null
+            : null
+        }
       />
 
       {/* Dialog de fusion */}
