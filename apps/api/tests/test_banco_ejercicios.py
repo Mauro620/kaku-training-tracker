@@ -602,6 +602,157 @@ async def test_archivar_ejercicio_actualiza_activo(sesion: AsyncSession) -> None
     assert recargado.activo is False
 
 
+# ------------------------------------------------ services R6.4 ----
+
+
+async def test_listar_ejercicios_filtrado_service_normaliza_q(
+    sesion: AsyncSession,
+) -> None:
+    """El service normaliza `q` antes de pasar al repo: ?q=hip thrust y
+    ?q=HIP THRUST producen el mismo resultado. La busqueda ignora acentos
+    via la traduccion SQL del repo."""
+    from app.services.catalogo import entrenamiento as service
+
+    minus = await service.listar_ejercicios_filtrado(
+        sesion,
+        q="hip thrust",
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    mayus = await service.listar_ejercicios_filtrado(
+        sesion,
+        q="HIP THRUST",
+        tipo_medicion=None,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    assert minus.total == mayus.total
+    assert minus.total >= 1
+    nombres = {item.nombre for item in minus.items}
+    assert "Hip thrust" in nombres
+
+
+async def test_listar_ejercicios_filtrado_service_tipo_medicion(
+    sesion: AsyncSession,
+) -> None:
+    """El service propaga el filtro de tipo_medicion al repo."""
+    from app.services.catalogo import entrenamiento as service
+
+    respuesta = await service.listar_ejercicios_filtrado(
+        sesion,
+        q=None,
+        tipo_medicion=TipoMedicion.carga,
+        tipo_sesion_id=None,
+        activo=True,
+        orden="nombre",
+    )
+    assert respuesta.total > 0
+    assert all(item.tipo_medicion is TipoMedicion.carga for item in respuesta.items)
+
+
+async def test_obtener_detalle_ejercicio_devuelve_historial_y_duplicados(
+    sesion: AsyncSession,
+) -> None:
+    """Detalle completo: datos del ejercicio + historial top 5 + duplicados."""
+    from app.services.catalogo import entrenamiento as service
+
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+
+    # 2 ejecuciones del pallof + 1 con un ejercicio muy parecido.
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, pallof.id, fecha=date(2026, 8, 10)
+    )
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, pallof.id, fecha=date(2026, 8, 15)
+    )
+
+    detalle = await service.obtener_detalle_ejercicio(sesion, pallof.id)
+
+    assert detalle.id == pallof.id
+    assert detalle.nombre == "Pallof press"
+    assert len(detalle.historial) == 2
+    # Orden por fecha desc: la primera es 2026-08-15.
+    assert detalle.historial[0].fecha == date(2026, 8, 15)
+    assert detalle.historial[1].fecha == date(2026, 8, 10)
+    # El test no chequea duplicados (no hay un "Pallof press X" con similitud
+    # >=0.75 en el seed). Eso se valida en el test siguiente con uno creado.
+
+
+async def test_obtener_detalle_ejercicio_sin_uso_historial_vacio(
+    sesion: AsyncSession,
+) -> None:
+    """Sin ejecuciones: historial vacio y posibles_duplicados puede ser
+    [] o poblarse con candidatos segun el seed."""
+    from app.services.catalogo import entrenamiento as service
+
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    detalle = await service.obtener_detalle_ejercicio(sesion, pallof.id)
+    assert detalle.historial == []
+    # Sin semilla de duplicados no forzamos nada aca.
+
+
+async def test_obtener_detalle_ejercicio_posibles_duplicados_075(
+    sesion: AsyncSession,
+) -> None:
+    """Crea un ejercicio con similitud >=0.75 al Pallof press, verifica que
+    aparece en `posibles_duplicados`. Otro con similitud baja (<0.75) NO
+    aparece."""
+    from app.services.catalogo import entrenamiento as service
+
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    # "Pallof press inclinado" -> similitud >= 0.75 contra "Pallof press".
+    candidato_alto = await repo_ejercicio.crear(
+        sesion,
+        nombre="Pallof press inclinado",
+        tipo_medicion=TipoMedicion.carga,
+        descripcion=None,
+    )
+    # Algo completamente distinto -> similitud muy baja. NO debe aparecer.
+    await repo_ejercicio.crear(
+        sesion,
+        nombre="Sentadilla búlgara",
+        tipo_medicion=TipoMedicion.carga,
+        descripcion=None,
+    )
+    await sesion.flush()
+
+    detalle = await service.obtener_detalle_ejercicio(sesion, pallof.id)
+    nombres_dup = {d.nombre for d in detalle.posibles_duplicados}
+    assert "Pallof press inclinado" in nombres_dup
+    assert "Sentadilla búlgara" not in nombres_dup
+    # El propio NO aparece.
+    assert pallof.id not in {d.id for d in detalle.posibles_duplicados}
+    # El candidato_alto tiene similitud reportada >= 0.75.
+    cand = next(d for d in detalle.posibles_duplicados if d.id == candidato_alto.id)
+    assert cand.similitud >= 0.75
+
+
+async def test_obtener_detalle_ejercicio_404_si_no_existe(
+    sesion: AsyncSession,
+) -> None:
+    """`RecursoNoEncontradoError` cuando el id no existe."""
+    from app.core.exceptions import RecursoNoEncontradoError
+    from app.services.catalogo import entrenamiento as service
+
+    with pytest.raises(RecursoNoEncontradoError):
+        await service.obtener_detalle_ejercicio(sesion, 99999)
+
+
 if __name__ == "__main__":
     # Permite correr este archivo aislado: `pytest tests/test_banco_ejercicios.py`.
     pytest.main([__file__, "-q"])
