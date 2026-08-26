@@ -10,7 +10,14 @@ from app.core.exceptions import InvarianteDeNegocioError, RecursoNoEncontradoErr
 from app.models import CicloSemana, SesionPlan
 from app.models.enums import EstadoSesionPlan
 from app.repositories import entrenamiento as repo
-from app.schemas.entrenamiento.plan import SesionPlanCreate
+from app.repositories.entrenamiento import plan as repo_plan
+from app.schemas.entrenamiento.plan import (
+    BloquePlanDetalleRead,
+    PlanCicloRead,
+    PlanDetalleRead,
+    SesionPlanCreate,
+)
+from app.schemas.entrenamiento.sesion import BloqueEjercicioEnDetalleRead
 from app.services.entrenamiento.bloque import validar_campos
 from app.services.entrenamiento.ciclo import (
     calcular_rango_semana,
@@ -190,3 +197,68 @@ async def descartar_plan(
     await session.commit()
     await session.refresh(plan, attribute_names=["bloques_planeados"])
     return plan
+
+
+async def obtener_plan_detalle(
+    session: AsyncSession, usuario_id: uuid.UUID, plan_id: int
+) -> PlanDetalleRead:
+    """Detalle de un plan (R9, SPEC §3.8): cabecera + ciclo anidado
+    opcional + bloques planeados ordenados por `orden` ASC, cada uno con
+    su ejercicio. 404 si el plan no existe o no es del usuario (no se
+    filtra la existencia para no distinguir entre "no existe" y "no es
+    tuyo", AGENTS §5)."""
+    plan = await repo_plan.obtener_con_detalle(session, plan_id)
+    if plan is None or plan.usuario_id != usuario_id:
+        raise RecursoNoEncontradoError(f"sesion_plan {plan_id} no encontrado")
+
+    ciclo = None
+    if plan.ciclo_semana is not None and plan.ciclo_semana.ciclo is not None:
+        ciclo = PlanCicloRead(
+            numero=plan.ciclo_semana.ciclo.numero,
+            semana=plan.ciclo_semana.numero,
+            fase=plan.ciclo_semana.fase,
+        )
+
+    # `SesionPlan.bloques_planeados` ya viene ordenado por `orden` ASC via
+    # `order_by="BloquePlan.orden"` en la relación; el `sorted` es defensa
+    # por si alguien cambia esa configuración en el modelo.
+    bloques = [
+        BloquePlanDetalleRead(
+            id=bp.id,
+            sesion_plan_id=bp.sesion_plan_id,
+            orden=bp.orden,
+            series=bp.series,
+            reps_min=bp.reps_min,
+            reps_max=bp.reps_max,
+            peso_objetivo_kg=bp.peso_objetivo_kg,
+            distancia_objetivo_m=bp.distancia_objetivo_m,
+            duracion_objetivo_s=bp.duracion_objetivo_s,
+            nota=bp.nota,
+            ejercicio=BloqueEjercicioEnDetalleRead(
+                id=bp.ejercicio.id,
+                nombre=bp.ejercicio.nombre,
+                tipo_medicion=bp.ejercicio.tipo_medicion,
+                descripcion=bp.ejercicio.descripcion,
+                carga_lumbar=bp.ejercicio.carga_lumbar,
+            ),
+        )
+        for bp in sorted(plan.bloques_planeados, key=lambda b: b.orden)
+    ]
+
+    return PlanDetalleRead(
+        id=plan.id,
+        usuario_id=plan.usuario_id,
+        ciclo_semana_id=plan.ciclo_semana_id,
+        ciclo=ciclo,
+        fecha_prevista=plan.fecha_prevista,
+        dia_sugerido=plan.dia_sugerido,
+        tipo_sesion_id=plan.tipo_sesion_id,
+        objetivo=plan.objetivo,
+        duracion_min_est=plan.duracion_min_est,
+        rpe_objetivo=plan.rpe_objetivo,
+        estado=plan.estado,
+        clave_import=plan.clave_import,
+        nombre=plan.nombre,
+        nota=plan.nota,
+        bloques_planeados=bloques,
+    )
