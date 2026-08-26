@@ -74,6 +74,34 @@ async def test_el_seed_es_idempotente(sesion: AsyncSession) -> None:
     assert await sesion.scalar(select(func.count()).select_from(Usuario)) == 1
 
 
+async def test_los_ejercicios_sembrados_figuran_como_activos(
+    sesion: AsyncSession,
+) -> None:
+    """Migracion que agrega `ejercicio.activo` con default true: los registros
+    que ya estaban en la base tienen que haber quedado con activo=true."""
+    total = await sesion.scalar(select(func.count()).select_from(Ejercicio))
+    activos = await sesion.scalar(
+        select(func.count()).select_from(Ejercicio).where(Ejercicio.activo.is_(True))
+    )
+    assert total is not None and total > 0
+    assert activos == total
+
+
+async def test_ejercicio_expone_el_campo_activo_en_el_modelo(
+    sesion: AsyncSession,
+) -> None:
+    """El modelo ORM tiene que tener el atributo, y la columna tiene que
+    aparecer como not null en la definicion de la tabla (para que el
+    `Mapped[bool]` no sea accidentalmente nullable en SQL)."""
+    uno = await sesion.scalar(select(Ejercicio))
+    assert uno is not None
+    assert hasattr(uno, "activo")
+    assert uno.activo is True
+
+    columna = Ejercicio.__table__.columns["activo"]
+    assert columna.nullable is False
+
+
 async def test_estan_los_parametros_que_las_reglas_referencian(
     sesion: AsyncSession,
 ) -> None:

@@ -95,8 +95,9 @@ Table ejercicio [headercolor: #175e7a] {
 	tipo_sesion_id smallint
 	tipo_medicion tipo_medicion [ not null ]
 	descripcion text
+	activo boolean [ not null, default: true ]
 
-	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §15): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→series opcional/duracion_s, tecnica→reps o duracion_s + calidad. tipo_sesion_id es NULLABLE a proposito (migracion a09181f1ca0e): unico catalogo con creacion de usuario (POST /catalogos/ejercicios), el usuario que crea inline no elige tipo de sesion. descripcion es PERMANENTE —qué es y cómo se ejecuta— y NO confundir con bloque.nota, que es DE ESTA VEZ (REGLAS_NEGOCIO §15): mezclarlas llena el catalogo de duplicados disfrazados.'
+	Note: 'carga_lumbar permite filtrar alternativas seguras cuando la molestia lumbar está activa. tipo_medicion determina que campos acepta cada bloque de este ejercicio (REGLAS_NEGOCIO §15): carga→series/reps/peso_kg, distancia→reps/distancia_m, tiempo→series opcional/duracion_s, tecnica→reps o duracion_s + calidad. tipo_sesion_id es NULLABLE a proposito (migracion a09181f1ca0e): unico catalogo con creacion de usuario (POST /catalogos/ejercicios), el usuario que crea inline no elige tipo de sesion. descripcion es PERMANENTE —qué es y cómo se ejecuta— y NO confundir con bloque.nota, que es DE ESTA VEZ (REGLAS_NEGOCIO §15): mezclarlas llena el catalogo de duplicados disfrazados. activo (migracion f1a2b3c4d5e6) filtra el selector: la fusion de duplicados lo baja a false sin borrar la fila, conservando bloque.ejercicio_id de los registros historicos.'
 }
 
 Table zona_corporal [headercolor: #53177a] {
