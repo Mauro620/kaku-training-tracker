@@ -21,6 +21,11 @@ type Props = HTMLAttributes<HTMLDivElement> & {
  * Side effect: al abrir bloquea el scroll del body (overflow-hidden) para
  * que el sheet no haga scroll-into-view ni que la pagina quede scrollable
  * detras del overlay. Se restaura al cerrar.
+ *
+ * Tambien fuerza scrollTop=0 al abrir para que el contenido siempre
+ * aparezca desde el nombre del ejercicio, no desde el menu de acciones
+ * al fondo. Cubrimos el caso del focus automatico (tabIndex=-1 + .focus())
+ * y el caso de scrollIntoView disparado por React al insertar el nodo.
  */
 export function Sheet({ open, onClose, title, children, className = "", ...rest }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -38,9 +43,7 @@ export function Sheet({ open, onClose, title, children, className = "", ...rest 
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  // Bloquea scroll del body mientras el sheet esta abierto. Sin esto, en
-  // algunas navegadores el sheet (position: fixed bottom-0) puede causar
-  // scroll-into-view y la pagina queda scrollable detras del overlay.
+  // Bloquea scroll del body mientras el sheet esta abierto.
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -50,13 +53,36 @@ export function Sheet({ open, onClose, title, children, className = "", ...rest 
     };
   }, [open]);
 
-  // Focus trap basico: enfoca el contenido al abrir. preventScroll evita
-  // que el navegador haga scroll-into-view del sheet (que esta fixed al
-  // bottom y provocaria que la pagina scrollee al fondo al abrir).
+  // Reset scroll al abrir. Hay tres fuentes que pueden mover el scroll
+  // al fondo del sheet en algunos navegadores:
+  // 1. React 19 + scrollIntoView automatico al montar el nodo.
+  // 2. El focus automatico del sheet container (tabIndex=-1).
+  // 3. El focus de un input interior (autoFocus).
+  //
+  // Para atraparlos a todos, hacemos scrollTop=0 al final de cada frame
+  // durante ~100ms con un loop que se cancela al primer tick donde el
+  // scroll cambio y volvimos a ponerlo en 0 (es decir, ya esta estable).
   useEffect(() => {
-    if (open && contentRef.current) {
-      contentRef.current.focus({ preventScroll: true });
-    }
+    if (!open) return;
+    let raf = 0;
+    let lastTop = -1;
+    let stable = 0;
+    const tick = () => {
+      const el = contentRef.current;
+      if (!el) return;
+      const top = el.scrollTop;
+      if (top !== lastTop) {
+        el.scrollTop = 0;
+        lastTop = 0;
+        stable = 0;
+      } else if (top === 0) {
+        stable += 1;
+        if (stable >= 3) return; // ~3 frames estables, cortamos.
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [open]);
 
   if (!open) return null;
