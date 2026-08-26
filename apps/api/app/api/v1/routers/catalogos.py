@@ -22,9 +22,11 @@ from app.models.enums import TipoMedicion
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
     EjercicioDetalleRead,
+    EjercicioFusionarCreate,
     EjercicioListRead,
     EjercicioRead,
     EjercicioUpdate,
+    FusionResultadoRead,
     TipoSesionRead,
     TipoTestRead,
     ZonaCorporalRead,
@@ -120,6 +122,43 @@ async def actualizar_ejercicio(
         sesion, ejercicio_id, payload.model_dump(exclude_unset=True)
     )
     return EjercicioRead.model_validate(ejercicio)
+
+
+@router.post(
+    "/ejercicios/{ejercicio_id}/fusionar",
+    response_model=FusionResultadoRead,
+    status_code=status.HTTP_200_OK,
+    summary="Fusiona origen en destino. Reasigna bloques y archiva origen.",
+)
+async def fusionar_ejercicio(
+    payload: EjercicioFusionarCreate,
+    ejercicio_id: int = Path(..., description="id del ejercicio origen"),
+    _: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> FusionResultadoRead:
+    """`ejercicio_id` (path) es el origen; `payload.destino_id` es el que se
+    queda. Reasigna los bloques reales y planeados del origen al destino en
+    una sola transaccion, y archiva el origen (no lo borra). Devuelve los
+    conteos de filas reasignadas por tabla (design #326)."""
+    return await service.fusionar_ejercicios(
+        sesion, origen_id=ejercicio_id, destino_id=payload.destino_id
+    )
+
+
+@router.delete(
+    "/ejercicios/{ejercicio_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Elimina un ejercicio. Solo si uso == 0 y no aparece en bloque_plan.",
+)
+async def eliminar_ejercicio(
+    ejercicio_id: int = Path(..., description="id del ejercicio"),
+    _: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> None:
+    """DELETE fisico: solo procede si el ejercicio no tiene bloques reales ni
+    planeados. Si los tiene, devuelve 409 con un mensaje que sugiere
+    archivarlo o fusionarlo: asi la UI puede mostrar la salida concreta."""
+    await service.eliminar_ejercicio(sesion, ejercicio_id)
 
 
 @router.get(

@@ -11,7 +11,11 @@ from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictoDeNegocioError, RecursoNoEncontradoError
+from app.core.exceptions import (
+    ConflictoDeNegocioError,
+    InvarianteDeNegocioError,
+    RecursoNoEncontradoError,
+)
 from app.core.normalizacion import normalizar_para_busqueda
 from app.core.similitud import _similitud_normalizada
 from app.models import Bloque, Ejercicio, Sesion, TipoSesion, TipoTest, ZonaCorporal
@@ -20,12 +24,17 @@ from app.repositories.catalogo import ejercicio as repo_ejercicio
 from app.repositories.catalogo import tipo_sesion as repo_tipo_sesion
 from app.repositories.catalogo import tipo_test as repo_tipo_test
 from app.repositories.catalogo import zona_corporal as repo_zona_corporal
+from app.repositories.entrenamiento import (
+    reasignar_ejercicio_en_bloques,
+    reasignar_ejercicio_en_bloques_plan,
+)
 from app.schemas.catalogo.catalogo import (
     EjercicioDetalleRead,
     EjercicioHistorialItem,
     EjercicioListItem,
     EjercicioListRead,
     EjercicioPosibleDuplicado,
+    FusionResultadoRead,
 )
 
 
@@ -297,3 +306,114 @@ async def listar_zonas_corporales(session: AsyncSession) -> list[ZonaCorporal]:
 
 async def listar_tipos_test(session: AsyncSession) -> list[TipoTest]:
     return await repo_tipo_test.listar(session)
+
+
+async def fusionar_ejercicios(
+    session: AsyncSession,
+    *,
+    origen_id: int,
+    destino_id: int,
+) -> FusionResultadoRead:
+    """Fusiona `origen_id` en `destino_id`: reasigna todos los bloques
+    (reales y planeados) del origen al destino y archiva el origen
+    (`activo=false`, no se borra).
+
+    Validaciones:
+    1. `destino_id != origen_id` (422): no se puede fusionar consigo mismo.
+    2. Ambos ejercicios existen (404 si falta cualquiera).
+    3. Mismo `tipo_medicion` (409): reasignar romperia los bloques
+       historicos (REGLAS_NEGOCIO §15).
+    4. `destino.activo == true` (409): absorber historia en un ejercicio
+       archivado es contradictorio.
+
+    Toda la operacion corre en una sola transaccion: si algo falla despues
+    del primer UPDATE, el rollback deja la base intacta.
+    """
+    if destino_id == origen_id:
+        raise InvarianteDeNegocioError(
+            "el ejercicio origen y destino no pueden ser el mismo"
+        )
+
+    origen = await repo_ejercicio.obtener_por_id(session, origen_id)
+    if origen is None:
+        raise RecursoNoEncontradoError(f"ejercicio {origen_id} no encontrado")
+    destino = await repo_ejercicio.obtener_por_id(session, destino_id)
+    if destino is None:
+        raise RecursoNoEncontradoError(f"ejercicio {destino_id} no encontrado")
+
+    if origen.tipo_medicion != destino.tipo_medicion:
+        raise ConflictoDeNegocioError(
+            f"no se puede fusionar: tipo_medicion difiere "
+            f"({origen.tipo_medicion.value} vs {destino.tipo_medicion.value})"
+        )
+
+    if not destino.activo:
+        raise ConflictoDeNegocioError(
+            f"el ejercicio destino {destino.id} esta archivado; "
+            "reactivelo antes de fusionar contra el"
+        )
+
+    # 1) UPDATE bloque SET ejercicio_id = destino WHERE ejercicio_id = origen.
+    bloques_reasignados = await reasignar_ejercicio_en_bloques(
+        session, origen_id=origen_id, destino_id=destino_id
+    )
+    # 2) UPDATE bloque_plan SET ejercicio_id = destino WHERE ejercicio_id = origen.
+    bloques_plan_reasignados = await reasignar_ejercicio_en_bloques_plan(
+        session, origen_id=origen_id, destino_id=destino_id
+    )
+    # 3) Archivar el origen (soft delete): la fila persiste, pero no aparece
+    # en el listado default. La historia del usuario queda preservada porque
+    # los bloques apuntan al destino (SPEC §2.3).
+    origen.activo = False
+    await session.flush()
+
+    await session.commit()
+    return FusionResultadoRead(
+        bloques_reasignados=bloques_reasignados,
+        bloques_plan_reasignados=bloques_plan_reasignados,
+        origen_id=origen_id,
+        destino_id=destino_id,
+    )
+
+
+async def eliminar_ejercicio(session: AsyncSession, ejercicio_id: int) -> None:
+    """Borra un ejercicio del catalogo. Solo procede si NO aparece en
+    `bloque` ni en `bloque_plan`: si hay historia asociada, devolver 409
+    con un mensaje que sugiere archivarlo (`activo=false`) o fusionarlo con
+    otro (REGLAS_NEGOCIO §15, design #326).
+
+    404 si el id no existe.
+    """
+    from sqlalchemy import delete as _delete
+
+    ejercicio = await repo_ejercicio.obtener_por_id(session, ejercicio_id)
+    if ejercicio is None:
+        raise RecursoNoEncontradoError(f"ejercicio {ejercicio_id} no encontrado")
+
+    usos = await repo_ejercicio.contar_usos(session, ejercicio_id)
+
+    # Tambien contar bloques_plan: la planificacion es uso valido y debe
+    # bloquear la eliminacion tanto como los bloques reales.
+    from sqlalchemy import func as _func
+    from sqlalchemy import select as _select
+
+    from app.models import BloquePlan
+
+    usos_plan = (
+        await session.scalar(
+            _select(_func.count())
+            .select_from(BloquePlan)
+            .where(BloquePlan.ejercicio_id == ejercicio_id)
+        )
+        or 0
+    )
+
+    if usos > 0 or usos_plan > 0:
+        total = usos + int(usos_plan)
+        raise ConflictoDeNegocioError(
+            f"No se puede eliminar: el ejercicio tiene {total} usos. "
+            "Archivá (activo=false) o fusioná con otro."
+        )
+
+    await session.execute(_delete(Ejercicio).where(Ejercicio.id == ejercicio_id))
+    await session.commit()
