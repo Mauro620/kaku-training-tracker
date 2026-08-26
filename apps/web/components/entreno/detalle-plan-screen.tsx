@@ -234,6 +234,10 @@ function BloqueCard({
         </button>
       </div>
 
+      {ejercicio.descripcion && (
+        <p className="mt-1 text-[12px] text-text-secondary">{ejercicio.descripcion}</p>
+      )}
+
       <div className="mt-1.5">
         <p className="text-[13px] text-text-secondary">{valorString}</p>
       </div>
