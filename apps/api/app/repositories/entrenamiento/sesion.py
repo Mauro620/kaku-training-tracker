@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Sesion
+from app.models import Bloque, BloquePlan, CicloSemana, Sesion, SesionPlan
 
 
 async def crear(
@@ -73,6 +73,38 @@ async def obtener_por_id(session: AsyncSession, sesion_id: uuid.UUID) -> Sesion 
             .options(selectinload(Sesion.bloques))
         ),
     )
+
+
+async def obtener_con_detalle(
+    session: AsyncSession, sesion_id: uuid.UUID
+) -> Sesion | None:
+    """Carga la sesion con todo lo que el detalle necesita serializar.
+
+    Diseño: una query principal + una query por cada nivel de coleccion
+    (`selectinload` dispara una query por coleccion, no por fila — sin
+    N+1). Los 8 round-trips maximos son los que el test de regresion
+    N+1 (`test_sesion_detalle_no_supera_8_queries`) verifica.
+
+    Niveles cargados:
+    - `bloques` + `bloque.ejercicio` (catalogo del banco).
+    - `tipo_sesion` y `partido` (FKs a una sola fila).
+    - `sesion_plan` + `bloque_plan.ejercicio` + `ciclo_semana` + `ciclo`
+      (el plan entero del que esta sesion es ejecucion).
+    """
+    stmt = (
+        select(Sesion)
+        .where(Sesion.id == sesion_id)
+        .options(
+            selectinload(Sesion.bloques).selectinload(Bloque.ejercicio),
+            selectinload(Sesion.tipo_sesion),
+            selectinload(Sesion.partido),
+            selectinload(Sesion.sesion_plan)
+            .selectinload(SesionPlan.bloques_planeados)
+            .selectinload(BloquePlan.ejercicio),
+            selectinload(Sesion.sesion_plan).selectinload(SesionPlan.ciclo_semana).selectinload(CicloSemana.ciclo),
+        )
+    )
+    return cast("Sesion | None", await session.scalar(stmt))
 
 
 async def obtener_por_sesion_plan(

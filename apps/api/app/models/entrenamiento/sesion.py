@@ -75,6 +75,13 @@ class Sesion(Base):
         back_populates="sesion", order_by="Bloque.orden", passive_deletes="all"
     )
     partido: Mapped["Partido | None"] = relationship(back_populates="sesion")
+    # `tipo_sesion` se carga via selectinload en el detalle de sesion (R8.2)
+    # para no disparar lazy-load al serializar.
+    tipo_sesion: Mapped["TipoSesion"] = relationship()
+    # Nullable + UNIQUE simultaneamente: sesiones libres tienen `sesion_plan`
+    # en None. El selectinload del detalle lo trae junto con sus bloques
+    # planeados, ejercicio y ciclo_semana.
+    sesion_plan: Mapped["SesionPlan | None"] = relationship()
 
 
 class Bloque(Base):
@@ -123,6 +130,10 @@ class Bloque(Base):
     nota: Mapped[str | None] = mapped_column(String(120))
 
     sesion: Mapped[Sesion] = relationship(back_populates="bloques")
+    # Cargado via selectinload(Sesion.bloques).selectinload(Bloque.ejercicio)
+    # en el detalle de sesion: el frontend necesita el nombre y la descripcion
+    # del ejercicio para mostrar la tecnica sin pedirlo aparte.
+    ejercicio: Mapped["Ejercicio"] = relationship()
 
 
 class Partido(Base):
