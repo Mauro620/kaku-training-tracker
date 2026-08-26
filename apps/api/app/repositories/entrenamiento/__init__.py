@@ -16,9 +16,15 @@ from app.repositories.entrenamiento.bloque import crear as crear_bloque
 from app.repositories.entrenamiento.bloque import (
     eliminar_por_sesion as eliminar_bloques_de_sesion,
 )
+from app.repositories.entrenamiento.bloque import (
+    reasignar_ejercicio as reasignar_ejercicio_en_bloques,
+)
 from app.repositories.entrenamiento.bloque_plan import crear as crear_bloque_plan
 from app.repositories.entrenamiento.bloque_plan import (
     eliminar_por_sesion_plan as eliminar_bloques_de_plan,
+)
+from app.repositories.entrenamiento.bloque_plan import (
+    reasignar_ejercicio as reasignar_ejercicio_en_bloques_plan,
 )
 from app.repositories.entrenamiento.sesion import (
     actualizar as actualizar_sesion,
@@ -44,6 +50,9 @@ from app.repositories.entrenamiento.sesion import (
 )
 from app.repositories.entrenamiento.sesion import (
     listar_ultimas as listar_ultimas_sesiones,
+)
+from app.repositories.entrenamiento.sesion import (
+    obtener_con_detalle as obtener_sesion_con_detalle,
 )
 from app.repositories.entrenamiento.sesion import (
     obtener_por_id as obtener_sesion_por_id,
@@ -124,8 +133,11 @@ __all__ = [
     "obtener_ciclo_semana_por_id",
     "obtener_ciclo_semana_por_numero",
     "obtener_ejercicio_por_nombre",
+    "obtener_sesion_con_detalle",
     "obtener_sesion_plan_por_id",
     "obtener_sesion_por_id",
     "obtener_sesion_por_plan",
+    "reasignar_ejercicio_en_bloques",
+    "reasignar_ejercicio_en_bloques_plan",
     "reemplazar_composicion",
 ]

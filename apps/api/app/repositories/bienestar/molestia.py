@@ -10,6 +10,7 @@ from typing import cast
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import Molestia
 
@@ -90,6 +91,21 @@ async def listar_por_fecha(
         select(Molestia)
         .where(Molestia.usuario_id == usuario_id, Molestia.fecha == fecha)
         .order_by(Molestia.zona_id)
+    )
+    return list(resultado.all())
+
+
+async def listar_por_usuario_y_fecha(
+    session: AsyncSession, usuario_id: uuid.UUID, fecha: date
+) -> list[Molestia]:
+    """Molestias del usuario en una fecha exacta, con la zona anidada via
+    `selectinload` para que el detalle de sesion (R8) pueda serializar el
+    nombre sin disparar N+1."""
+    resultado = await session.scalars(
+        select(Molestia)
+        .where(Molestia.usuario_id == usuario_id, Molestia.fecha == fecha)
+        .options(selectinload(Molestia.zona))
+        .order_by(Molestia.id)
     )
     return list(resultado.all())
 

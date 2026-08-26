@@ -3,6 +3,8 @@
 POST /sesiones crea una sesion con sus bloques opcionales en el mismo body.
 GET /sesiones?fecha=YYYY-MM-DD devuelve las sesiones del usuario en esa
 fecha con sus bloques via selectinload.
+GET /sesiones/{id} devuelve el detalle completo (plan + delta + bloques +
+molestias) — feature 2, R8.
 """
 
 import uuid
@@ -17,6 +19,7 @@ from app.models import Sesion, Usuario
 from app.schemas.entrenamiento.sesion import (
     BloqueSinSesionCreate,
     SesionCreate,
+    SesionDetalleRead,
     SesionRead,
     SesionUpdate,
 )
@@ -78,15 +81,17 @@ async def listar_ultimas(
 
 @router.get(
     "/{sesion_id}",
-    response_model=SesionRead,
-    summary="Detalle de una sesion, con sus bloques.",
+    response_model=SesionDetalleRead,
+    summary="Detalle de una sesion, con plan, delta, bloques y molestias.",
 )
 async def obtener_sesion(
     sesion_id: uuid.UUID,
     usuario: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
-) -> Sesion:
-    return await service.obtener_sesion(sesion, usuario.id, sesion_id)
+) -> SesionDetalleRead:
+    return await service.obtener_sesion_detalle(
+        sesion, sesion_id, usuario_id=usuario.id
+    )
 
 
 @router.put(

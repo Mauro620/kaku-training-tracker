@@ -17,8 +17,6 @@ Dos invariantes gobiernan todo lo de abajo:
 
 import importlib.resources
 import json
-import re
-import unicodedata
 import uuid
 from collections import Counter
 from datetime import timedelta
@@ -26,6 +24,7 @@ from datetime import timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvarianteDeNegocioError
+from app.core.normalizacion import normalizar_para_indice
 from app.models import Ciclo, CicloSemana, Ejercicio, SesionPlan, TipoSesion
 from app.models.enums import EstadoSesionPlan
 from app.repositories import entrenamiento as repo
@@ -173,27 +172,6 @@ async def _resolver_tipos(
     return catalogo
 
 
-_PARENESIS = re.compile(r"\([^)]*\)")
-_PORCENTAJE = re.compile(r"\b\d+(?:\.\d+)?\s*%")
-_ESPACIOS = re.compile(r"\s+")
-
-
-def _normalizar_nombre(nombre: str) -> str:
-    """Identidad difusa de un ejercicio (PLAN_IMPORT.md §6.1): minúsculas,
-    sin tildes, sin paréntesis con su contenido, sin sufijos de porcentaje y
-    espacios colapsados. Es lo que evita que un LLM que escribe
-    `Elevacion de talon` duplique el `Elevación de talón` del catálogo.
-
-    Contrapartida deliberada: "Regate (con conos)" y "Regate (sin conos)"
-    colapsan al mismo. Aceptar el duplicado es peor: el catálogo se llena de
-    basura con cada importación."""
-    texto = unicodedata.normalize("NFD", nombre.lower())
-    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
-    texto = _PARENESIS.sub(" ", texto)
-    texto = _PORCENTAJE.sub(" ", texto)
-    return _ESPACIOS.sub(" ", texto).strip()
-
-
 async def _resolver_ejercicios(
     session: AsyncSession, payload: PlanSemanalImport
 ) -> tuple[dict[str, Ejercicio], list[str], list[str]]:
@@ -213,7 +191,7 @@ async def _resolver_ejercicios(
     conflictos: list[str] = []
 
     for existente in await repo.listar_ejercicios(session):
-        index.setdefault(_normalizar_nombre(existente.nombre), existente)
+        index.setdefault(normalizar_para_indice(existente.nombre), existente)
 
     for sesion_json in payload.sesiones:
         for bloque in sesion_json.bloques:
@@ -227,7 +205,7 @@ async def _resolver_ejercicios(
                     )
                 continue
 
-            clave = _normalizar_nombre(bloque.ejercicio)
+            clave = normalizar_para_indice(bloque.ejercicio)
             ejercicio = index.get(clave)
             if ejercicio is None:
                 ejercicio = await repo.crear_ejercicio(

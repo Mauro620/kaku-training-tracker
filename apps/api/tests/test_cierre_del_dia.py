@@ -11,6 +11,7 @@ el mismo evento tres veces y verifica una sola fila".
 
 from collections.abc import AsyncGenerator
 from datetime import date as _date
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -88,18 +89,18 @@ async def test_sueno_ultimos_n_dias_devuelve_ventana(
     del mas reciente al mas viejo."""
     # 3 noches, cada una con su propia fecha de despertar (el modelo
     # es unique por (usuario_id, fecha_del_despertar)).
-    noches = [
-        ("2026-08-01", "2026-07-31T23:30:00-05:00", "2026-08-01T07:00:00-05:00"),
-        ("2026-08-02", "2026-08-01T23:30:00-05:00", "2026-08-02T07:00:00-05:00"),
-        ("2026-08-04", "2026-08-03T23:30:00-05:00", "2026-08-04T07:00:00-05:00"),
+    fechas = [
+        _date.today() - timedelta(days=12),
+        _date.today() - timedelta(days=7),
+        _date.today() - timedelta(days=3),
     ]
-    for fecha, inicio, fin in noches:
+    for fecha in fechas:
         await cliente.post(
             "/api/v1/sueno",
             json={
-                "fecha": fecha,
-                "inicio": inicio,
-                "fin": fin,
+                "fecha": fecha.isoformat(),
+                "inicio": f"{(fecha - timedelta(days=1)).isoformat()}T23:30:00-05:00",
+                "fin": f"{fecha.isoformat()}T07:00:00-05:00",
                 "celular_fuera": True,
             },
         )
@@ -111,9 +112,8 @@ async def test_sueno_ultimos_n_dias_devuelve_ventana(
     assert isinstance(cuerpo, list)
     assert len(cuerpo) == 3
     # Orden: descendente (mas reciente primero).
-    assert cuerpo[0]["fecha"] == "2026-08-04"
-    assert cuerpo[1]["fecha"] == "2026-08-02"
-    assert cuerpo[2]["fecha"] == "2026-08-01"
+    fechas_esperadas = sorted((fecha.isoformat() for fecha in fechas), reverse=True)
+    assert [item["fecha"] for item in cuerpo] == fechas_esperadas
     # Cada uno trae horas_sueno calculado por la base.
     for item in cuerpo:
         assert item["horas_sueno"] == "7.50"

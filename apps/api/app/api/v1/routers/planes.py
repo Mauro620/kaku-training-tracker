@@ -14,7 +14,11 @@ from app.schemas.entrenamiento.importacion import (
     ImportacionResultado,
     PlanSemanalImport,
 )
-from app.schemas.entrenamiento.plan import SesionPlanCreate, SesionPlanRead
+from app.schemas.entrenamiento.plan import (
+    PlanDetalleRead,
+    SesionPlanCreate,
+    SesionPlanRead,
+)
 from app.services.entrenamiento.importacion import (
     construir_export,
     importar_plan_semanal,
@@ -23,6 +27,7 @@ from app.services.entrenamiento.plan import (
     crear_sesion_plan,
     descartar_plan,
     listar_planes_de_fecha,
+    obtener_plan_detalle,
 )
 
 router = APIRouter(prefix="/planes", tags=["ciclos"])
@@ -94,6 +99,24 @@ async def exportar_recurso(
     if recurso not in EXPORT_RECURSOS:
         raise HTTPException(status_code=404, detail="Recurso no encontrado")
     return await construir_export(sesion, recurso)
+
+
+@router.get(
+    "/{plan_id}",
+    response_model=PlanDetalleRead,
+    summary="Detalle de un plan de sesión con sus bloques y ciclo.",
+    description=(
+        "Alimenta la pantalla previa a ejecutar (SPEC §3.8): el plan con su "
+        "ciclo anidado y sus bloques planeados ordenados por `orden` ASC. 404 "
+        "si el plan no existe o no es del usuario actual."
+    ),
+)
+async def obtener_plan(
+    plan_id: int = Path(..., description="id del sesion_plan"),
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> PlanDetalleRead:
+    return await obtener_plan_detalle(sesion, usuario.id, plan_id)
 
 
 @router.patch(

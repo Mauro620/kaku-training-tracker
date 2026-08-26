@@ -13,6 +13,7 @@ dependencies = [
     "asyncpg>=0.30",
     "alembic>=1.14",
     "pydantic-settings>=2.7",
+    "rapidfuzz>=3.10",
 ]
 
 [dependency-groups]

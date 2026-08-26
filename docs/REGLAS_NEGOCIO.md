@@ -376,3 +376,162 @@ importador (PLAN_IMPORT §6.1) está pensada para prevenir.
 ampliar (`POST /catalogos/ejercicios`). El universo de ejercicios de una
 rutina real es abierto; los demás catálogos son taxonomías fijas del
 negocio.
+
+---
+
+## 16. Delta plan vs real y forma del detalle
+
+Las definiciones de esta sección son las que materializan el delta
+plan-vs-real y el detalle de sesión que el SPEC del feature 2 (banco +
+detalle) introdujo como parte nueva del dominio. Conviven con §1-§15 y no
+las reemplazan: lo que ya estaba (carga, ACWR, Hooper, etc.) sigue igual.
+
+### 16.1 Delta de bloque (real − objetivo)
+
+Para cada `bloque` ejecutado que tenga un `bloque_plan` emparejado:
+
+```
+delta_campo = valor_real − valor_objetivo
+```
+
+Se calcula para `series`, `reps`, `peso_kg`, `distancia_m`, `duracion_s`.
+**Si el objetivo es NULL, el delta es NULL** — nunca 0. Un faltante no se
+sustituye por cero (mismo principio que §14).
+
+Para rangos (`reps_min` / `reps_max`):
+
+```
+si reps_min <= reps_real <= reps_max   → delta = 0
+si reps_real  > reps_max              → delta = reps_real − reps_max
+si reps_real  < reps_min              → delta = reps_real − reps_min
+```
+
+El delta se mide contra el **límite más cercano**: dentro del rango, 0.
+
+**Casos cubiertos por los tests** (referencia cruzada):
+
+| Test (`tests/test_delta_bloque.py`) | Caso |
+|---|---|
+| `test_delta_bloque_carga` | 3×8@80 contra 3×8@90 → delta.peso −10 |
+| `test_delta_reps_dentro_de_rango` | 7 reps contra rango 6-8 → 0 |
+| `test_delta_reps_sobre_rango` | 10 reps contra rango 6-8 → +2 |
+| `test_delta_reps_bajo_rango` | 5 reps contra rango 6-8 → −1 |
+| `test_delta_objetivo_nulo` | todos los objetivos NULL → todos los deltas NULL |
+
+### 16.2 Emparejamiento de bloques
+
+Un `bloque` se empareja con su `bloque_plan` por la tupla
+`(sesion_plan_id, orden)`. Consecuencias:
+
+- **Bloque extra sin plan.** El usuario agregó un ejercicio que no estaba
+  en el plan. No hay `bloque_plan` para esa tupla → su delta es NULL (todos
+  los campos), su `objetivo` es NULL en el detalle. Test:
+  `test_sesion_detalle_bloque_extra_sin_plan` y
+  `test_sesion_detalle_delta_bloque_sin_plan`.
+- **Bloque del plan no ejecutado.** El usuario omitió un ejercicio del
+  plan. La sesión real no tiene `bloque` para esa tupla → entra en
+  `bloques_no_ejecutados` del detalle con el objetivo del `bloque_plan`.
+  Test: `test_sesion_detalle_bloques_no_ejecutados` (plan con 5 bloques,
+  ejecuta 3 → 2 en la lista, ordenados por su `orden`).
+
+### 16.3 Delta de sesión
+
+A nivel de cabecera de sesión:
+
+```
+delta_duracion = duracion_min_real − duracion_min_est
+delta_rpe      = rpe_real − rpe_objetivo
+delta_carga    = carga_srpe_real − (duracion_min_est × rpe_objetivo)
+```
+
+`delta_carga` se calcula contra la **multiplicación** de los dos parámetros
+del plan, no contra un campo directo: la planilla solo lleva
+`duracion_min_est` y `rpe_objetivo` por separado. Si falta cualquiera de
+los dos, `delta_carga` es NULL. Tests:
+`test_sesion_detalle_delta_sesion_duracion`,
+`test_sesion_detalle_delta_sesion_rpe`,
+`test_sesion_detalle_delta_sesion_carga` (495 real contra 55×7=385 → +110).
+
+Si la sesión es libre (sin `sesion_plan_id`): `plan = null`, `delta = null`
+y `bloques_no_ejecutados = []`. Los bloques siguen apareciendo con
+`objetivo = null` y delta todo NULL. Test:
+`test_sesion_detalle_libre_plan_null`.
+
+### 16.4 Fusión de ejercicios
+
+Fusionar ejercicio `A` en `B` (mismo `tipo_medicion`, en otro caso 409):
+
+1. Reasignar todos los `bloque.ejercicio_id = A` a `B`.
+2. Reasignar todos los `bloque_plan.ejercicio_id = A` a `B`.
+3. Marcar `A.activo = false`.
+4. `A` no se borra: queda archivado para que el histórico siga trazable.
+
+Precondiciones:
+
+- `A.tipo_medicion == B.tipo_medicion` (si no, 409:
+  `ConflicDeNegocioError`).
+- `B.activo = true` (destino archivado, 409).
+- `A.id != B.id` (auto-fusión, 422).
+
+Tests: `test_fusion_reasigna_bloques` (conteos correctos),
+`test_fusion_tipo_distinto_falla` (carga en tiempo → 409).
+
+### 16.5 Umbral de round-trips en `GET /sesiones/{id}`
+
+`GET /sesiones/{id}` dispara **9 queries** como techo, no 3 como proponía
+la primera versión del SPEC. El conteo exacto con el shape completo del
+SPEC §3.7 (sesión con plan + bloques + ciclo + molestias) es:
+
+| # | Query | Por qué |
+|---|---|---|
+| 1 | Sesión + `tipo_sesion` + `sesion_plan` (cuando existe) | `joinedload` para FKs 1:1 |
+| 2 | `sesion.bloques` | `selectinload` (1 batch, sin N+1) |
+| 3 | `bloque.ejercicio` de cada bloque | `selectinload` anidado |
+| 4 | `sesion_plan.bloques_planeados` | `selectinload` anidado al plan |
+| 5 | `bloque_plan.ejercicio` de cada bloque planeado | `selectinload` anidado |
+| 6 | `sesion_plan.ciclo_semana` | `selectinload` anidado al plan |
+| 7 | `ciclo_semana.ciclo` | `selectinload` anidado a la semana |
+| 8 | Molestias del día | 1 query |
+| 9 | `zona` de cada molestia | `selectinload` anidado |
+
+9 SELECTs totales, todos con batch-loading. Cualquier subida por encima
+de 9 sería un N+1 nuevo (acceso por fila en vez de por colección), no un
+costo del shape.
+
+**Decisión del usuario.** El SPEC §4.2 proponía "máximo 3". El design
+elevó el techo a 9 con documentación explícita: la combinación de las 4
+colecciones (bloques, bloques_planeados, ciclo_semana+ciclo, molestias+
+zonas) más la query principal + tipo_sesion + sesion_plan llega a 9 sin
+N+1. Combinar `bloque.ejercicio` con `bloque_plan.ejercicio` exigiría un
+JOIN o subquery manual sobre la misma tabla `ejercicio`, cosa que el
+patrón `selectinload` anidado ya hace por separado sin riesgo de
+duplicación. AGENTS §3.1 prohíbe desnormalizar el modelo para bajar el
+conteo.
+
+**Test de regresión:** `test_sesion_detalle_no_supera_9_queries`
+(`tests/test_detalle_sesion.py`). Si en una iteración futura hace falta
+cargar más colecciones (por ejemplo, `partido` cuando se agregue al
+detalle), el umbral debe subir en consecuencia.
+
+**Forma del detalle.** La forma que serializa este endpoint es
+`SesionDetalleRead` (schemas/entrenamiento/sesion.py) con:
+
+- Cabecera de sesión (id, fecha, duracion_min, rpe, carga_srpe, nota,
+  registrado_en).
+- `tipo_sesion` anidado (subset de `TipoSesionRead`: id, codigo, nombre).
+- `plan` opcional (`PlanDetalleEnSesionRead`): ciclo (numero, semana,
+  fase, objetivo) + objetivos + estado + rpe_objetivo + dia_sugerido.
+  Sin `bloques_planeados` propios: ya están en `bloques_no_ejecutados`.
+- `delta` opcional (`SesionDeltaRead`): duracion_min, rpe, carga_srpe,
+  NULL si falta el objetivo.
+- `bloques`: cada uno con ejercicio anidado + objetivo (subset de
+  `BloquePlanRead`) + delta (subset con la diferencia real − objetivo).
+- `bloques_no_ejecutados`: bloques del plan que la sesión no ejecutó, con
+  su `objetivo` para que el usuario sepa qué se saltó.
+- `molestias`: zona (string con el nombre, no el id) + intensidad.
+
+La pantalla previa a ejecutar (`GET /planes/{id}`) reutiliza
+`PlanDetalleRead` (schemas/entrenamiento/plan.py) con la cabecera
+completa del plan + `ciclo` anidado + `bloques_planeados` (cada uno con su
+ejercicio). Es la vista "antes de hacer" del mismo dominio que el detalle
+de sesión expone como "después de hacer".

@@ -18,12 +18,32 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import RecursoNoEncontradoError
-from app.models import Bloque, Sesion
+from app.models import Bloque, BloquePlan, Sesion
 from app.repositories import entrenamiento as repo
+from app.repositories.bienestar import molestia as repo_molestia
 from app.schemas.entrenamiento.sesion import (
+    BloqueDeltaRead,
+    BloqueDetalleRead,
+    BloqueEjercicioEnDetalleRead,
+    BloqueNoEjecutadoRead,
+    BloqueObjetivoRead,
     BloqueSinSesionCreate,
+    MolestiaDetalleRead,
+    PlanCicloRead,
+    PlanDetalleEnSesionRead,
     SesionCreate,
+    SesionDeltaRead,
+    SesionDetalleRead,
+    SesionTipoRead,
     SesionUpdate,
+)
+from app.services.catalogo.delta import (
+    BloqueDeltaInput,
+    BloquePlanDeltaInput,
+    SesionDeltaInput,
+    SesionPlanDeltaInput,
+    delta_bloque,
+    delta_sesion,
 )
 from app.services.entrenamiento.bloque import validar_campos
 from app.services.entrenamiento.plan import resolver_estado_de_plan
@@ -144,6 +164,209 @@ async def obtener_sesion(
         # pero es de otro usuario.
         raise RecursoNoEncontradoError(f"sesion {sesion_id} no encontrada")
     return sesion
+
+
+def _armar_objetivo(bp: BloquePlan | None) -> BloqueObjetivoRead | None:
+    if bp is None:
+        return None
+    return BloqueObjetivoRead(
+        id=bp.id,
+        orden=bp.orden,
+        series=bp.series,
+        reps_min=bp.reps_min,
+        reps_max=bp.reps_max,
+        peso_objetivo_kg=bp.peso_objetivo_kg,
+        distancia_objetivo_m=bp.distancia_objetivo_m,
+        duracion_objetivo_s=bp.duracion_objetivo_s,
+        nota=bp.nota,
+    )
+
+
+def _armar_bloque_detalle(
+    bloque: Bloque, bloque_plan: BloquePlan | None
+) -> BloqueDetalleRead:
+    """Convierte un bloque real (+ opcionalmente su plan) en el shape del
+    detalle: campos del bloque + ejercicio anidado + objetivo (si lo
+    tiene) + delta contra el objetivo (todas las keys NULL si no)."""
+    ejercicio = bloque.ejercicio
+    objetivo = _armar_objetivo(bloque_plan)
+    delta_real = BloqueDeltaInput(
+        series=bloque.series,
+        reps=bloque.reps,
+        peso_kg=bloque.peso_kg,
+        distancia_m=bloque.distancia_m,
+        duracion_s=bloque.duracion_s,
+    )
+    if bloque_plan is not None:
+        delta_plan_input: BloquePlanDeltaInput | None = BloquePlanDeltaInput(
+            series=bloque_plan.series,
+            reps_min=bloque_plan.reps_min,
+            reps_max=bloque_plan.reps_max,
+            peso_objetivo_kg=bloque_plan.peso_objetivo_kg,
+            distancia_objetivo_m=bloque_plan.distancia_objetivo_m,
+            duracion_objetivo_s=bloque_plan.duracion_objetivo_s,
+        )
+    else:
+        delta_plan_input = None
+    resultado = delta_bloque(delta_real, delta_plan_input)
+    return BloqueDetalleRead(
+        id=bloque.id,
+        sesion_id=bloque.sesion_id,
+        orden=bloque.orden,
+        series=bloque.series,
+        reps=bloque.reps,
+        distancia_m=bloque.distancia_m,
+        duracion_s=bloque.duracion_s,
+        calidad=bloque.calidad,
+        peso_kg=bloque.peso_kg,
+        rpe=bloque.rpe,
+        dolor_lumbar=bloque.dolor_lumbar,
+        nota=bloque.nota,
+        ejercicio=BloqueEjercicioEnDetalleRead(
+            id=ejercicio.id,
+            nombre=ejercicio.nombre,
+            tipo_medicion=ejercicio.tipo_medicion,
+            descripcion=ejercicio.descripcion,
+            carga_lumbar=ejercicio.carga_lumbar,
+        ),
+        objetivo=objetivo,
+        delta=BloqueDeltaRead(
+            series=resultado.series,
+            reps=resultado.reps,
+            peso_kg=resultado.peso_kg,
+            distancia_m=resultado.distancia_m,
+            duracion_s=resultado.duracion_s,
+        ),
+    )
+
+
+def _armar_plan_detalle(
+    sesion_actual: Sesion,
+) -> PlanDetalleEnSesionRead | None:
+    plan = sesion_actual.sesion_plan
+    if plan is None:
+        return None
+    ciclo_detalle: PlanCicloRead | None = None
+    if plan.ciclo_semana is not None and plan.ciclo_semana.ciclo is not None:
+        ciclo = plan.ciclo_semana.ciclo
+        ciclo_detalle = PlanCicloRead(
+            numero=ciclo.numero,
+            objetivo=ciclo.objetivo,
+            semana=plan.ciclo_semana.numero,
+            fase=plan.ciclo_semana.fase.value,
+        )
+    return PlanDetalleEnSesionRead(
+        id=plan.id,
+        nombre=plan.nombre,
+        objetivo=plan.objetivo,
+        nota=plan.nota,
+        duracion_min_est=plan.duracion_min_est,
+        rpe_objetivo=plan.rpe_objetivo,
+        estado=plan.estado.value,
+        dia_sugerido=plan.dia_sugerido,
+        ciclo=ciclo_detalle,
+    )
+
+
+async def obtener_sesion_detalle(
+    session: AsyncSession,
+    sesion_id: uuid.UUID,
+    *,
+    usuario_id: uuid.UUID | None = None,
+) -> SesionDetalleRead:
+    """Construye el detalle completo de una sesion (R8, SPEC §3.7).
+
+    `usuario_id` es opcional y filtra por dueño: si se omite, devuelve la
+    sesion sin chequeo de pertenencia (uso interno entre servicios). El
+    router siempre lo pasa."""
+    sesion = await repo.obtener_sesion_con_detalle(session, sesion_id)
+    if sesion is None or (usuario_id is not None and sesion.usuario_id != usuario_id):
+        raise RecursoNoEncontradoError(f"sesion {sesion_id} no encontrada")
+    # NOTA: `carga_srpe` es columna generada y el `selectinload` principal
+    # ya la trae en el SELECT inicial (mapeada al modelo). El refresh
+    # explicito que se hace en `crear_sesion_con_bloques` /
+    # `actualizar_sesion` existe porque el `RETURNING` del INSERT/UPDATE
+    # no la incluye; acá el SELECT del detalle la cubre y no hace falta
+    # un round-trip extra.
+
+    # Molestias del mismo dia que la sesion.
+    molestias = await repo_molestia.listar_por_usuario_y_fecha(
+        session, sesion.usuario_id, sesion.fecha
+    )
+
+    # Emparejar bloques reales con bloques planeados por orden. Si el
+    # usuario agrego bloques que no estaban en el plan, quedan con
+    # `bloque_plan=None` y delta todo NULL.
+    plan = sesion.sesion_plan
+    bloques_planeados_por_orden: dict[int, BloquePlan] = (
+        {bp.orden: bp for bp in plan.bloques_planeados}
+        if plan is not None and plan.bloques_planeados
+        else {}
+    )
+    bloques_detalle = [
+        _armar_bloque_detalle(bloque, bloques_planeados_por_orden.get(bloque.orden))
+        for bloque in sorted(sesion.bloques, key=lambda b: b.orden)
+    ]
+    bloques_no_ejecutados: list[BloqueNoEjecutadoRead] = []
+    if plan is not None and plan.bloques_planeados:
+        ordenes_ejecutados = {b.orden for b in sesion.bloques}
+        for bp in plan.bloques_planeados:
+            if bp.orden not in ordenes_ejecutados:
+                bloques_no_ejecutados.append(
+                    BloqueNoEjecutadoRead(
+                        orden=bp.orden,
+                        ejercicio_id=bp.ejercicio_id,
+                        ejercicio_nombre=bp.ejercicio.nombre,
+                        objetivo=_armar_objetivo(bp),
+                    )
+                )
+
+    # Delta de sesion: solo si tiene plan (sin plan → None, no un
+    # `SesionDeltaRead` con campos NULL).
+    delta_read: SesionDeltaRead | None = None
+    if plan is not None:
+        resultado_sesion = delta_sesion(
+            real=SesionDeltaInput(
+                duracion_min=sesion.duracion_min,
+                rpe=sesion.rpe,
+                carga_srpe=sesion.carga_srpe,
+            ),
+            plan=SesionPlanDeltaInput(
+                duracion_min_est=plan.duracion_min_est,
+                rpe_objetivo=plan.rpe_objetivo,
+            ),
+        )
+        if resultado_sesion is not None:
+            delta_read = SesionDeltaRead(
+                duracion_min=resultado_sesion.duracion_min,
+                rpe=resultado_sesion.rpe,
+                carga_srpe=resultado_sesion.carga_srpe,
+            )
+
+    return SesionDetalleRead(
+        id=sesion.id,
+        usuario_id=sesion.usuario_id,
+        sesion_plan_id=sesion.sesion_plan_id,
+        fecha=sesion.fecha,
+        tipo_sesion=SesionTipoRead(
+            id=sesion.tipo_sesion.id,
+            codigo=sesion.tipo_sesion.codigo,
+            nombre=sesion.tipo_sesion.nombre,
+        ),
+        duracion_min=sesion.duracion_min,
+        rpe=sesion.rpe,
+        nota=sesion.nota,
+        carga_srpe=sesion.carga_srpe,
+        registrado_en=sesion.registrado_en,
+        plan=_armar_plan_detalle(sesion),
+        delta=delta_read,
+        bloques=bloques_detalle,
+        bloques_no_ejecutados=bloques_no_ejecutados,
+        molestias=[
+            MolestiaDetalleRead(zona=m.zona.nombre, intensidad=m.intensidad)
+            for m in molestias
+        ],
+    )
 
 
 async def actualizar_sesion(

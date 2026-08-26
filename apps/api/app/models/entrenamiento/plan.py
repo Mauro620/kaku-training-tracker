@@ -1,4 +1,5 @@
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -17,6 +18,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.enums import EstadoSesionPlan
 from app.models.types import Distancia, IntPk, Peso, UsuarioFk
+
+if TYPE_CHECKING:
+    from app.models.catalogo.catalogos import Ejercicio
+    from app.models.entrenamiento.ciclo import CicloSemana
 
 
 class SesionPlan(Base):
@@ -83,6 +88,11 @@ class SesionPlan(Base):
     bloques_planeados: Mapped[list["BloquePlan"]] = relationship(
         back_populates="sesion_plan", order_by="BloquePlan.orden"
     )
+    # Cargado via selectinload(Sesion.sesion_plan).selectinload(
+    # SesionPlan.ciclo_semana) en el detalle de sesion (R8.2). La FK a
+    # `ciclo_semana.id` es nullable: un plan creado a mano no cuelga de
+    # ciclo.
+    ciclo_semana: Mapped["CicloSemana | None"] = relationship()
 
 
 class BloquePlan(Base):
@@ -128,3 +138,6 @@ class BloquePlan(Base):
     nota: Mapped[str | None] = mapped_column(String(120))
 
     sesion_plan: Mapped[SesionPlan] = relationship(back_populates="bloques_planeados")
+    # Cargado via selectinload(SesionPlan.bloques_planeados).selectinload(
+    # BloquePlan.ejercicio) en el detalle de sesion (R8.2).
+    ejercicio: Mapped["Ejercicio"] = relationship()

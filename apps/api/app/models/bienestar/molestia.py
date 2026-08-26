@@ -1,5 +1,6 @@
 import uuid
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -11,10 +12,13 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.types import BigIntPk, UsuarioFk
+
+if TYPE_CHECKING:
+    from app.models.catalogo.catalogos import ZonaCorporal
 
 
 class Molestia(Base):
@@ -44,3 +48,7 @@ class Molestia(Base):
     intensidad: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     nota: Mapped[str | None] = mapped_column(Text)
     idempotency_key: Mapped[uuid.UUID | None] = mapped_column(Uuid, unique=True)
+    # Cargado via selectinload(Molestia.zona) en
+    # `listar_por_usuario_y_fecha` (R8.3): el detalle de sesion expone el
+    # nombre de la zona, no el id.
+    zona: Mapped["ZonaCorporal"] = relationship()

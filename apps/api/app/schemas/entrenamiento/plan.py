@@ -1,11 +1,13 @@
 import uuid
 from datetime import date
+from decimal import Decimal
 from typing import Self
 
 from pydantic import Field, model_validator
 
-from app.models.enums import EstadoSesionPlan
+from app.models.enums import EstadoSesionPlan, FaseCiclo
 from app.schemas.base import ReadBase, SchemaBase
+from app.schemas.entrenamiento.sesion import BloqueEjercicioEnDetalleRead
 from app.schemas.types import (
     DiaSemana,
     Distancia,
@@ -128,3 +130,77 @@ class BloquePlanRead(ReadBase):
 # Resuelve las forward refs.
 SesionPlanCreate.model_rebuild()
 SesionPlanRead.model_rebuild()
+
+
+# ============================================================== detalle (R9) ==.
+#
+# Schemas para `GET /planes/{id}` (SPEC §3.8): la forma de plan que consume la
+# pantalla previa a ejecutar. Es el shape completo, con sus bloques planeados
+# y su ciclo anidados — más rico que el subset `PlanDetalleEnSesionRead` que
+# cuelga del detalle de sesión (R8.1).
+
+
+class PlanCicloRead(ReadBase):
+    """Ciclo + semana del plan anidado en `PlanDetalleRead`.
+
+    `numero` y `semana` son los identificadores humanos; `fase` es la clave
+    para pintar la banda de carga del plan. Distinto del `PlanCicloRead`
+    declarado en `sesion.py`: el subset del detalle de sesión incluye
+    también `objetivo` del ciclo y no incluye `numero` ni `semana` como
+    campos separados (porque ya los conoce por contexto)."""
+
+    numero: int
+    semana: int
+    fase: FaseCiclo
+
+
+class PlanDetalleRead(ReadBase):
+    """Plan completo con su ciclo y sus bloques planeados. Salida del
+    endpoint `GET /planes/{id}` (SPEC §3.8).
+
+    El campo `bloques_planeados` ya viene ordenado por `orden` ASC (el
+    modelo `SesionPlan.bloques_planeados` lo declara). `ciclo` es opcional
+    porque la FK a `ciclo_semana.id` es nullable: un plan creado a mano
+    puede no colgar de ningún ciclo.
+    """
+
+    id: int
+    usuario_id: uuid.UUID
+    ciclo_semana_id: int | None
+    ciclo: PlanCicloRead | None
+    fecha_prevista: date | None
+    dia_sugerido: int | None
+    tipo_sesion_id: int
+    objetivo: str | None
+    duracion_min_est: int | None
+    rpe_objetivo: int | None
+    estado: EstadoSesionPlan
+    clave_import: str | None
+    nombre: str | None
+    nota: str | None
+    bloques_planeados: list["BloquePlanDetalleRead"] = Field(default_factory=list)
+
+
+class BloquePlanDetalleRead(ReadBase):
+    """Cada bloque planeado con su ejercicio anidado.
+
+    Reusa `BloqueEjercicioEnDetalleRead` (subset de `EjercicioRead` ya
+    introducido en R8.1) en vez de declarar un schema propio: el detalle
+    de plan y el detalle de sesión exponen la misma forma de ejercicio.
+    """
+
+    id: int
+    sesion_plan_id: int
+    orden: int
+    series: int | None
+    reps_min: int | None
+    reps_max: int | None
+    peso_objetivo_kg: Decimal | None
+    distancia_objetivo_m: Decimal | None
+    duracion_objetivo_s: int | None
+    nota: str | None
+    ejercicio: BloqueEjercicioEnDetalleRead
+
+
+# Resuelve la forward ref de PlanDetalleRead.bloques_planeados.
+PlanDetalleRead.model_rebuild()

@@ -1,6 +1,6 @@
 """Catálogos sembrados. Agregar una fila es un seed, nunca una migración."""
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, Enum, ForeignKey, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -44,6 +44,13 @@ class Ejercicio(Base):
     # queda guardada: buscar la tecnica en el momento es fricción en la cancha,
     # y el registro diario no puede pasar de 2 minutos (AGENTS.md §1).
     descripcion: Mapped[str | None] = mapped_column(Text)
+    # Feature 2: filtro del selector. El endpoint de fusion lo pone en false
+    # al absorber un duplicado; el listado lo filtra por default. La historia
+    # del usuario no se pierde porque `bloque.ejercicio_id` sigue apuntando
+    # al original (ver SPEC §2.3).
+    activo: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
 
 
 class ZonaCorporal(Base):

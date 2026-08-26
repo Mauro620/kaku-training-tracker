@@ -8,7 +8,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Ciclo, CicloSemana, SesionPlan
+from app.models import BloquePlan, Ciclo, CicloSemana, SesionPlan
 from app.models.enums import EstadoSesionPlan
 
 
@@ -94,6 +94,31 @@ async def obtener_por_id(session: AsyncSession, plan_id: int) -> SesionPlan | No
     return cast(
         "SesionPlan | None",
         await session.scalar(select(SesionPlan).where(SesionPlan.id == plan_id)),
+    )
+
+
+async def obtener_con_detalle(session: AsyncSession, plan_id: int) -> SesionPlan | None:
+    """Plan + `bloques_planeados` (con su `ejercicio` anidado) + `ciclo_semana`
+    + `ciclo` de esa semana. Sin `ciclo_semana_id` la rama queda None sin
+    disparar queries adicionales (selectinload de relaciones nullable es
+    seguro: hace LEFT JOIN y no rompe si no hay fila).
+
+    Usado por `obtener_plan_detalle` (R9.3) para evitar N+1 al serializar
+    el detalle de plan. Distinto de `obtener_con_detalle` de `sesion.py`:
+    ese arranca de `Sesion` y carga `sesion_plan` como un nivel más; este
+    arranca de `SesionPlan` y carga sus propias colecciones."""
+    return cast(
+        "SesionPlan | None",
+        await session.scalar(
+            select(SesionPlan)
+            .where(SesionPlan.id == plan_id)
+            .options(
+                selectinload(SesionPlan.bloques_planeados).selectinload(
+                    BloquePlan.ejercicio
+                ),
+                selectinload(SesionPlan.ciclo_semana).selectinload(CicloSemana.ciclo),
+            )
+        ),
     )
 
 
