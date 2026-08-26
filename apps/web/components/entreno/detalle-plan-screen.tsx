@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BentoCard } from "@/components/ui/bento-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DetalleEjercicioSheet } from "@/components/entreno/detalle-ejercicio-sheet";
+import { FusionEjercicioDialog } from "@/components/entreno/fusion-ejercicio-dialog";
 import {
   usePlanDetalle,
   useTiposSesion,
@@ -62,10 +64,22 @@ export function DetallePlanScreen({ planId }: Props) {
 
 function DetallePlanContent({ plan }: { plan: PlanDetalleRead }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const tipos = useTiposSesion();
   const tipoNombre = tipos.data?.find((t) => t.id === plan.tipo_sesion_id)?.nombre ?? "Plan";
 
   const [ejercicioSheetOpen, setEjercicioSheetOpen] = useState<number | null>(null);
+  const [fusionOrigenId, setFusionOrigenId] = useState<number | null>(null);
+
+  const handleFusionarClick = (origenId: number) => {
+    setEjercicioSheetOpen(null);
+    setFusionOrigenId(origenId);
+  };
+
+  const handleFusionConfirm = async (_destinoId: number) => {
+    await queryClient.invalidateQueries({ queryKey: ["planes"] });
+    setFusionOrigenId(null);
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-32">
@@ -154,14 +168,23 @@ function DetallePlanContent({ plan }: { plan: PlanDetalleRead }) {
         )}
       </div>
 
-      {ejercicioSheetOpen && (
+      {/* Sheet de detalle de ejercicio */}
+      {ejercicioSheetOpen !== null && (
         <DetalleEjercicioSheet
           ejercicioId={ejercicioSheetOpen}
           open={true}
           onClose={() => setEjercicioSheetOpen(null)}
-          onFusionarClick={(origenId) => {
-            console.log("Fusion click desde detalle-plan:", origenId);
-          }}
+          onFusionarClick={handleFusionarClick}
+        />
+      )}
+
+      {/* Dialog de fusion */}
+      {fusionOrigenId !== null && (
+        <FusionEjercicioDialog
+          origenId={fusionOrigenId}
+          open={true}
+          onClose={() => setFusionOrigenId(null)}
+          onConfirm={handleFusionConfirm}
         />
       )}
     </div>

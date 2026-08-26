@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BentoCard } from "@/components/ui/bento-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DetalleEjercicioSheet } from "@/components/entreno/detalle-ejercicio-sheet";
+import { FusionEjercicioDialog } from "@/components/entreno/fusion-ejercicio-dialog";
 import {
   useSesion,
   type SesionDetalleRead,
@@ -61,9 +63,24 @@ export function DetalleSesionScreen({ sesionId }: Props) {
 
 function DetalleSesionContent({ sesion }: { sesion: SesionDetalleRead }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const plan = sesion.plan;
 
+  // Estado para el sheet: null = cerrado, number = ejercicioId abierto
   const [ejercicioSheetOpen, setEjercicioSheetOpen] = useState<number | null>(null);
+  // Estado para el dialog de fusion: null = cerrado, number = origenId abierto
+  const [fusionOrigenId, setFusionOrigenId] = useState<number | null>(null);
+
+  const handleFusionarClick = (origenId: number) => {
+    setEjercicioSheetOpen(null); // cerrar sheet
+    setFusionOrigenId(origenId); // abrir dialog con este origenId
+  };
+
+  const handleFusionConfirm = async (_destinoId: number) => {
+    // Invalidar la query de sesion para que se recargue con los datos actualizados
+    await queryClient.invalidateQueries({ queryKey: ["sesion"] });
+    setFusionOrigenId(null);
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-32">
@@ -145,15 +162,22 @@ function DetalleSesionContent({ sesion }: { sesion: SesionDetalleRead }) {
         <p className="mb-3 text-[11px] font-normal tracking-widest uppercase text-text-secondary">
           Bloques
         </p>
-        <div className="flex flex-col gap-2">
-          {sesion.bloques.map((bloque) => (
-            <BloqueCard
-              key={bloque.id}
-              bloque={bloque}
-              onVerEjercicio={() => setEjercicioSheetOpen(bloque.ejercicio.id)}
-            />
-          ))}
-        </div>
+        {sesion.bloques.length === 0 && !plan ? (
+          <EmptyState
+            title="Sesion sin bloques"
+            description="No se registraron bloques en esta sesion."
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {sesion.bloques.map((bloque) => (
+              <BloqueCard
+                key={bloque.id}
+                bloque={bloque}
+                onVerEjercicio={() => setEjercicioSheetOpen(bloque.ejercicio.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Bloques no ejecutados */}
@@ -195,14 +219,23 @@ function DetalleSesionContent({ sesion }: { sesion: SesionDetalleRead }) {
         </div>
       )}
 
-      {ejercicioSheetOpen && (
+      {/* Sheet de detalle de ejercicio */}
+      {ejercicioSheetOpen !== null && (
         <DetalleEjercicioSheet
           ejercicioId={ejercicioSheetOpen}
           open={true}
           onClose={() => setEjercicioSheetOpen(null)}
-          onFusionarClick={(origenId) => {
-            console.log("Fusion click desde detalle-sesion:", origenId);
-          }}
+          onFusionarClick={handleFusionarClick}
+        />
+      )}
+
+      {/* Dialog de fusion */}
+      {fusionOrigenId !== null && (
+        <FusionEjercicioDialog
+          origenId={fusionOrigenId}
+          open={true}
+          onClose={() => setFusionOrigenId(null)}
+          onConfirm={handleFusionConfirm}
         />
       )}
     </div>
