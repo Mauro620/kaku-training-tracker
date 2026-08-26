@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import { CicloActivoCard } from "@/components/entreno/ciclo-activo-card";
@@ -8,7 +9,6 @@ import { PlanDeHoyCard } from "@/components/entreno/plan-de-hoy-card";
 import { RestoDeLaSemana } from "@/components/entreno/resto-de-la-semana";
 import { HistoricoSesiones } from "@/components/entreno/historico-sesiones";
 import { SesionForm } from "@/components/entreno/sesion-form";
-import { SesionDetalle } from "@/components/entreno/sesion-detalle";
 import { MolestiaForm } from "@/components/entreno/molestia-form";
 import { useFechaDeRegistro } from "@/lib/fecha";
 import { diaDeLaSemana, useSemanaActual } from "@/lib/semana";
@@ -32,6 +32,7 @@ import {
  * comparando esa fecha contra `dia_sugerido`.
  */
 export function EntrenoScreen() {
+  const router = useRouter();
   const fecha = useFechaDeRegistro();
   const molestias = useMolestiasDeFecha(fecha);
   const planesDeHoy = usePlanesDeFecha(fecha);
@@ -42,10 +43,13 @@ export function EntrenoScreen() {
     plan: SesionPlan | null;
     nonce: number;
   } | null>(null);
-  const [sesionAbierta, setSesionAbierta] = useState<string | null>(null);
   const [molestiaAbierta, setMolestiaAbierta] = useState(false);
 
   const diaDeHoy = semana.ciclo ? diaDeLaSemana(semana.ciclo.fecha_inicio, fecha) : null;
+
+  const handleVerSesion = (sesionId: string) => {
+    router.push(`/entreno/sesiones/${sesionId}`);
+  };
 
   return (
     <div className="flex flex-col gap-4 pb-32">
@@ -56,14 +60,14 @@ export function EntrenoScreen() {
         sesionesDeHoy={sesionesDeHoy.data ?? []}
         planesDeLaSemana={semana.planes}
         onEmpezar={(plan) => setPedido({ plan, nonce: Date.now() })}
-        onVerSesion={setSesionAbierta}
+        onVerSesion={handleVerSesion}
       />
 
       <RestoDeLaSemana planes={semana.planes} diaDeHoy={diaDeHoy} />
 
       <SesionForm fecha={fecha} planes={planesDeHoy.data ?? []} pedido={pedido} />
 
-      <HistoricoSesiones onVerSesion={setSesionAbierta} />
+      <HistoricoSesiones onVerSesion={handleVerSesion} />
 
       {/* Registrar una molestia pasa pocas veces; no justifica un tercio de
           la pantalla con 13 chips siempre visibles. */}
@@ -80,13 +84,6 @@ export function EntrenoScreen() {
             Molestia
           </button>
         </BentoCard>
-      )}
-
-      {sesionAbierta && (
-        <SesionDetalle
-          sesionId={sesionAbierta}
-          onCerrar={() => setSesionAbierta(null)}
-        />
       )}
     </div>
   );
