@@ -753,6 +753,280 @@ async def test_obtener_detalle_ejercicio_404_si_no_existe(
         await service.obtener_detalle_ejercicio(sesion, 99999)
 
 
+# --------------------------------------------- router R6.5 ---
+
+
+async def test_obtener_detalle_ejercicio_via_endpoint_devuelve_404(
+    cliente: AsyncClient,
+) -> None:
+    """El endpoint tambien devuelve 404 cuando el id no existe."""
+    respuesta = await cliente.get("/api/v1/catalogos/ejercicios/99999")
+    assert respuesta.status_code == 404
+
+
+async def test_obtener_detalle_ejercicio_via_endpoint_401_sin_token() -> None:
+    """Sin token JWT el endpoint devuelve 401. `get_usuario_actual` rechaza
+    requests sin credenciales."""
+    from httpx import ASGITransport
+    from httpx import AsyncClient as _AsyncClient
+
+    from app.main import app as _app
+
+    transport = ASGITransport(app=_app)
+    async with _AsyncClient(transport=transport, base_url="http://test") as sin_auth:
+        respuesta = await sin_auth.get("/api/v1/catalogos/ejercicios/1")
+    assert respuesta.status_code == 401
+
+
+async def test_listar_ejercicios_filtrado_via_endpoint(
+    cliente: AsyncClient,
+) -> None:
+    """El endpoint GET /catalogos/ejercicios devuelve el envelope
+    `EjercicioListRead` con `items` y `total`."""
+    respuesta = await cliente.get("/api/v1/catalogos/ejercicios")
+    assert respuesta.status_code == 200, respuesta.text
+    cuerpo = respuesta.json()
+    assert "items" in cuerpo
+    assert "total" in cuerpo
+    assert cuerpo["total"] == 29
+    assert len(cuerpo["items"]) == 29
+    item = cuerpo["items"][0]
+    assert "usos" in item
+    assert "ultima_vez" in item
+    assert "activo" in item
+
+
+async def test_listar_ejercicios_filtrado_via_endpoint_q_con_acentos(
+    cliente: AsyncClient,
+) -> None:
+    """`?q=elevacion` y `?q=elevación` matchean el mismo ejercicio via el
+    endpoint. La normalizacion vive en el service."""
+    sin = await cliente.get("/api/v1/catalogos/ejercicios", params={"q": "elevacion"})
+    con = await cliente.get("/api/v1/catalogos/ejercicios", params={"q": "elevación"})
+    assert sin.status_code == 200
+    assert con.status_code == 200
+    assert sin.json()["total"] == con.json()["total"] >= 1
+
+
+async def test_listar_ejercicios_filtrado_via_endpoint_tipo_medicion(
+    cliente: AsyncClient,
+) -> None:
+    """`?tipo_medicion=carga` filtra via el endpoint."""
+    respuesta = await cliente.get(
+        "/api/v1/catalogos/ejercicios", params={"tipo_medicion": "carga"}
+    )
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["total"] > 0
+    assert all(item["tipo_medicion"] == "carga" for item in cuerpo["items"])
+
+
+async def test_listar_ejercicios_filtrado_via_endpoint_orden_uso(
+    cliente: AsyncClient,
+) -> None:
+    """`?orden=uso` es aceptado por el endpoint sin 422."""
+    respuesta = await cliente.get(
+        "/api/v1/catalogos/ejercicios", params={"orden": "uso"}
+    )
+    assert respuesta.status_code == 200
+
+
+async def test_obtener_detalle_ejercicio_via_endpoint_devuelve_historial_y_duplicados(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """El endpoint GET /catalogos/ejercicios/{id} devuelve el detalle completo."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    usuario_id, tipo_sesion_id = await _ids_base(sesion)
+    await _crear_sesion_con_bloques(
+        sesion, usuario_id, tipo_sesion_id, pallof.id, fecha=date(2026, 8, 10)
+    )
+
+    respuesta = await cliente.get(f"/api/v1/catalogos/ejercicios/{pallof.id}")
+    assert respuesta.status_code == 200, respuesta.text
+    cuerpo = respuesta.json()
+    assert cuerpo["id"] == pallof.id
+    assert cuerpo["nombre"] == "Pallof press"
+    assert "historial" in cuerpo
+    assert "posibles_duplicados" in cuerpo
+    assert len(cuerpo["historial"]) == 1
+    assert cuerpo["historial"][0]["fecha"] == "2026-08-10"
+
+
+# ------------------------- POST /catalogos/ejercicios (R6.5) ---
+
+
+async def test_crear_ejercicio_exige_tipo_medicion(cliente: AsyncClient) -> None:
+    """POST sin tipo_medicion devuelve 422."""
+    respuesta = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Nuevo ejercicio"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_crear_ejercicio_con_patron_y_carga_lumbar(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """POST con patron + carga_lumbar los persiste."""
+    respuesta = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={
+            "nombre": "Pallof press con banda",
+            "tipo_medicion": "carga",
+            "patron": "core_antirotacion",
+            "carga_lumbar": "baja",
+        },
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    cuerpo = respuesta.json()
+    assert cuerpo["nombre"] == "Pallof press con banda"
+    assert cuerpo["patron"] == "core_antirotacion"
+    assert cuerpo["carga_lumbar"] == "baja"
+    assert cuerpo["tipo_medicion"] == "carga"
+
+
+async def test_crear_ejercicio_nombre_duplicado_409(
+    cliente: AsyncClient,
+) -> None:
+    """POST con un nombre que ya existe (normalizado) devuelve 409."""
+    primero = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "Pallof press X", "tipo_medicion": "carga"},
+    )
+    assert primero.status_code == 200
+
+    segundo = await cliente.post(
+        "/api/v1/catalogos/ejercicios",
+        json={"nombre": "pallof PRESS x", "tipo_medicion": "carga"},
+    )
+    assert segundo.status_code == 409
+
+
+# ------------------------- PATCH /catalogos/ejercicios/{id} ---
+
+
+async def test_patch_ejercicio_acepta_patron_carga_lumbar_activo(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """PATCH actualiza los campos nuevos (patron, carga_lumbar, activo)."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{pallof.id}",
+        json={"patron": "core_pasada", "carga_lumbar": "alta", "activo": False},
+    )
+    assert respuesta.status_code == 200, respuesta.text
+    cuerpo = respuesta.json()
+    assert cuerpo["patron"] == "core_pasada"
+    assert cuerpo["carga_lumbar"] == "alta"
+    assert cuerpo["activo"] is False
+
+
+async def test_patch_ejercicio_rechaza_tipo_medicion_422(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """PATCH con `tipo_medicion` devuelve 422 (Pydantic extra=forbid)."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{pallof.id}",
+        json={"tipo_medicion": "carga"},
+    )
+    assert respuesta.status_code == 422
+
+
+async def test_patch_ejercicio_nombre_duplicado_normalizado_409(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """PATCH con un nombre que colisiona con otro activo (normalizado)
+    devuelve 409, no 200 silencioso."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{pallof.id}",
+        json={"nombre": "HIP THRUST"},
+    )
+    assert respuesta.status_code == 409
+
+
+async def test_patch_ejercicio_parcial_no_toca_omitidos(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """PATCH con un solo campo no toca los demas."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    patron_inicial = pallof.patron
+    activo_inicial = pallof.activo
+
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{pallof.id}",
+        json={"descripcion": "Solo cambia descripcion"},
+    )
+    assert respuesta.status_code == 200
+    await sesion.refresh(pallof)
+    assert pallof.descripcion == "Solo cambia descripcion"
+    assert pallof.patron == patron_inicial
+    assert pallof.activo is activo_inicial
+
+
+async def test_patch_ejercicio_descripcion_vacia_pone_null(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    """PATCH con descripcion='' la traduce a NULL en la base."""
+    pallof = await sesion.scalar(
+        select(Ejercicio).where(Ejercicio.nombre == "Pallof press")
+    )
+    assert pallof is not None
+    pallof.descripcion = "Algo que estaba"
+    await sesion.flush()
+
+    respuesta = await cliente.patch(
+        f"/api/v1/catalogos/ejercicios/{pallof.id}",
+        json={"descripcion": ""},
+    )
+    assert respuesta.status_code == 200
+    await sesion.refresh(pallof)
+    assert pallof.descripcion is None
+
+
+async def test_patch_ejercicio_404_si_no_existe(cliente: AsyncClient) -> None:
+    respuesta = await cliente.patch(
+        "/api/v1/catalogos/ejercicios/99999",
+        json={"descripcion": "nada"},
+    )
+    assert respuesta.status_code == 404
+
+
+async def test_patch_ejercicio_401_sin_token() -> None:
+    """Sin token JWT el endpoint PATCH devuelve 401."""
+    from httpx import ASGITransport
+    from httpx import AsyncClient as _AsyncClient
+
+    from app.main import app as _app
+
+    transport = ASGITransport(app=_app)
+    async with _AsyncClient(transport=transport, base_url="http://test") as sin_auth:
+        respuesta = await sin_auth.patch(
+            "/api/v1/catalogos/ejercicios/1",
+            json={"descripcion": "x"},
+        )
+    assert respuesta.status_code == 401
+
+
 if __name__ == "__main__":
     # Permite correr este archivo aislado: `pytest tests/test_banco_ejercicios.py`.
     pytest.main([__file__, "-q"])

@@ -10,14 +10,19 @@ valores, lo que rompe cuando el seed agrega uno nuevo.
 inline, el universo de ejercicios de una rutina real es abierto.
 """
 
-from fastapi import APIRouter, Depends, Path, status
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_usuario_actual
 from app.db.session import get_session
-from app.models import Ejercicio, TipoSesion, TipoTest, Usuario, ZonaCorporal
+from app.models import TipoSesion, TipoTest, Usuario, ZonaCorporal
+from app.models.enums import TipoMedicion
 from app.schemas.catalogo.catalogo import (
     EjercicioCreate,
+    EjercicioDetalleRead,
+    EjercicioListRead,
     EjercicioRead,
     EjercicioUpdate,
     TipoSesionRead,
@@ -43,14 +48,39 @@ async def listar_tipos_sesion(
 
 @router.get(
     "/ejercicios",
-    response_model=list[EjercicioRead],
-    summary="Lista los ejercicios sembrados.",
+    response_model=EjercicioListRead,
+    summary="Lista los ejercicios con busqueda, filtros y orden.",
 )
 async def listar_ejercicios(
+    q: str | None = Query(default=None, description="busca en nombre y descripcion"),
+    tipo_medicion: TipoMedicion | None = Query(default=None),
+    tipo_sesion_id: int | None = Query(default=None),
+    activo: bool = Query(default=True, description="false lista los archivados"),
+    orden: Literal["nombre", "uso", "reciente"] = Query(default="nombre"),
     _: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
-) -> list[Ejercicio]:
-    return await service.listar_ejercicios(sesion)
+) -> EjercicioListRead:
+    return await service.listar_ejercicios_filtrado(
+        sesion,
+        q=q,
+        tipo_medicion=tipo_medicion,
+        tipo_sesion_id=tipo_sesion_id,
+        activo=activo,
+        orden=orden,
+    )
+
+
+@router.get(
+    "/ejercicios/{ejercicio_id}",
+    response_model=EjercicioDetalleRead,
+    summary="Detalle del ejercicio: datos + historial + duplicados.",
+)
+async def obtener_detalle_ejercicio(
+    ejercicio_id: int = Path(..., description="id del ejercicio"),
+    _: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> EjercicioDetalleRead:
+    return await service.obtener_detalle_ejercicio(sesion, ejercicio_id)
 
 
 @router.post(
@@ -63,31 +93,33 @@ async def crear_ejercicio(
     payload: EjercicioCreate,
     _: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
-) -> Ejercicio:
-    return await service.crear_ejercicio(
-        sesion, payload.nombre, payload.tipo_medicion, payload.descripcion
+) -> EjercicioRead:
+    """`model_dump(exclude_unset=True)` para que el service sepa qué campos
+    vinieron en el body y cuáles no: el service aplica solo los cambios."""
+    ejercicio = await service.crear_ejercicio(
+        sesion, payload.model_dump(exclude_unset=True)
     )
+    return EjercicioRead.model_validate(ejercicio)
 
 
 @router.patch(
     "/ejercicios/{ejercicio_id}",
     response_model=EjercicioRead,
-    summary="Edita nombre y descripcion. tipo_medicion NO es editable.",
+    summary="Edita ejercicio. tipo_medicion NO es editable (REGLAS_NEGOCIO §15).",
 )
 async def actualizar_ejercicio(
     payload: EjercicioUpdate,
     ejercicio_id: int = Path(..., description="id del ejercicio"),
     _: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
-) -> Ejercicio:
-    """`tipo_medicion` queda afuera del payload: cambiarlo invalidaria los
-    bloques historicos, que se midieron con el anterior (REGLAS_NEGOCIO §15)."""
-    return await service.actualizar_ejercicio(
-        sesion,
-        ejercicio_id,
-        nombre=payload.nombre,
-        descripcion=payload.descripcion,
+) -> EjercicioRead:
+    """`tipo_medicion` queda afuera del payload (extra=forbid en el schema):
+    cambiarlo invalidaria los bloques historicos (REGLAS_NEGOCIO §15).
+    `descripcion=""` se traduce a None en el service."""
+    ejercicio = await service.actualizar_ejercicio(
+        sesion, ejercicio_id, payload.model_dump(exclude_unset=True)
     )
+    return EjercicioRead.model_validate(ejercicio)
 
 
 @router.get(
