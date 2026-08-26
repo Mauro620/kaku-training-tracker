@@ -40,11 +40,13 @@ export function DetalleEjercicioSheet({
   const actualizar = useActualizarEjercicio(ejercicioId ?? 0);
   const eliminar = useEliminarEjercicio(ejercicioId ?? 0);
 
-  // Estado local para edicion inline de descripcion
+  // Estado local para edicion inline de descripcion y nombre
   const [editandoDescripcion, setEditandoDescripcion] = useState(false);
   const [descripcionValue, setDescripcionValue] = useState("");
+  const [editandoNombre, setEditandoNombre] = useState(false);
+  const [nombreValue, setNombreValue] = useState("");
 
-  // Sincronizar descripcion cuando llega un ejercicio distinto al actual
+  // Sincronizar campos cuando llega un ejercicio distinto al actual
   // Solo re-sincronizamos cuando cambia el id del ejercicio; cambios en otros
   // campos no deben pisar lo que el usuario esta editando.
   const ejercicioIdActual = ejercicio?.id;
@@ -52,6 +54,8 @@ export function DetalleEjercicioSheet({
     if (ejercicio) {
       setDescripcionValue(ejercicio.descripcion ?? "");
       setEditandoDescripcion(false);
+      setNombreValue(ejercicio.nombre ?? "");
+      setEditandoNombre(false);
     }
     // ejercicio se lee dentro pero queremos que reaccione solo al id.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,7 +66,7 @@ export function DetalleEjercicioSheet({
   // Handlers
   const handleGuardarDescripcion = async () => {
     if (!ejercicioId) return;
-    
+
     const valor = descripcionValue.trim();
     await actualizar.mutateAsync({
       descripcion: valor === "" ? null : valor,
@@ -73,6 +77,23 @@ export function DetalleEjercicioSheet({
   const handleCancelarEdicion = () => {
     setDescripcionValue(ejercicio?.descripcion ?? "");
     setEditandoDescripcion(false);
+  };
+
+  const handleGuardarNombre = async () => {
+    if (!ejercicioId) return;
+    const valor = nombreValue.trim();
+    if (valor === "" || valor === ejercicio?.nombre) {
+      setEditandoNombre(false);
+      setNombreValue(ejercicio?.nombre ?? "");
+      return;
+    }
+    await actualizar.mutateAsync({ nombre: valor });
+    setEditandoNombre(false);
+  };
+
+  const handleCancelarNombre = () => {
+    setNombreValue(ejercicio?.nombre ?? "");
+    setEditandoNombre(false);
   };
 
   const handleArchivar = async () => {
@@ -97,6 +118,11 @@ export function DetalleEjercicioSheet({
   };
 
   const accionesMenu = [
+    {
+      label: "Editar nombre",
+      onClick: () => setEditandoNombre(true),
+      icon: <Pencil className="h-4 w-4" />,
+    },
     {
       label: "Editar descripcion",
       onClick: () => setEditandoDescripcion(true),
@@ -179,8 +205,60 @@ export function DetalleEjercicioSheet({
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={ejercicio.nombre}>
+    <Sheet open={open} onClose={onClose}>
       <div className="space-y-6">
+        {/* Nombre editable inline */}
+        <section>
+          {editandoNombre ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={nombreValue}
+                onChange={(e) => setNombreValue(e.target.value)}
+                placeholder="Nombre del ejercicio"
+                autoFocus
+                maxLength={80}
+                className="w-full rounded-xl border border-border-subtle bg-surface-primary px-3 py-2 text-[18px] font-semibold text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleGuardarNombre}
+                  disabled={actualizar.isPending}
+                  className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-bg transition hover:bg-accent/90 disabled:opacity-50"
+                >
+                  {actualizar.isPending ? "Guardando..." : "Guardar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelarNombre}
+                  className="rounded-full bg-surface-secondary px-4 py-2 text-[13px] font-medium text-text-secondary transition hover:bg-surface-secondary/80"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-[20px] font-semibold text-text-primary">
+                {ejercicio.nombre}
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setNombreValue(ejercicio.nombre ?? "");
+                  setEditandoNombre(true);
+                }}
+                aria-label="Editar nombre"
+                className="flex items-center gap-1 text-[12px] font-medium text-text-secondary transition hover:text-text-primary"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Editar
+              </button>
+            </div>
+          )}
+        </section>
+
         {/* Header de chips */}
         <div className="flex flex-wrap gap-2">
           <span
