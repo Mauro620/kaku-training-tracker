@@ -81,7 +81,7 @@ def test_schema_plan_detalle_incluye_ciclo_y_bloques_planeados() -> None:
     opcional) + `bloques_planeados` (lista). Su forma es la del endpoint
     `GET /planes/{id}` (SPEC §3.8): sin `usuario_id` ni `sesion_id`
     intermedio, con la info que ve el usuario antes de ejecutar la sesion."""
-    from app.schemas.entrenamiento.plan import BloquePlanDetalleRead, PlanDetalleRead
+    from app.schemas.entrenamiento.plan import PlanDetalleRead
 
     plan = PlanDetalleRead(
         id=7,

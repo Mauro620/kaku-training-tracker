@@ -97,9 +97,7 @@ async def obtener_por_id(session: AsyncSession, plan_id: int) -> SesionPlan | No
     )
 
 
-async def obtener_con_detalle(
-    session: AsyncSession, plan_id: int
-) -> SesionPlan | None:
+async def obtener_con_detalle(session: AsyncSession, plan_id: int) -> SesionPlan | None:
     """Plan + `bloques_planeados` (con su `ejercicio` anidado) + `ciclo_semana`
     + `ciclo` de esa semana. Sin `ciclo_semana_id` la rama queda None sin
     disparar queries adicionales (selectinload de relaciones nullable es
@@ -118,9 +116,7 @@ async def obtener_con_detalle(
                 selectinload(SesionPlan.bloques_planeados).selectinload(
                     BloquePlan.ejercicio
                 ),
-                selectinload(SesionPlan.ciclo_semana).selectinload(
-                    CicloSemana.ciclo
-                ),
+                selectinload(SesionPlan.ciclo_semana).selectinload(CicloSemana.ciclo),
             )
         ),
     )
