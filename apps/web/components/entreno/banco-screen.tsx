@@ -51,7 +51,7 @@ export function BancoScreen() {
   }, [q]);
 
   // Hook de lista de ejercicios
-  const { data, isLoading } = useEjerciciosList(
+  const { data, isLoading, error, refetch } = useEjerciciosList(
     qDebounce || null,
     tiposSeleccionados.length > 0 ? tiposSeleccionados[0] : null,
     mostrarArchivados ? undefined : true, // si false, muestra solo activos; si undefined, muestra todos
@@ -108,6 +108,20 @@ export function BancoScreen() {
           </div>
         ))}
       </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <EmptyState
+        title="Error al cargar el banco"
+        description="No se pudo obtener la lista de ejercicios."
+        action={{
+          label: "Reintentar",
+          onClick: () => refetch(),
+        }}
+      />
     );
   }
 
