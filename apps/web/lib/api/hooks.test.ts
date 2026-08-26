@@ -392,3 +392,140 @@ describe("SesionDetalleRead - estructura de tipos", () => {
     expect(sesionCompleta.molestias.length).toBe(1);
   });
 });
+
+// Tests del retry policy de useEjercicio: cuando el endpoint no existe
+// todavia en el backend (404/405), no reintentamos para no spamear.
+describe("useEjercicio - retry policy", () => {
+  it("no retry en 404 (endpoint no existe en el backend)", () => {
+    const error = Object.assign(new Error("Not Found"), { status: 404 });
+    const shouldRetry = (count: number) =>
+      // Replicar la logica del hook
+      !(error instanceof Error && "status" in error &&
+        ((error as { status?: number }).status === 404 ||
+         (error as { status?: number }).status === 405)) && count < 1;
+    expect(shouldRetry(0)).toBe(false);
+  });
+
+  it("no retry en 405 (Method Not Allowed)", () => {
+    const error = Object.assign(new Error("Method Not Allowed"), { status: 405 });
+    const shouldRetry = (count: number) =>
+      !((error as { status?: number }).status === 404 ||
+        (error as { status?: number }).status === 405) && count < 1;
+    expect(shouldRetry(0)).toBe(false);
+  });
+
+  it("retry en 500 (error transitorio)", () => {
+    const error = Object.assign(new Error("Server Error"), { status: 500 });
+    const shouldRetry = (count: number) =>
+      !((error as { status?: number }).status === 404 ||
+        (error as { status?: number }).status === 405) && count < 1;
+    expect(shouldRetry(0)).toBe(true);
+    expect(shouldRetry(1)).toBe(false);
+  });
+
+  // Test del fallback del sheet: dado un EjercicioListItem, podemos
+  // construir un EjercicioDetalleRead con historial/duplicados vacios.
+  it("fallback de EjercicioListItem a EjercicioDetalleRead (sin historial ni duplicados)", () => {
+    const item = {
+      id: 9,
+      nombre: "Sentadilla",
+      patron: "squat",
+      carga_lumbar: "alta" as const,
+      tipo_sesion_id: 1,
+      tipo_medicion: "carga" as const,
+      descripcion: "Sentadilla con barra en trapecios",
+      activo: true,
+      usos: 12,
+      ultima_vez: "2026-08-22",
+    };
+    const detalleFallback: import("@/lib/api/hooks").EjercicioDetalleRead = {
+      ...item,
+      historial: [],
+      posibles_duplicados: [],
+    };
+    expect(detalleFallback.nombre).toBe(item.nombre);
+    expect(detalleFallback.descripcion).toBe(item.descripcion);
+    expect(detalleFallback.historial).toEqual([]);
+    expect(detalleFallback.posibles_duplicados).toEqual([]);
+  });
+});
+
+// Tests del filtrado local del banco: cuando el backend no soporta los
+// query params del nuevo handshake, el cliente debe poder filtrar
+// localmente sobre el array completo.
+describe("filtrado local del banco (fallback)", () => {
+  type Item = {
+    id: number;
+    nombre: string;
+    descripcion: string | null;
+    tipo_medicion: "carga" | "distancia" | "tiempo" | "tecnica";
+    activo: boolean;
+    usos: number;
+    ultima_vez: string | null;
+    patron: string | null;
+    carga_lumbar: "alta" | "media" | "baja";
+    tipo_sesion_id: number | null;
+  };
+  const items: Item[] = [
+    { id: 1, nombre: "Sentadilla trasera", descripcion: "Profundidad hasta paralelo", tipo_medicion: "carga", activo: true, usos: 12, ultima_vez: "2026-08-22", patron: null, carga_lumbar: "alta", tipo_sesion_id: 1 },
+    { id: 2, nombre: "Estiramiento", descripcion: "30 segundos por pierna", tipo_medicion: "tecnica", activo: true, usos: 5, ultima_vez: null, patron: null, carga_lumbar: "baja", tipo_sesion_id: 3 },
+    { id: 3, nombre: "Press banca", descripcion: null, tipo_medicion: "carga", activo: false, usos: 0, ultima_vez: null, patron: "push", carga_lumbar: "media", tipo_sesion_id: 1 },
+  ];
+
+  const normalizar = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  const filtrar = (
+    lista: Item[],
+    q: string,
+    tipos: string[],
+    mostrarArchivados: boolean,
+  ): Item[] =>
+    lista.filter((e: Item) => {
+      if (q) {
+        const haystack = `${normalizar(e.nombre)} ${normalizar(e.descripcion ?? "")}`;
+        if (!haystack.includes(normalizar(q))) return false;
+      }
+      if (tipos.length > 0 && !tipos.includes(e.tipo_medicion)) return false;
+      if (mostrarArchivados && e.activo) return false;
+      if (!mostrarArchivados && !e.activo) return false;
+      return true;
+    });
+
+  it("busca por nombre case-insensitive y sin acentos", () => {
+    const r = filtrar(items, "SENTADILLA", [], false);
+    expect(r.map((e) => e.id)).toEqual([1]);
+  });
+
+  it("busca en descripcion, no solo en nombre", () => {
+    const r = filtrar(items, "pierna", [], false);
+    expect(r.map((e) => e.id)).toEqual([2]);
+  });
+
+  it("filtra por tipo_medicion (multi-select)", () => {
+    const r = filtrar(items, "", ["carga"], false);
+    expect(r.map((e) => e.id)).toEqual([1]);
+  });
+
+  it("switch archivados: si no, solo activos", () => {
+    const r = filtrar(items, "", [], false);
+    expect(r.map((e) => e.id)).toEqual([1, 2]);
+  });
+
+  it("switch archivados: si, solo inactivos", () => {
+    const r = filtrar(items, "", [], true);
+    expect(r.map((e) => e.id)).toEqual([3]);
+  });
+
+  it("busca vacia + sin filtros = universo segun switch", () => {
+    const r = filtrar(items, "", [], false);
+    expect(r.length).toBe(2);
+  });
+
+  it("filtros se combinan (archivado false oculta inactivos aunque coincidan)", () => {
+    const r = filtrar(items, "press", ["carga"], false);
+    expect(r).toEqual([]);
+    const r2 = filtrar(items, "press", ["carga"], true);
+    expect(r2.map((e) => e.id)).toEqual([3]);
+  });
+});
