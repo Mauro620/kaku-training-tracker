@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -27,6 +28,10 @@ from app.models.types import (
     UsuarioFk,
     UuidPk,
 )
+
+if TYPE_CHECKING:
+    from app.models.catalogo.catalogos import Ejercicio, TipoSesion
+    from app.models.entrenamiento.plan import SesionPlan
 
 
 class Sesion(Base):

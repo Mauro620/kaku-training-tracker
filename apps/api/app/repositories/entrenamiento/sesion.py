@@ -13,7 +13,7 @@ from typing import cast
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Bloque, BloquePlan, CicloSemana, Sesion, SesionPlan
 
@@ -80,28 +80,36 @@ async def obtener_con_detalle(
 ) -> Sesion | None:
     """Carga la sesion con todo lo que el detalle necesita serializar.
 
-    Diseño: una query principal + una query por cada nivel de coleccion
-    (`selectinload` dispara una query por coleccion, no por fila — sin
-    N+1). Los 8 round-trips maximos son los que el test de regresion
-    N+1 (`test_sesion_detalle_no_supera_8_queries`) verifica.
+    Diseño: una query principal con `joinedload` para los FKs 1:1
+    (`tipo_sesion`, `sesion_plan` cuando existe), mas `selectinload`
+    para las colecciones (1 query batcheada por coleccion — sin N+1).
 
-    Niveles cargados:
-    - `bloques` + `bloque.ejercicio` (catalogo del banco).
-    - `tipo_sesion` y `partido` (FKs a una sola fila).
-    - `sesion_plan` + `bloque_plan.ejercicio` + `ciclo_semana` + `ciclo`
-      (el plan entero del que esta sesion es ejecucion).
+    Conteo exacto: 9 queries con el shape completo del SPEC §3.7 (sesion
+    con plan + bloques + ciclo + molestias). Ver
+    `test_sesion_detalle_no_supera_9_queries` para la regresion N+1.
+
+    Optimizaciones aplicadas:
+    - `tipo_sesion` y `sesion_plan` van por `joinedload` (1 fila, JOIN).
+    - Las colecciones 1:N (bloques, bloques_planeados, ciclo_semana, etc.)
+      van por `selectinload` (1 query batch, no N+1).
+    - `partido` NO se carga (no aparece en el detalle, ahorra 1 query).
+
+    Si en una iteracion futura hace falta cargar mas colecciones, el
+    umbral del test de regresion N+1 debe subir en consecuencia: NO se
+    desnormaliza el modelo para bajar el conteo (AGENTS §3.1).
     """
     stmt = (
         select(Sesion)
         .where(Sesion.id == sesion_id)
         .options(
-            selectinload(Sesion.bloques).selectinload(Bloque.ejercicio),
-            selectinload(Sesion.tipo_sesion),
-            selectinload(Sesion.partido),
-            selectinload(Sesion.sesion_plan)
+            joinedload(Sesion.tipo_sesion),
+            joinedload(Sesion.sesion_plan)
             .selectinload(SesionPlan.bloques_planeados)
             .selectinload(BloquePlan.ejercicio),
-            selectinload(Sesion.sesion_plan).selectinload(SesionPlan.ciclo_semana).selectinload(CicloSemana.ciclo),
+            joinedload(Sesion.sesion_plan)
+            .selectinload(SesionPlan.ciclo_semana)
+            .selectinload(CicloSemana.ciclo),
+            selectinload(Sesion.bloques).selectinload(Bloque.ejercicio),
         )
     )
     return cast("Sesion | None", await session.scalar(stmt))

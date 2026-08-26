@@ -1,4 +1,5 @@
 from datetime import date
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -17,6 +18,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from app.models.enums import EstadoSesionPlan
 from app.models.types import Distancia, IntPk, Peso, UsuarioFk
+
+if TYPE_CHECKING:
+    from app.models.catalogo.catalogos import Ejercicio
+    from app.models.entrenamiento.ciclo import CicloSemana
 
 
 class SesionPlan(Base):

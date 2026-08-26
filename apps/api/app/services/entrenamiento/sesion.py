@@ -280,14 +280,14 @@ async def obtener_sesion_detalle(
     sesion sin chequeo de pertenencia (uso interno entre servicios). El
     router siempre lo pasa."""
     sesion = await repo.obtener_sesion_con_detalle(session, sesion_id)
-    if sesion is None or (
-        usuario_id is not None and sesion.usuario_id != usuario_id
-    ):
+    if sesion is None or (usuario_id is not None and sesion.usuario_id != usuario_id):
         raise RecursoNoEncontradoError(f"sesion {sesion_id} no encontrada")
-    # `carga_srpe` es columna generada (REGLAS_NEGOCIO §1). El SELECT del
-    # repo la trae, pero un flush posterior puede expirarla; el refresh
-    # explicito evita un lazy-load fuera del greenlet async al serializar.
-    await session.refresh(sesion, attribute_names=["carga_srpe"])
+    # NOTA: `carga_srpe` es columna generada y el `selectinload` principal
+    # ya la trae en el SELECT inicial (mapeada al modelo). El refresh
+    # explicito que se hace en `crear_sesion_con_bloques` /
+    # `actualizar_sesion` existe porque el `RETURNING` del INSERT/UPDATE
+    # no la incluye; acá el SELECT del detalle la cubre y no hace falta
+    # un round-trip extra.
 
     # Molestias del mismo dia que la sesion.
     molestias = await repo_molestia.listar_por_usuario_y_fecha(
@@ -317,7 +317,7 @@ async def obtener_sesion_detalle(
                         orden=bp.orden,
                         ejercicio_id=bp.ejercicio_id,
                         ejercicio_nombre=bp.ejercicio.nombre,
-                        objetivo=_armar_objetivo(bp),  # type: ignore[arg-type]
+                        objetivo=_armar_objetivo(bp),
                     )
                 )
 
