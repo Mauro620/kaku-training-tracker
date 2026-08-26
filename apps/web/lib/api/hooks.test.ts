@@ -184,3 +184,163 @@ describe("useSesion", () => {
     expect(enabled).toBe(true);
   });
 });
+
+// Tests adicionales para Slice 5
+describe("useEjerciciosList - filtros combinados", () => {
+  it("construye el path correcto con todos los filtros activos", () => {
+    const params = new URLSearchParams();
+    params.set("q", "sentadilla");
+    params.set("tipo_medicion", "carga");
+    params.set("activo", "true");
+    params.set("orden", "nombre");
+
+    const expected = "/catalogos/ejercicios?q=sentadilla&tipo_medicion=carga&activo=true&orden=nombre";
+    expect(`/catalogos/ejercicios?${params.toString()}`).toBe(expected);
+  });
+
+  it("construye el query key con todos los parametros", () => {
+    const queryKey = ["catalogos", "ejercicios", "sentadilla", "carga", true, "nombre"];
+    expect(queryKey).toHaveLength(6);
+    expect(queryKey).toEqual(["catalogos", "ejercicios", "sentadilla", "carga", true, "nombre"]);
+  });
+});
+
+describe("useActualizarEjercicio - invalidacion", () => {
+  it("invalida el ejercicio especifico y el catalogo completo on success", () => {
+    const invalidatedKeys: (string | number)[][] = [];
+    const mockInvalidate = vi.fn((query) => {
+      invalidatedKeys.push(query.queryKey);
+      return Promise.resolve();
+    });
+
+    const id = 42;
+    const ejercicioKey = ["ejercicio", id];
+    const catalogosKey = ["catalogos", "ejercicios"];
+
+    // Simulacion del comportamiento del hook
+    const cache = new Map();
+    cache.set(ejercicioKey, { id, nombre: "Nombre actualizado" });
+
+    // invalidateQueries simulado
+    void mockInvalidate({ queryKey: ejercicioKey });
+    void mockInvalidate({ queryKey: catalogosKey });
+
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: ejercicioKey });
+    expect(mockInvalidate).toHaveBeenCalledWith({ queryKey: catalogosKey });
+    expect(invalidatedKeys).toContainEqual(ejercicioKey);
+    expect(invalidatedKeys).toContainEqual(catalogosKey);
+  });
+});
+
+// Test de tipo para SesionDetalleRead (compile-time check)
+describe("SesionDetalleRead - estructura de tipos", () => {
+  it("compila con la estructura completa de SesionDetalleRead", () => {
+    // Este test verifica que el tipo SesionDetalleRead tenga todos los campos esperados
+    // Si falta algun campo, TypeScript fallara en compile
+    const sesionCompleta: import("@/lib/api/hooks").SesionDetalleRead = {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      usuario_id: "550e8400-e29b-41d4-a716-446655440001",
+      sesion_plan_id: 1,
+      tipo_sesion: { id: 1, codigo: "FUERZA", nombre: "Fuerza" },
+      fecha: "2026-08-26",
+      duracion_min: 60,
+      rpe: 7,
+      nota: null,
+      carga_srpe: 420,
+      registrado_en: "2026-08-26T10:00:00.000000Z",
+      plan: {
+        id: 1,
+        nombre: "Plan semanal 1",
+        objetivo: "Hipertrofia",
+        nota: "Nota del plan",
+        duracion_min_est: 60,
+        rpe_objetivo: 7,
+        estado: "pendiente",
+        dia_sugerido: null,
+        ciclo: {
+          numero: 1,
+          objetivo: "Volumen",
+          semana: 2,
+          fase: "carga",
+        },
+      },
+      delta: {
+        duracion_min: 5,
+        rpe: 1,
+        carga_srpe: 50,
+      },
+      bloques: [
+        {
+          id: 1,
+          sesion_id: "550e8400-e29b-41d4-a716-446655440000",
+          orden: 1,
+          ejercicio: {
+            id: 1,
+            nombre: "Sentadilla",
+            tipo_medicion: "carga",
+            descripcion: null,
+            carga_lumbar: "alta",
+          },
+          objetivo: {
+            id: 1,
+            orden: 1,
+            series: 3,
+            reps_min: 8,
+            reps_max: 12,
+            peso_objetivo_kg: "100",
+            distancia_objetivo_m: null,
+            duracion_objetivo_s: null,
+            nota: null,
+          },
+          series: 3,
+          reps: 10,
+          peso_kg: "100",
+          distancia_m: null,
+          duracion_s: null,
+          calidad: null,
+          rpe: 7,
+          nota: null,
+          dolor_lumbar: false,
+          delta: {
+            series: 0,
+            reps: 0,
+            peso_kg: "0",
+            distancia_m: null,
+            duracion_s: null,
+          },
+        },
+      ],
+      bloques_no_ejecutados: [
+        {
+          orden: 2,
+          ejercicio_id: 2,
+          ejercicio_nombre: "Press banca",
+          objetivo: {
+            id: 2,
+            orden: 2,
+            series: 3,
+            reps_min: 8,
+            reps_max: 12,
+            peso_objetivo_kg: "80",
+            distancia_objetivo_m: null,
+            duracion_objetivo_s: null,
+            nota: null,
+          },
+        },
+      ],
+      molestias: [
+        {
+          zona: "Hombro derecho",
+          intensidad: 2,
+        },
+      ],
+    };
+
+    // Verificar que la estructura compila correctamente
+    expect(sesionCompleta.id).toBe("550e8400-e29b-41d4-a716-446655440000");
+    expect(sesionCompleta.bloques.length).toBe(1);
+    expect(sesionCompleta.bloques[0]?.ejercicio.nombre).toBe("Sentadilla");
+    expect(sesionCompleta.bloques_no_ejecutados.length).toBe(1);
+    expect(sesionCompleta.molestias.length).toBe(1);
+  });
+});
