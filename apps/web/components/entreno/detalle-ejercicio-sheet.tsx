@@ -21,10 +21,8 @@ type DetalleEjercicioSheetProps = {
   open: boolean;
   onClose: () => void;
   onFusionarClick?: (origenId: number) => void;
-  // Datos del item de lista: cuando el backend actual no expone el endpoint
-  // de detalle (devuelve 405), usamos esto como fallback para que el sheet
-  // muestre al menos nombre, descripcion, patron, carga_lumbar y tipo.
-  // historial y posibles_duplicados quedan vacios hasta que se mergee el backend.
+  // Datos del item de lista: permiten pintar el contenido base mientras llega
+  // el detalle completo, y sirven como respaldo si la consulta falla.
   fallback?: EjercicioListItem | null;
 };
 
@@ -36,10 +34,9 @@ type DetalleEjercicioSheetProps = {
  * - Posibles duplicados con boton Fusionar
  * - Menu tres puntos: Editar, Archivar, Fusionar, Eliminar
  *
- * Si el endpoint GET /catalogos/ejercicios/{id} no existe todavia en el
- * backend (devuelve 405), el sheet cae al fallback del item de lista y
- * muestra lo que tiene. La edicion sigue funcionando via PATCH si el
- * endpoint PATCH existe.
+ * El endpoint de detalle aporta historial y posibles duplicados. El item de
+ * lista se usa como respaldo para no dejar el sheet vacío durante la carga
+ * o ante un error transitorio.
  */
 export function DetalleEjercicioSheet({
   ejercicioId,
@@ -48,19 +45,15 @@ export function DetalleEjercicioSheet({
   onFusionarClick,
   fallback,
 }: DetalleEjercicioSheetProps) {
-  // Si el padre pasa un fallback (item de lista), lo usamos directamente y
-  // evitamos el GET al endpoint de detalle. Esto es importante porque el
-  // backend viejo (main) devuelve 405 en ese endpoint y no queremos
-  // ensuciar la consola del navegador con errores 405 cuando ya tenemos
-  // la info que necesitamos.
-  // Si no hay fallback, intentamos el endpoint; si responde, lo usamos;
-  // si falla 405, mostramos EmptyState (caso de pantallas donde no
-  // teniamos la lista en scope, como detalle de sesion/plan).
+  // El fallback permite pintar el item de lista mientras llega el detalle
+  // completo. El endpoint se consulta siempre cuando hay un id, porque el
+  // detalle aporta historial y posibles duplicados. Si falla, el fallback
+  // mantiene visible nombre, descripcion y metadatos basicos.
   const {
     data: ejercicioDetalle,
     isLoading,
     error,
-  } = useEjercicio(fallback ? null : ejercicioId);
+  } = useEjercicio(ejercicioId);
 
   const ejercicio: EjercicioDetalleRead | null = fallback
     ? ({
