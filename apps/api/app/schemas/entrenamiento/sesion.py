@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import Field
 
@@ -133,6 +134,27 @@ class BloqueRead(ReadBase):
     rpe: int | None
     dolor_lumbar: bool
     nota: str | None
+
+
+class BloqueDeltaRead(ReadBase):
+    """`real - plan` por campo, NULL si falta el objetivo (SPEC §2.1).
+    El router de detalle de sesion lo construye a partir de
+    `app.services.catalogo.delta.delta_bloque`."""
+
+    series: int | None
+    reps: int | None
+    peso_kg: Decimal | None
+    distancia_m: Decimal | None
+    duracion_s: int | None
+
+
+class SesionDeltaRead(ReadBase):
+    """Delta a nivel de sesion (SPEC §2.1). `carga_srpe` se calcula contra
+    `duracion_min_est * rpe_objetivo` y es NULL si falta alguno."""
+
+    duracion_min: int | None
+    rpe: int | None
+    carga_srpe: int | None
 
 
 # Resuelve las forward refs.
