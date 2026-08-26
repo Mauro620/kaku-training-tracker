@@ -53,31 +53,28 @@ export function Sheet({ open, onClose, title, children, className = "", ...rest 
     };
   }, [open]);
 
-  // Reset scroll al abrir. Hay tres fuentes que pueden mover el scroll
-  // al fondo del sheet en algunos navegadores:
+  // Reset scroll al abrir SOLO si quedo cerca del final. Hay tres fuentes
+  // que pueden dejar el scroll al fondo en algunos navegadores:
   // 1. React 19 + scrollIntoView automatico al montar el nodo.
   // 2. El focus automatico del sheet container (tabIndex=-1).
   // 3. El focus de un input interior (autoFocus).
   //
-  // Para atraparlos a todos, hacemos scrollTop=0 al final de cada frame
-  // durante ~100ms con un loop que se cancela al primer tick donde el
-  // scroll cambio y volvimos a ponerlo en 0 (es decir, ya esta estable).
+  // Si el scroll quedo al fondo (maximo), lo reseteamos al inicio durante
+  // los primeros 200ms tras el open. Si el scroll es chico (porque el
+  // usuario ya empezo a scrollear), no tocamos nada.
   useEffect(() => {
     if (!open) return;
     let raf = 0;
-    let lastTop = -1;
-    let stable = 0;
+    const start = performance.now();
     const tick = () => {
       const el = contentRef.current;
       if (!el) return;
-      const top = el.scrollTop;
-      if (top !== lastTop) {
+      if (performance.now() - start > 200) return;
+      // Si el scroll esta cerca del fondo (>= 95% del maximo), es
+      // automatico del navegador, no del usuario. Lo reseteamos.
+      const max = el.scrollHeight - el.clientHeight;
+      if (max > 0 && el.scrollTop >= max * 0.95) {
         el.scrollTop = 0;
-        lastTop = 0;
-        stable = 0;
-      } else if (top === 0) {
-        stable += 1;
-        if (stable >= 3) return; // ~3 frames estables, cortamos.
       }
       raf = requestAnimationFrame(tick);
     };
