@@ -64,10 +64,10 @@ export function ActionPopoverMenu({ items }: Props) {
         <MoreVertical className="h-5 w-5" />
       </button>
 
-      {/* Menu desplegable */}
+      {/* Menu desplegable hacia arriba, porque el trigger vive al pie del sheet */}
       {abierto && (
         <div
-          className="absolute right-0 top-full mt-1 min-w-[160px] rounded-[20px] border border-border-subtle bg-surface-primary p-2 shadow-lg focus:outline-none"
+          className="absolute right-0 bottom-full mb-1 min-w-[160px] rounded-[20px] border border-border-subtle bg-surface-primary p-2 shadow-lg focus:outline-none"
           role="menu"
           aria-orientation="vertical"
         >
