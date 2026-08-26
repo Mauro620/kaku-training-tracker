@@ -48,11 +48,22 @@ export function DetalleEjercicioSheet({
   onFusionarClick,
   fallback,
 }: DetalleEjercicioSheetProps) {
-  // retry: false para no spamear un endpoint que no existe. Si llega a
-  // existir en el futuro, el usuario abre el sheet de nuevo y se reintenta.
-  const { data: ejercicioDetalle, isLoading, error } = useEjercicio(ejercicioId);
-  const ejercicio: EjercicioDetalleRead | null = ejercicioDetalle ?? (fallback
-    ? {
+  // Si el padre pasa un fallback (item de lista), lo usamos directamente y
+  // evitamos el GET al endpoint de detalle. Esto es importante porque el
+  // backend viejo (main) devuelve 405 en ese endpoint y no queremos
+  // ensuciar la consola del navegador con errores 405 cuando ya tenemos
+  // la info que necesitamos.
+  // Si no hay fallback, intentamos el endpoint; si responde, lo usamos;
+  // si falla 405, mostramos EmptyState (caso de pantallas donde no
+  // teniamos la lista en scope, como detalle de sesion/plan).
+  const {
+    data: ejercicioDetalle,
+    isLoading,
+    error,
+  } = useEjercicio(fallback ? null : ejercicioId);
+
+  const ejercicio: EjercicioDetalleRead | null = fallback
+    ? ({
         id: fallback.id,
         nombre: fallback.nombre,
         patron: fallback.patron,
@@ -63,8 +74,8 @@ export function DetalleEjercicioSheet({
         activo: fallback.activo,
         historial: [],
         posibles_duplicados: [],
-      }
-    : null);
+      } as EjercicioDetalleRead)
+    : ejercicioDetalle ?? null;
   const actualizar = useActualizarEjercicio(ejercicioId ?? 0);
   const eliminar = useEliminarEjercicio(ejercicioId ?? 0);
 

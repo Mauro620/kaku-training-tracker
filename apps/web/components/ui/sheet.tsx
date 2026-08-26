@@ -17,6 +17,10 @@ type Props = HTMLAttributes<HTMLDivElement> & {
  * - Fondo bg-canvas (dark)
  * - Focus trap basico
  * - ESC cierra, click outside cierra
+ *
+ * Side effect: al abrir bloquea el scroll del body (overflow-hidden) para
+ * que el sheet no haga scroll-into-view ni que la pagina quede scrollable
+ * detras del overlay. Se restaura al cerrar.
  */
 export function Sheet({ open, onClose, title, children, className = "", ...rest }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -34,10 +38,24 @@ export function Sheet({ open, onClose, title, children, className = "", ...rest 
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  // Focus trap basico: enfoca el contenido al abrir
+  // Bloquea scroll del body mientras el sheet esta abierto. Sin esto, en
+  // algunas navegadores el sheet (position: fixed bottom-0) puede causar
+  // scroll-into-view y la pagina queda scrollable detras del overlay.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // Focus trap basico: enfoca el contenido al abrir. preventScroll evita
+  // que el navegador haga scroll-into-view del sheet (que esta fixed al
+  // bottom y provocaria que la pagina scrollee al fondo al abrir).
   useEffect(() => {
     if (open && contentRef.current) {
-      contentRef.current.focus();
+      contentRef.current.focus({ preventScroll: true });
     }
   }, [open]);
 
