@@ -746,7 +746,7 @@ async def test_crear_ejercicio_inline_aparece_en_catalogo(cliente: AsyncClient) 
     assert creado.json()["tipo_sesion_id"] is None
 
     listado = await cliente.get("/api/v1/catalogos/ejercicios")
-    assert any(e["id"] == creado.json()["id"] for e in listado.json())
+    assert any(e["id"] == creado.json()["id"] for e in listado.json()["items"])
 
 
 async def test_crear_ejercicio_con_nombre_repetido_devuelve_422(
@@ -755,7 +755,7 @@ async def test_crear_ejercicio_con_nombre_repetido_devuelve_422(
     payload = {"nombre": "Pases con cada pierna", "tipo_medicion": "tecnica"}
     await cliente.post("/api/v1/catalogos/ejercicios", json=payload)
     repetido = await cliente.post("/api/v1/catalogos/ejercicios", json=payload)
-    assert repetido.status_code == 422
+    assert repetido.status_code == 409
 
 
 # ------------------------------------- bloque: matriz por tipo_medicion --
@@ -892,7 +892,7 @@ async def test_patch_rechaza_un_nombre_ya_usado(cliente: AsyncClient) -> None:
         f"/api/v1/catalogos/ejercicios/{a.json()['id']}",
         json={"nombre": "Salto lateral al cajon"},
     )
-    assert respuesta.status_code == 422
+    assert respuesta.status_code == 409
 
 
 async def test_patch_a_un_ejercicio_inexistente_devuelve_404(

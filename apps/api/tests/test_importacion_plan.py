@@ -33,8 +33,18 @@ from app.models.enums import EstadoSesionPlan, TipoMedicion
 from app.repositories.catalogo import ejercicio as repo_ejercicio
 from app.services.entrenamiento.importacion import construir_export
 
-RUTA_EJEMPLO = Path(__file__).resolve().parents[3] / "docs" / "plan-ejemplo.json"
-RUTA_DOC_REGLAS = Path(__file__).resolve().parents[3] / "docs" / "PLAN_IMPORT.md"
+RUTA_EJEMPLO = (
+    Path(__file__).resolve().parents[3]
+    / "docs"
+    / "feature-01-plan-import"
+    / "plan-ejemplo.json"
+)
+RUTA_DOC_REGLAS = (
+    Path(__file__).resolve().parents[3]
+    / "docs"
+    / "feature-01-plan-import"
+    / "PLAN_IMPORT.md"
+)
 RUTA_REGLAS_EMPAQUETADAS = (
     Path(__file__).resolve().parents[1] / "app" / "resources" / "reglas-import.md"
 )
