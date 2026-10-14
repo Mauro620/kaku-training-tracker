@@ -1300,16 +1300,27 @@ export type ExportRead = {
   contenido: string;
 };
 
-const RECURSOS_EXPORT_LLM = ["ejercicios", "reglas", "ejemplo"] as const;
+// Siempre estan: si uno falla, no se copia nada.
+const RECURSOS_EXPORT_LLM = ["ejercicios", "reglas", "ejemplo", "perfil"] as const;
+// Solo existe cuando hay un ciclo activo o cerrado; un 404 significa "todavia no
+// hay historia" y se omite en vez de romper la copia.
+const RECURSO_EXPORT_OPCIONAL = "resumen_ciclo";
 
 export async function obtenerExportsLLM(
   cliente: { get: (path: string) => Promise<ExportRead> } = api,
 ): Promise<ExportRead[]> {
-  return Promise.all(
-    RECURSOS_EXPORT_LLM.map((recurso) =>
-      cliente.get(`/planes/importar/export/${recurso}`),
+  const [fijos, resumen] = await Promise.all([
+    Promise.all(
+      RECURSOS_EXPORT_LLM.map((recurso) =>
+        cliente.get(`/planes/importar/export/${recurso}`),
+      ),
     ),
-  );
+    cliente.get(`/planes/importar/export/${RECURSO_EXPORT_OPCIONAL}`).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }),
+  ]);
+  return resumen ? [...fijos, resumen] : fijos;
 }
 
 export function useDescartarPlan() {
@@ -1368,269 +1379,6 @@ export function useEliminarMolestia(fecha: string) {
   });
 }
 
-// ---------- Fase 6: nutricion ----------
-
-export type GrupoAlimento =
-  | "proteina_animal"
-  | "lacteo"
-  | "cereal"
-  | "leguminosa"
-  | "tuberculo"
-  | "verdura"
-  | "fruta"
-  | "grasa"
-  | "procesado";
-
-export type EstadoPesaje = "crudo" | "cocido";
-
-export type Alimento = {
-  id: number;
-  nombre: string;
-  grupo: GrupoAlimento;
-  estado_pesaje: EstadoPesaje;
-  kcal_100g: string;
-  proteina_100g: string;
-  carbo_100g: string;
-  grasa_100g: string;
-  fibra_100g: string | null;
-  fuente: string | null;
-};
-
-export type MomentoComida =
-  | "desayuno"
-  | "media_manana"
-  | "almuerzo"
-  | "merienda"
-  | "cena";
-
-export type RecetaItem = {
-  id: number;
-  alimento_id: number;
-  cantidad_g: string;
-};
-
-export type Receta = {
-  id: number;
-  nombre: string;
-  momento_default: MomentoComida | null;
-  activa: boolean;
-  items: RecetaItem[];
-};
-
-export type MacroTotal = {
-  kcal: string;
-  proteina: string;
-  carbo: string;
-  grasa: string;
-  fibra: string;
-};
-
-export type ComidaItem = {
-  id: number;
-  alimento_id: number;
-  cantidad_g: string;
-};
-
-export type Comida = {
-  id: string;
-  fecha: string;
-  momento: MomentoComida;
-  receta_id: number | null;
-  nota: string | null;
-  idempotency_key: string;
-  items: ComidaItem[];
-};
-
-export type ComidaConMacros = Comida & { macros: MacroTotal };
-
-export type ComidasDelDia = {
-  comidas: Comida[];
-  macros_del_dia: MacroTotal;
-};
-
-export type DespensaItem = {
-  alimento_id: number;
-  alimento_nombre: string;
-  imprescindible: boolean;
-  en_stock: boolean;
-};
-
-// Catalogo sembrado: staleTime infinito.
-export function useAlimentos() {
-  return useQuery({
-    queryKey: ["alimentos"],
-    queryFn: () => api.get<Alimento[]>("/alimentos"),
-    staleTime: Infinity,
-  });
-}
-
-// Recetas del usuario. staleTime corto (5 min): cuando agrega/edita una,
-// invalida la query; mientras tanto, no refetchea en cada navegacion.
-export function useRecetas() {
-  return useQuery({
-    queryKey: ["recetas"],
-    queryFn: () => api.get<Receta[]>("/recetas"),
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useReceta(id: number | null) {
-  return useQuery({
-    queryKey: ["receta", id],
-    queryFn: () => api.get<Receta>(`/recetas/${id}`),
-    enabled: id !== null,
-  });
-}
-
-export function useMacrosDeReceta(id: number | null) {
-  return useQuery({
-    queryKey: ["receta", id, "macros"],
-    queryFn: () => api.get<MacroTotal>(`/recetas/${id}/macros`),
-    enabled: id !== null,
-  });
-}
-
-// El POST de comida SI va a la cola (es el registro diario del usuario,
-// offline-first). El resto de mutaciones de nutricion (CRUD receta,
-// upsert despensa, eliminar) NO: son setup con red.
-export function useRegistrarComida(fecha: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (cuerpo: {
-      momento: MomentoComida;
-      receta_id: number | null;
-      nota?: string | null;
-      items?: { alimento_id: number; cantidad_g: number }[];
-    }) => {
-      const evento: EventoOutbox = {
-        tipo: "comida",
-        cuerpo: {
-          fecha,
-          momento: cuerpo.momento,
-          receta_id: cuerpo.receta_id,
-          nota: cuerpo.nota ?? null,
-          items: cuerpo.items ?? [],
-          idempotency_key: crypto.randomUUID(),
-        },
-      };
-      await encolar(evento);
-      sincronizarYRefrescar(qc, [["comidas", fecha]]);
-    },
-  });
-}
-
-export function useEliminarComida(fecha: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.delete<void>(`/comidas/${id}`),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["comidas", fecha] });
-    },
-  });
-}
-
-export function useCrearReceta() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (cuerpo: {
-      nombre: string;
-      momento_default: MomentoComida | null;
-      items: { alimento_id: number; cantidad_g: number }[];
-    }) => api.post<Receta>("/recetas", cuerpo),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["recetas"] });
-    },
-  });
-}
-
-export function useActualizarReceta() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      ...cuerpo
-    }: {
-      id: number;
-      nombre: string;
-      momento_default: MomentoComida | null;
-      items: { alimento_id: number; cantidad_g: number }[];
-    }) => api.put<Receta>(`/recetas/${id}`, cuerpo),
-    onSuccess: (_data, variables) => {
-      void qc.invalidateQueries({ queryKey: ["recetas"] });
-      void qc.invalidateQueries({ queryKey: ["receta", variables.id] });
-    },
-  });
-}
-
-export function useEliminarReceta() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.delete<void>(`/recetas/${id}`),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["recetas"] });
-    },
-  });
-}
-
-export function useComidasDelDia(fecha: string) {
-  return useQuery({
-    queryKey: ["comidas", fecha],
-    queryFn: () => api.get<ComidasDelDia>(`/comidas?fecha=${fecha}`),
-  });
-}
-
-export function useComida(id: string | null) {
-  return useQuery({
-    queryKey: ["comida", id],
-    queryFn: () => api.get<ComidaConMacros>(`/comidas/${id}`),
-    enabled: id !== null,
-  });
-}
-
-export function useDespensa() {
-  return useQuery({
-    queryKey: ["despensa"],
-    queryFn: () => api.get<DespensaItem[]>("/despensa"),
-  });
-}
-
-export function useListaDeMercado() {
-  return useQuery({
-    queryKey: ["despensa", "lista-de-mercado"],
-    queryFn: () =>
-      api.get<{ items: DespensaItem[] }>("/despensa/lista-de-mercado"),
-  });
-}
-
-export function useUpsertDespensa() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      alimento_id,
-      ...cuerpo
-    }: {
-      alimento_id: number;
-      imprescindible: boolean;
-      en_stock: boolean;
-    }) =>
-      api.put<void>(`/despensa/${alimento_id}`, cuerpo),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["despensa"] });
-    },
-  });
-}
-
-export function useEliminarDeDespensa() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (alimento_id: number) =>
-      api.delete<void>(`/despensa/${alimento_id}`),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["despensa"] });
-    },
-  });
-}
-
 // ---------- Fase 7: tests fisicos, medida corporal, partidos ----------
 
 export type TipoTest = {
@@ -1669,6 +1417,7 @@ export type MedidaCorporal = {
   fecha: string;
   peso_kg: string;
   fc_reposo: number | null;
+  cintura_cm: string | null;
   origen: "manual" | "health_kit" | "notion_backfill";
 };
 
@@ -1752,7 +1501,12 @@ export function useMedidas() {
 export function useRegistrarMedida() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: { fecha: string; peso_kg: string; fc_reposo?: number | null }) =>
+    mutationFn: (cuerpo: {
+      fecha: string;
+      peso_kg: string;
+      fc_reposo?: number | null;
+      cintura_cm?: string | null;
+    }) =>
       api.post<MedidaCorporal>("/medidas", cuerpo),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["medidas"] });
@@ -1792,5 +1546,160 @@ export function useRegistrarPartido() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["partidos"] });
     },
+  });
+}
+
+// ---------- Perfil del atleta ----------
+
+export type EventoFijo = {
+  dia: number;
+  hora: string;
+  tipo_sesion: string;
+  nombre: string;
+  duracion_min: number | null;
+};
+
+export type VentanaDisponible = {
+  dia: number;
+  inicio: string;
+  fin: string;
+  lugares: string[];
+};
+
+export type LugarEntreno = { nombre: string; equipamiento: string[] };
+
+export type PerfilAtletaBase = {
+  posicion: string;
+  rol_tactico: string;
+  pie_dominante: string;
+  talla_cm: string | null;
+  peso_kg: string | null;
+  lesiones_activas: string[];
+  objetivos: string[];
+  eventos_fijos: EventoFijo[];
+  ventanas: VentanaDisponible[];
+  lugares: LugarEntreno[];
+};
+
+export type PerfilAtleta = PerfilAtletaBase & { actualizado_en: string };
+
+export function usePerfil() {
+  return useQuery({
+    queryKey: ["perfil"],
+    queryFn: () => api.get<PerfilAtleta>("/perfil"),
+  });
+}
+
+export function useGuardarPerfil() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: PerfilAtletaBase) => api.put<PerfilAtleta>("/perfil", cuerpo),
+    onSuccess: (perfil) => {
+      qc.setQueryData(["perfil"], perfil);
+    },
+  });
+}
+
+// ---------- Progreso: las cuatro preguntas (REGLAS_NEGOCIO §18) ----------
+
+export type SemanaCumplimiento = {
+  numero: number;
+  inicio: string;
+  fin: string;
+  planeadas: number;
+  cumplido: number;
+  movido: number;
+  descartado: number;
+  pendiente: number;
+  pct_cumplido: number | null;
+  pct_movido: number | null;
+  pct_descartado: number | null;
+  pct_pendiente: number | null;
+};
+export type CumplimientoProgreso = {
+  ciclo_numero: number | null;
+  semanas: SemanaCumplimiento[];
+  conclusion: string;
+};
+
+export type PuntoPrueba = { fecha: string; mejor: number; pct_cambio_vs_base: number | null };
+export type PruebaTendencia = {
+  codigo: string;
+  nombre: string;
+  unidad: string;
+  mejor_es_mayor: boolean;
+  puntos: PuntoPrueba[];
+};
+export type MejorMarca = {
+  ejercicio_id: number;
+  ejercicio: string;
+  tipo_medicion: TipoMedicion;
+  peso_max_kg: number | null;
+  rm_estimado_kg: number | null;
+  duracion_max_s: number | null;
+  distancia_max_m: number | null;
+  calidad_max: number | null;
+  fecha: string;
+};
+export type RendimientoProgreso = {
+  pruebas: PruebaTendencia[];
+  marcas: MejorMarca[];
+  conclusion: string;
+};
+
+export type Semaforo = "baja" | "verde" | "amarillo" | "rojo";
+export type SemanaRecuperacion = {
+  inicio: string;
+  fin: string;
+  en_curso: boolean;
+  carga_semanal: number;
+  acwr: number | null;
+  semaforo: Semaforo | null;
+  sueno_prom_h: number | null;
+  sueno_dias_con_dato: number;
+};
+export type RecuperacionProgreso = {
+  semanas: SemanaRecuperacion[];
+  bandas: { min_seguro: number; max_seguro: number; alerta: number };
+  sueno_objetivo_h: number;
+  conclusion: string;
+};
+
+export type SemanaComposicion = {
+  inicio: string;
+  fecha_medida: string;
+  peso_kg: number;
+  cintura_cm: number | null;
+};
+export type ComposicionProgreso = {
+  semanas: SemanaComposicion[];
+  peso_objetivo_kg: number | null;
+  cambio_peso_kg: number | null;
+  cambio_cintura_cm: number | null;
+  conclusion: string;
+};
+
+export function useProgresoCumplimiento() {
+  return useQuery({
+    queryKey: ["progreso", "cumplimiento"],
+    queryFn: () => api.get<CumplimientoProgreso>("/progreso/cumplimiento"),
+  });
+}
+export function useProgresoRendimiento() {
+  return useQuery({
+    queryKey: ["progreso", "rendimiento"],
+    queryFn: () => api.get<RendimientoProgreso>("/progreso/rendimiento"),
+  });
+}
+export function useProgresoRecuperacion() {
+  return useQuery({
+    queryKey: ["progreso", "recuperacion"],
+    queryFn: () => api.get<RecuperacionProgreso>("/progreso/recuperacion"),
+  });
+}
+export function useProgresoComposicion() {
+  return useQuery({
+    queryKey: ["progreso", "composicion"],
+    queryFn: () => api.get<ComposicionProgreso>("/progreso/composicion"),
   });
 }

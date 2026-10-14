@@ -227,35 +227,10 @@ booleano: el valor está en las razones.
 
 ---
 
-## 12. Nutrición
+## 12. (retirada)
 
-Macros de una receta:
-
-```
-macro_receta = Σ (macro_alimento_por_100g × cantidad_g ÷ 100)
-```
-
-Para cada uno de kcal, proteína, carbohidrato, grasa y fibra.
-
-Macros del día: suma de las recetas registradas más los `comida_item` sueltos.
-
-Todos los alimentos se almacenan con `estado_pesaje = 'crudo'`. Si una fuente
-da un valor cocido, se convierte antes de sembrarlo. Mezclar ambos estados
-introduce un error cercano al 30% en carnes.
-
-Indicadores semanales, que son los que ve el usuario:
-
-```
-pct_comidas_con_proteina = comidas con ≥ 20 g de proteína ÷ total × 100
-pct_comidas_con_vegetal  = comidas con ≥ 1 alimento de grupo 'verdura' ÷ total × 100
-```
-
-"Vegetal" significa exactamente `alimento.grupo = 'verdura'`. Fruta,
-tubérculo y leguminosa **no** cuentan para este indicador.
-
-El objetivo diario de proteína se calcula como
-`peso_kg × proteina_g_por_kg`, con el peso del `medida_corporal` más
-reciente. Se muestra como referencia, **no como meta a perseguir**.
+El módulo de Cocina se eliminó. La sección conserva su número para no romper
+las referencias cruzadas; ya no define ninguna fórmula.
 
 ---
 
@@ -535,3 +510,186 @@ La pantalla previa a ejecutar (`GET /planes/{id}`) reutiliza
 completa del plan + `ciclo` anidado + `bloques_planeados` (cada uno con su
 ejercicio). Es la vista "antes de hacer" del mismo dominio que el detalle
 de sesión expone como "después de hacer".
+
+---
+
+## 17. Resumen de ciclo (export `resumen_ciclo`)
+
+Lo consume el LLM para planear el ciclo siguiente. Es una lectura: no
+escribe nada ni define métricas nuevas, solo agrega las de §1, §2, §8 y §13
+por semana del ciclo.
+
+**Qué ciclo.** El `activo` de mayor `numero`; si no hay, el `cerrado` de
+mayor `numero`; si no hay ninguno, no hay resumen (404). Un ciclo
+`planificado` no tiene historia y no cuenta.
+
+**Qué semanas.** Las `ciclo_semana` existentes cuyo `semana_inicio`
+(§13.1) es anterior o igual a hoy. Una semana futura no se informa. Para la
+semana en curso, "días transcurridos" llega hasta hoy inclusive.
+
+**Cumplimiento por estado.** Cuenta los `sesion_plan` de la semana por su
+columna `estado` (`cumplido`, `movido`, `descartado`, `pendiente`).
+
+```
+pct_ejecutado = (cumplido + movido) ÷ (planeadas − descartado) × 100
+```
+
+`movido` cuenta como ejecutado y `descartado` sale del denominador
+(PLAN_IMPORT.md §2.1). Si el denominador es 0, `pct_ejecutado` es NULL.
+Las sesiones reales sin `sesion_plan_id` se cuentan aparte como
+`sesiones_sin_plan`: no suman ni restan cumplimiento.
+
+**Planeado vs. real.** Se compara por sesión: cada `sesion_plan` que tiene
+una `sesion` real (la que lo referencia) aporta un par.
+
+```
+rpe_planeado_prom     = promedio(rpe_objetivo)      de los planes con par y con rpe_objetivo
+rpe_real_prom         = promedio(sesion.rpe)        de esos mismos pares
+duracion_planeada_min = suma(duracion_min_est)      de los pares con duracion_min_est
+duracion_real_min     = suma(sesion.duracion_min)   de esos mismos pares
+```
+
+Solo se comparan pares: un plan pendiente no tiene "real" y meterlo en el
+planeado inflaría la diferencia.
+
+**Carga semanal** (§1): `carga_real` es la suma de `carga_srpe` de **todas**
+las sesiones con fecha entre `semana_inicio` y `semana_fin`, con plan o sin
+él. `carga_planeada` es la suma de `rpe_objetivo × duracion_min_est` de los
+planes de la semana que tengan los dos campos.
+
+**Pruebas.** Por `tipo_test`, los tests con fecha dentro del ciclo
+(`fecha_inicio` hasta `fecha_cierre_real`, o `fecha_fin_prevista` si sigue
+abierto). Cada uno con su mejor intento y su media; `pct_decremento` solo
+para `rsa_30m` (§7). `pct_cambio` es el de §8: contra el mejor del
+**primer test histórico** de ese tipo (no del primero del ciclo).
+
+**Sueño y agua.** Promedio de `horas_sueno` y de `ml_totales` sobre los
+**días con registro** de la semana, más `dias_con_dato`. Un día sin registro
+no entra al promedio (§14). Si no hay ninguno, el promedio es NULL.
+
+**Hábitos.** Por hábito activo y por semana:
+
+```
+pct_cumplimiento = días con valor = true ÷ días transcurridos × 100
+```
+
+A diferencia del sueño y el agua, el día sin registro **cuenta como no
+cumplido**: para un sí/no diario, no marcarlo es no haberlo hecho. Se
+informa también `dias_con_registro` para distinguir "no lo hice" de "no lo
+anoté", y un hábito creado a mitad del ciclo queda penalizado por los días
+anteriores a su creación. Es una excepción deliberada a §14.
+
+**Peso y cintura.** Las `medida_corporal` del ciclo en orden de fecha, por
+semana, y el cambio total entre la primera y la última. Cintura NULL se
+propaga (no se sustituye por 0).
+
+**Casos**
+
+| Entrada | Resultado |
+|---|---|
+| 6 planes: 3 cumplido, 1 movido, 1 descartado, 1 pendiente | `pct_ejecutado` = 4 ÷ 5 × 100 = 80.0 |
+| 2 planes, los 2 descartados | `pct_ejecutado` = NULL |
+| Pares (rpe_obj 6, real 7, 60 min est, 70 min real) y (rpe_obj 8, real 8, 90 est, 80 real) | rpe 7.0 plan / 7.5 real; 150 min plan / 150 min real |
+| Plan 6 × 60 + plan 8 × 90 | `carga_planeada` = 360 + 720 = 1080 |
+| Sueño 7.0 h y 8.0 h en 2 de 7 días | promedio 7.5, `dias_con_dato` = 2 |
+| Hábito marcado 5 de 7 días | `pct_cumplimiento` = 71.4 |
+
+---
+
+## 18. Progreso (pestaña Progreso)
+
+Cuatro preguntas, cada una con su cálculo. Todas son lecturas de datos ya
+registrados; ninguna escribe. Cada tarjeta resume su respuesta en **una
+frase** generada con estas mismas cifras.
+
+### 18.1 ¿Cumplí el plan?
+
+Por semana del ciclo (el mismo que elige §17: activo, o el último cerrado):
+
+```
+pct_X = cantidad de planes en estado X ÷ planeadas × 100
+        para X ∈ {cumplido, movido, descartado, pendiente}
+```
+
+El denominador es el **total** de planes de la semana. Es distinto de
+`pct_ejecutado` (§17), que saca los descartados del denominador: aquí se
+quiere ver los cuatro estados repartirse el 100 %. Sin planes, los
+porcentajes son NULL.
+
+### 18.2 ¿Estoy rindiendo mejor?
+
+**Pruebas.** Por `tipo_test`, la serie de su mejor intento por fecha (§8) y
+`pct_cambio_vs_base` contra el primer test histórico.
+
+**Mejor marca por ejercicio** (sobre los `bloque` reales):
+
+| `tipo_medicion` | Mejor marca |
+|---|---|
+| `carga` | `peso_max` = mayor `peso_kg`; `rm_estimado` = mayor 1RM de Epley |
+| `tiempo` | mayor `duracion_s` |
+| `distancia` | mayor `distancia_m` |
+| `tecnica` | mayor `calidad` |
+
+**1RM de Epley**, por bloque con `peso_kg` y `reps`:
+
+```
+1RM = peso × (1 + reps ÷ epley_divisor)      si reps > 1
+1RM = peso                                    si reps = 1
+```
+
+Solo cuentan los bloques con `reps ≤ epley_reps_max`; por encima, la fórmula
+deja de ser fiable y el bloque no aporta al `rm_estimado` (sí al `peso_max`).
+`epley_divisor` (30) y `epley_reps_max` (10) viven en `parametro`.
+
+| peso_kg | reps | 1RM |
+|---|---|---|
+| 100 | 1 | 100.0 |
+| 100 | 5 | 116.7 |
+| 80 | 10 | 106.7 |
+| 80 | 12 | no cuenta (reps > 10) |
+
+### 18.3 ¿Me estoy recuperando?
+
+Semanas de calendario (lunes a domingo). Por semana:
+
+- `carga_semanal` = suma de `carga_srpe` de la semana (§1, §2).
+- `acwr` según §3, calculado **al cierre de la semana** (o hoy, en la semana
+  en curso): `carga_aguda` = últimos `acwr_dias_agudo` días,
+  `carga_cronica` = últimos `acwr_dias_cronico` días ÷ 4. Sigue siendo NULL
+  con menos de 28 días de historia, contados desde la **primera sesión
+  registrada**. Los días sin sesión valen 0 y cuentan (§2): volver de un
+  parón largo da un ACWR alto, y es correcto.
+- `sueno_prom_h` = promedio de `horas_sueno` de la semana sobre los días con
+  registro (§14).
+
+**Semáforo** con los parámetros `acwr_min_seguro` (0.8), `acwr_max_seguro`
+(1.3) y `acwr_umbral_alerta` (1.5):
+
+| ACWR | Semáforo |
+|---|---|
+| NULL | sin dato |
+| < 0.8 | `baja` (verde claro) |
+| 0.8 a 1.3, ambos incluidos | `verde` |
+| > 1.3 y hasta 1.5 incluido | `amarillo` |
+| > 1.5 | `rojo` |
+
+Es una heurística, no un diagnóstico, y la interfaz lo dice.
+
+**Casos del ACWR** (los de §3 más los bordes del semáforo)
+
+| carga 7d | carga 28d | acwr | semáforo |
+|---|---|---|---|
+| 2000 | 7400 | 1.081 | verde |
+| 2400 | 6000 | 1.600 | rojo |
+| 1200 | 6000 | 0.800 | verde |
+| 1950 | 6000 | 1.300 | verde |
+| 2250 | 6000 | 1.500 | amarillo |
+| 1000 | 6000 | 0.667 | baja |
+
+### 18.4 ¿Voy hacia el 11 %?
+
+Por semana, el **último** registro de `medida_corporal` de esa semana: peso
+y, si ese registro la tiene, cintura. Se informa el cambio entre la primera
+y la última semana con dato, y `usuario.peso_objetivo_kg` como referencia si
+está definido. El peso no mide la grasa: no se calcula ningún % de grasa
+porque no hay un dato del que derivarlo.

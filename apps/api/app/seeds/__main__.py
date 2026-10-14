@@ -21,20 +21,20 @@ from app.core.seguridad import hashear_password
 from app.db.base import Base
 from app.db.session import get_engine, get_sessionmaker
 from app.models import (
-    Alimento,
     AuthUsuario,
     Ejercicio,
     Habito,
     Parametro,
+    PerfilAtleta,
     TipoSesion,
     TipoTest,
     Usuario,
     ZonaCorporal,
 )
-from app.seeds.alimentos import ALIMENTOS, FUENTE
 from app.seeds.catalogos import HABITOS, TIPOS_SESION, TIPOS_TEST, ZONAS_CORPORALES
 from app.seeds.ejercicios import EJERCICIOS
 from app.seeds.parametros import PARAMETROS
+from app.seeds.perfil import PERFIL
 
 # Los valores semilla rigen "desde siempre". Una fecha fija los hace
 # idempotentes: con CURRENT_DATE, re-sembrar mañana insertaría una segunda
@@ -79,6 +79,18 @@ async def _sembrar_usuario(session: AsyncSession, nombre: str) -> uuid.UUID:
     session.add(usuario)
     await session.flush()
     return usuario.id
+
+
+async def _sembrar_perfil(session: AsyncSession, usuario_id: uuid.UUID) -> int:
+    """Solo inserta si no existe: el perfil lo edita el usuario y re-sembrar no
+    puede pisar sus cambios. Devuelve 1 si lo creo, 0 si ya estaba."""
+    creado = await session.scalar(
+        pg_insert(PerfilAtleta)
+        .values(usuario_id=usuario_id, **PERFIL)
+        .on_conflict_do_nothing(index_elements=["usuario_id"])
+        .returning(PerfilAtleta.usuario_id)
+    )
+    return 0 if creado is None else 1
 
 
 async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
@@ -175,25 +187,6 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
             ],
             ["nombre"],
         ),
-        "alimento": await _upsert(
-            session,
-            Alimento,
-            [
-                {
-                    "nombre": nombre,
-                    "grupo": grupo,
-                    "kcal_100g": kcal,
-                    "proteina_100g": proteina,
-                    "carbo_100g": carbo,
-                    "grasa_100g": grasa,
-                    "fibra_100g": fibra,
-                    "estado_pesaje": estado_pesaje,
-                    "fuente": FUENTE,
-                }
-                for nombre, grupo, kcal, proteina, carbo, grasa, fibra, estado_pesaje in ALIMENTOS  # noqa: E501
-            ],
-            ["nombre"],
-        ),
         "habito": await _upsert(
             session,
             Habito,
@@ -204,6 +197,8 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
             ["usuario_id", "nombre"],
         ),
     }
+
+    conteo["perfil_atleta"] = await _sembrar_perfil(session, usuario_id)
 
     # El upsert nunca borra: un hábito que salió de HABITOS (ej. "hidratacion",
     # migrado a registro_hidratacion) queda huérfano si no se desactiva acá.

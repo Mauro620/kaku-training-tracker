@@ -19,6 +19,7 @@ from app.models.catalogo import (
     AuthUsuario,
     Ejercicio,
     Parametro,
+    PerfilAtleta,
     TipoSesion,
     TipoTest,
     Usuario,
@@ -35,17 +36,8 @@ from app.models.entrenamiento import (
     SesionPlan,
 )
 from app.models.evaluacion import TestFisico, TestIntento
-from app.models.nutricion import (
-    Alimento,
-    ComidaItem,
-    ComidaLog,
-    Despensa,
-    Receta,
-    RecetaItem,
-)
 
 __all__ = [
-    "Alimento",
     "AuthUsuario",
     "Base",
     "Bloque",
@@ -53,9 +45,6 @@ __all__ = [
     "Ciclo",
     "CicloSemana",
     "CicloSemanaComposicion",
-    "ComidaItem",
-    "ComidaLog",
-    "Despensa",
     "Ejercicio",
     "Habito",
     "HabitoRegistro",
@@ -63,8 +52,7 @@ __all__ = [
     "Molestia",
     "Parametro",
     "Partido",
-    "Receta",
-    "RecetaItem",
+    "PerfilAtleta",
     "RegistroBienestar",
     "RegistroHidratacion",
     "RegistroSueno",

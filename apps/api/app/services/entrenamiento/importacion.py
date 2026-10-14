@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import InvarianteDeNegocioError
 from app.core.normalizacion import normalizar_para_indice
+from app.core.tiempo import hoy_local
 from app.models import Ciclo, CicloSemana, Ejercicio, SesionPlan, TipoSesion
 from app.models.enums import EstadoSesionPlan
 from app.repositories import entrenamiento as repo
@@ -38,6 +39,10 @@ from app.services.catalogo import entrenamiento as catalogo
 from app.services.entrenamiento.bloque import validar_campos
 from app.services.entrenamiento.ciclo import anclar_a_lunes
 from app.services.entrenamiento.espaciado import evaluar_espaciado
+from app.services.entrenamiento.export_llm import (
+    exportar_perfil,
+    exportar_resumen_ciclo,
+)
 from app.services.entrenamiento.plan import resolver_estado_de_plan
 
 ESTADOS_EJECUTADOS = (EstadoSesionPlan.cumplido, EstadoSesionPlan.movido)
@@ -52,10 +57,24 @@ def _leer_recurso_empaquetado(nombre: str) -> str:
     )
 
 
-async def construir_export(session: AsyncSession, recurso: str) -> ExportRead:
-    """Los tres exports de PLAN_IMPORT.md §9. El router valida `recurso`
-    contra `EXPORT_RECURSOS` antes de llamar acá; esta función asume un valor
-    válido."""
+async def construir_export(
+    session: AsyncSession, recurso: str, usuario_id: uuid.UUID | None = None
+) -> ExportRead:
+    """Los exports de PLAN_IMPORT.md §9. El router valida `recurso` contra
+    `EXPORT_RECURSOS` antes de llamar acá; esta función asume un valor válido.
+
+    `perfil` y `resumen_ciclo` dependen del usuario, así que exigen
+    `usuario_id`; los otros tres son catálogo y no lo necesitan."""
+    if recurso in ("perfil", "resumen_ciclo"):
+        if usuario_id is None:
+            raise ValueError(f"el export '{recurso}' requiere usuario_id")
+        contenido = (
+            await exportar_perfil(session, usuario_id)
+            if recurso == "perfil"
+            else await exportar_resumen_ciclo(session, usuario_id, hoy_local())
+        )
+        return ExportRead(recurso=recurso, formato="json", contenido=contenido)
+
     if recurso == "ejercicios":
         ejercicios = await catalogo.listar_ejercicios(session)
         contenido = json.dumps(

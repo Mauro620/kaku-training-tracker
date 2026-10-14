@@ -123,6 +123,7 @@ async def registrar_medida(
         fecha=payload.fecha,
         peso_kg=payload.peso_kg,
         fc_reposo=payload.fc_reposo,
+        cintura_cm=payload.cintura_cm,
     )
 
 

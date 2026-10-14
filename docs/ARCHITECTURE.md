@@ -38,7 +38,6 @@
 │       ├── app/
 │       │   ├── (tabs)/hoy/
 │       │   ├── (tabs)/entreno/
-│       │   ├── (tabs)/cocina/
 │       │   └── (tabs)/progreso/
 │       ├── components/ui/        # shadcn
 │       ├── lib/
@@ -123,7 +122,6 @@ Claves iniciales a sembrar:
 | `estado_banda_amarilla` | 55 |
 | `molestia_recurrencia_dias` | 14 |
 | `molestia_recurrencia_conteo` | 3 |
-| `proteina_g_por_kg` | 1.8 |
 | `cerveza_horas_sin_alta_demanda` | 48 |
 | `cerveza_acwr_max` | 1.4 |
 | `cerveza_deuda_sueno_max` | 4 |

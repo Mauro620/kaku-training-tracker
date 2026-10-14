@@ -6,7 +6,7 @@ import { ProgresoScreen } from "@/components/progreso/progreso-screen";
 import { haySesion } from "@/lib/auth";
 
 /**
- * Pagina Progreso (Fase 7, ROADMAP §7).
+ * Pagina Progreso: las cuatro preguntas (REGLAS_NEGOCIO §18).
  * Mismo guard que las otras paginas (tabs): sin sesion redirige a /login.
  */
 export default function ProgresoPage() {
@@ -30,7 +30,7 @@ export default function ProgresoPage() {
       <header className="mb-6">
         <h1 className="text-[28px] font-bold tracking-tight text-text-primary">Progreso</h1>
         <p className="mt-1 text-[13px] text-text-secondary">
-          Tests fisicos, medida corporal y fichas de partido.
+          Cuatro preguntas, cada una con su respuesta.
         </p>
       </header>
       <ProgresoScreen />

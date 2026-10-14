@@ -281,6 +281,33 @@ async def test_registrar_medida_upsert_por_fecha(cliente: AsyncClient) -> None:
     assert len(listado.json()) == 1
 
 
+async def test_registrar_medida_con_cintura(cliente: AsyncClient) -> None:
+    r = await cliente.post(
+        "/api/v1/medidas",
+        json={"fecha": "2026-08-07", "peso_kg": "78.50", "cintura_cm": "84.5"},
+    )
+    assert r.status_code == 200
+    assert r.json()["cintura_cm"] == "84.5"
+
+    # La cintura es opcional: una medida sin ella queda en null, no falla.
+    sin = await cliente.post(
+        "/api/v1/medidas", json={"fecha": "2026-08-14", "peso_kg": "78.00"}
+    )
+    assert sin.status_code == 200
+    assert sin.json()["cintura_cm"] is None
+
+
+@pytest.mark.parametrize("cintura", ["0", "-3", "84.55", "10000"])
+async def test_registrar_medida_rechaza_cintura_invalida(
+    cliente: AsyncClient, cintura: str
+) -> None:
+    r = await cliente.post(
+        "/api/v1/medidas",
+        json={"fecha": "2026-08-07", "peso_kg": "78.50", "cintura_cm": cintura},
+    )
+    assert r.status_code == 422
+
+
 # ----------------------------------------------------------------- partido --
 
 

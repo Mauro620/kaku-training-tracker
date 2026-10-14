@@ -20,7 +20,7 @@ pnpm generate:api # regenera packages/contracts/src/api.ts desde el OpenAPI
 
 - `app/(auth)/login/` — formulario de login.
 - `app/(tabs)/hoy/` — pantalla Hoy: sueño + bienestar + hábitos (Fase 3).
-- `app/(tabs)/{entreno,cocina,progreso}/` — placeholders de fases 4/6/8.
+- `app/(tabs)/{entreno,progreso}/` — placeholders de fases 4/8.
 - `components/ui/` — primitivos del DESIGN.md (BentoCard, MetricDisplay,
   CircularProgressRing, PillSelectorGroup, CheckTile).
 - `components/hoy/` — composición específica de la pantalla.
@@ -34,6 +34,6 @@ pnpm generate:api # regenera packages/contracts/src/api.ts desde el OpenAPI
 
 - Service worker + offline (fase 5). El manifest está pero sin íconos.
 - Refresh automático proactivo del token (hoy solo reintenta una vez al 401).
-- Las pestañas Entreno/Cocina/Progreso son placeholders.
+- Las pestañas Entreno/Progreso son placeholders.
 - El Estado del día muestra `—` hasta fase 8.
 - Recharts para gráficas (fase 8).

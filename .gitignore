@@ -14,3 +14,6 @@ dist/
 *.egg-info/
 # Local AI runtime state
 .atl/
+
+# Respaldos de datos generados por scripts/ (contienen datos personales)
+respaldos/

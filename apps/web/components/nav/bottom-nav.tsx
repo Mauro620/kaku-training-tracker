@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { TABS } from "@/lib/tabs";
 
 /**
- * Bottom navigation de 4 pestañas (DESIGN.md §2.1).
+ * Bottom navigation de 3 pestañas (DESIGN.md §2.1).
  * Flotante inferior con backdrop-blur. El icono activo es blanco puro.
- * El lineamiento de tabs es de Fase 3; Entreno/Cocina/Progreso se
- * implementaron en sus respectivas fases (4/6/7).
+ * El lineamiento de tabs es de Fase 3; Entreno/Progreso se
+ * implementaron en sus respectivas fases (4/7).
  */
 export function BottomNav() {
   const pathname = usePathname();

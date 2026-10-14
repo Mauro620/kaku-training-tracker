@@ -32,6 +32,20 @@ PARAMETROS: tuple[tuple[str, Decimal, str | None, str], ...] = (
     ("acwr_umbral_alerta", Decimal("1.5"), None, "ACWR por encima del cual hay alerta"),
     ("acwr_dias_agudo", Decimal("7"), "dias", "Ventana de carga aguda"),
     ("acwr_dias_cronico", Decimal("28"), "dias", "Ventana de carga crónica"),
+    # ---------- 1RM estimado, Epley (REGLAS_NEGOCIO §18.2) ----------
+    (
+        "epley_divisor",
+        Decimal("30"),
+        None,
+        "Divisor de la formula de Epley: 1RM = peso x (1 + reps / divisor)",
+    ),
+    (
+        "epley_reps_max",
+        Decimal("10"),
+        "reps",
+        "Reps por encima de las cuales no se estima 1RM (Epley pierde "
+        "fiabilidad con muchas repeticiones)",
+    ),
     # ---------- Tests físicos ----------
     (
         "cmj_caida_alerta_pct",
@@ -139,13 +153,6 @@ PARAMETROS: tuple[tuple[str, Decimal, str | None, str], ...] = (
         Decimal("3"),
         "dias",
         "Días distintos con molestia en la zona que activan la señal",
-    ),
-    # ---------- Nutrición ----------
-    (
-        "proteina_g_por_kg",
-        Decimal("1.8"),
-        "g/kg",
-        "Referencia de proteína diaria por kg de peso. No es una meta a perseguir",
     ),
     # ---------- Semáforo de cerveza (REGLAS_NEGOCIO §11) ----------
     (

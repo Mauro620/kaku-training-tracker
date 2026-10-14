@@ -70,7 +70,7 @@ async def listar_planes(
         "idempotente por `{dia}-{tipo}`: reimportar la misma semana reemplaza "
         "en vez de duplicar. Los planes ya ejecutados (`cumplido` o `movido`) "
         "nunca se tocan; se omiten y se reportan como advertencia. El formato "
-        "está en docs/feature_1_session_plan_json/PLAN_IMPORT.md."
+        "está en docs/features/feature-01-plan-import/PLAN_IMPORT.md."
     ),
 )
 async def importar_semana(
@@ -86,19 +86,20 @@ async def importar_semana(
     response_model=ExportRead,
     summary="Exporta un recurso para armar el prompt del LLM (PLAN_IMPORT.md §9).",
     description=(
-        "`recurso` es uno de `ejercicios`, `reglas`, `ejemplo`. Cada uno "
-        "devuelve un `contenido` listo para pegar. Un `recurso` desconocido "
-        "responde 404."
+        "`recurso` es uno de `ejercicios`, `reglas`, `ejemplo`, `perfil` o "
+        "`resumen_ciclo`. Cada uno devuelve un `contenido` listo para pegar. "
+        "Un `recurso` desconocido responde 404, y `resumen_ciclo` tambien si "
+        "no hay un ciclo activo ni cerrado."
     ),
 )
 async def exportar_recurso(
     recurso: str,
-    _usuario: Usuario = Depends(get_usuario_actual),
+    usuario: Usuario = Depends(get_usuario_actual),
     sesion: AsyncSession = Depends(get_session),
 ) -> ExportRead:
     if recurso not in EXPORT_RECURSOS:
         raise HTTPException(status_code=404, detail="Recurso no encontrado")
-    return await construir_export(sesion, recurso)
+    return await construir_export(sesion, recurso, usuario.id)
 
 
 @router.get(
