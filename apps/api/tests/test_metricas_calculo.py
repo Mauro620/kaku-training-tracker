@@ -1,11 +1,15 @@
 """Casos de REGLAS_NEGOCIO §17 tal cual, sin base de datos."""
 
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 
 from app.services.metricas.calculo import (
+    calcular_acwr,
     carga_planeada,
+    clasificar_acwr,
+    e1rm_epley,
     pct_ejecutado,
     porcentaje,
     promedio,
@@ -54,3 +58,86 @@ def test_porcentaje_de_habitos(parte: int, total: int, esperado: float) -> None:
 
 def test_porcentaje_sin_denominador_es_null() -> None:
     assert porcentaje(0, 0) is None
+
+
+# ------------------------------------------------- 1RM de Epley (§18.2) --
+
+_DIV = Decimal("30")
+
+
+@pytest.mark.parametrize(
+    ("peso", "reps", "esperado"),
+    [("100", 1, "100.0"), ("100", 5, "116.7"), ("80", 10, "106.7")],
+)
+def test_epley(peso: str, reps: int, esperado: str) -> None:
+    rm = e1rm_epley(Decimal(peso), reps, divisor=_DIV)
+    assert round(float(rm), 1) == float(esperado)
+
+
+# --------------------------------------------- ACWR y semaforo (§3, §18.3) --
+
+FIN = date(2026, 10, 12)
+PRIMERA = date(2026, 6, 1)
+
+
+def _carga(aguda: int, total_28d: int) -> dict[date, int]:
+    """Aguda en el ultimo dia; el resto del total 28d en el primero de la ventana
+    (fuera de los 7 dias agudos)."""
+    return {FIN: aguda, FIN - timedelta(days=27): total_28d - aguda}
+
+
+@pytest.mark.parametrize(
+    ("aguda", "total", "acwr", "semaforo"),
+    [
+        (2000, 7400, 1.081, "verde"),
+        (2400, 6000, 1.6, "rojo"),
+        (1200, 6000, 0.8, "verde"),
+        (1950, 6000, 1.3, "verde"),
+        (2250, 6000, 1.5, "amarillo"),
+        (1000, 6000, 0.667, "baja"),
+    ],
+)
+def test_acwr_y_semaforo_con_los_casos_del_documento(
+    aguda: int, total: int, acwr: float, semaforo: str
+) -> None:
+    valor = calcular_acwr(
+        _carga(aguda, total), FIN, PRIMERA, dias_agudo=7, dias_cronico=28
+    )
+    assert valor == acwr
+    assert (
+        clasificar_acwr(valor, min_seguro=0.8, max_seguro=1.3, alerta=1.5) == semaforo
+    )
+
+
+def test_acwr_es_null_con_carga_cronica_cero() -> None:
+    assert calcular_acwr({}, FIN, PRIMERA, dias_agudo=7, dias_cronico=28) is None
+
+
+def test_acwr_es_null_con_menos_de_28_dias_de_historia() -> None:
+    primera = FIN - timedelta(days=19)  # 20 dias de historia
+    assert (
+        calcular_acwr(_carga(2000, 7400), FIN, primera, dias_agudo=7, dias_cronico=28)
+        is None
+    )
+    # Con exactamente 28 dias ya se calcula.
+    justo = FIN - timedelta(days=27)
+    assert (
+        calcular_acwr(_carga(2000, 7400), FIN, justo, dias_agudo=7, dias_cronico=28)
+        == 1.081
+    )
+
+
+def test_acwr_es_null_sin_ninguna_sesion_registrada() -> None:
+    assert calcular_acwr({}, FIN, None, dias_agudo=7, dias_cronico=28) is None
+
+
+def test_semaforo_sin_dato() -> None:
+    assert clasificar_acwr(None, min_seguro=0.8, max_seguro=1.3, alerta=1.5) is None
+
+
+def test_los_ceros_cuentan_volver_de_un_paron_da_acwr_alto() -> None:
+    # 3 semanas sin entrenar y una semana de 2000: cronica 500, aguda 2000.
+    carga = {FIN - timedelta(days=k): 400 for k in range(5)}  # 5 sesiones, 2000
+    valor = calcular_acwr(carga, FIN, PRIMERA, dias_agudo=7, dias_cronico=28)
+    assert valor == 4.0
+    assert clasificar_acwr(valor, min_seguro=0.8, max_seguro=1.3, alerta=1.5) == "rojo"

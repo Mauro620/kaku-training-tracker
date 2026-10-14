@@ -1599,3 +1599,107 @@ export function useGuardarPerfil() {
     },
   });
 }
+
+// ---------- Progreso: las cuatro preguntas (REGLAS_NEGOCIO §18) ----------
+
+export type SemanaCumplimiento = {
+  numero: number;
+  inicio: string;
+  fin: string;
+  planeadas: number;
+  cumplido: number;
+  movido: number;
+  descartado: number;
+  pendiente: number;
+  pct_cumplido: number | null;
+  pct_movido: number | null;
+  pct_descartado: number | null;
+  pct_pendiente: number | null;
+};
+export type CumplimientoProgreso = {
+  ciclo_numero: number | null;
+  semanas: SemanaCumplimiento[];
+  conclusion: string;
+};
+
+export type PuntoPrueba = { fecha: string; mejor: number; pct_cambio_vs_base: number | null };
+export type PruebaTendencia = {
+  codigo: string;
+  nombre: string;
+  unidad: string;
+  mejor_es_mayor: boolean;
+  puntos: PuntoPrueba[];
+};
+export type MejorMarca = {
+  ejercicio_id: number;
+  ejercicio: string;
+  tipo_medicion: TipoMedicion;
+  peso_max_kg: number | null;
+  rm_estimado_kg: number | null;
+  duracion_max_s: number | null;
+  distancia_max_m: number | null;
+  calidad_max: number | null;
+  fecha: string;
+};
+export type RendimientoProgreso = {
+  pruebas: PruebaTendencia[];
+  marcas: MejorMarca[];
+  conclusion: string;
+};
+
+export type Semaforo = "baja" | "verde" | "amarillo" | "rojo";
+export type SemanaRecuperacion = {
+  inicio: string;
+  fin: string;
+  en_curso: boolean;
+  carga_semanal: number;
+  acwr: number | null;
+  semaforo: Semaforo | null;
+  sueno_prom_h: number | null;
+  sueno_dias_con_dato: number;
+};
+export type RecuperacionProgreso = {
+  semanas: SemanaRecuperacion[];
+  bandas: { min_seguro: number; max_seguro: number; alerta: number };
+  sueno_objetivo_h: number;
+  conclusion: string;
+};
+
+export type SemanaComposicion = {
+  inicio: string;
+  fecha_medida: string;
+  peso_kg: number;
+  cintura_cm: number | null;
+};
+export type ComposicionProgreso = {
+  semanas: SemanaComposicion[];
+  peso_objetivo_kg: number | null;
+  cambio_peso_kg: number | null;
+  cambio_cintura_cm: number | null;
+  conclusion: string;
+};
+
+export function useProgresoCumplimiento() {
+  return useQuery({
+    queryKey: ["progreso", "cumplimiento"],
+    queryFn: () => api.get<CumplimientoProgreso>("/progreso/cumplimiento"),
+  });
+}
+export function useProgresoRendimiento() {
+  return useQuery({
+    queryKey: ["progreso", "rendimiento"],
+    queryFn: () => api.get<RendimientoProgreso>("/progreso/rendimiento"),
+  });
+}
+export function useProgresoRecuperacion() {
+  return useQuery({
+    queryKey: ["progreso", "recuperacion"],
+    queryFn: () => api.get<RecuperacionProgreso>("/progreso/recuperacion"),
+  });
+}
+export function useProgresoComposicion() {
+  return useQuery({
+    queryKey: ["progreso", "composicion"],
+    queryFn: () => api.get<ComposicionProgreso>("/progreso/composicion"),
+  });
+}

@@ -815,6 +815,74 @@ export interface paths {
         patch: operations["descartar_api_v1_planes__plan_id__descartar_patch"];
         trace?: never;
     };
+    "/api/v1/progreso/cumplimiento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ¿Cumpliste el plan? % de sesiones por estado y semana del ciclo. */
+        get: operations["cumplimiento_api_v1_progreso_cumplimiento_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progreso/rendimiento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ¿Estás rindiendo mejor? Tendencia de pruebas y mejor marca por ejercicio. */
+        get: operations["rendimiento_api_v1_progreso_rendimiento_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progreso/recuperacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ¿Te estás recuperando? Carga semanal, ACWR con semáforo y sueño. */
+        get: operations["recuperacion_api_v1_progreso_recuperacion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/progreso/composicion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ¿Vas hacia tu objetivo de composición? Peso y cintura semanales. */
+        get: operations["composicion_api_v1_progreso_composicion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tests": {
         parameters: {
             query?: never;
@@ -947,6 +1015,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BandasAcwr */
+        BandasAcwr: {
+            /** Min Seguro */
+            min_seguro: number;
+            /** Max Seguro */
+            max_seguro: number;
+            /** Alerta */
+            alerta: number;
+        };
         /**
          * BienestarDiaSchema
          * @description True si el usuario completo los 4 sliders de Hooper ese dia.
@@ -1399,6 +1476,19 @@ export interface components {
             /** Cantidad Objetivo */
             cantidad_objetivo: number;
         };
+        /** ComposicionRead */
+        ComposicionRead: {
+            /** Semanas */
+            semanas: components["schemas"]["SemanaComposicion"][];
+            /** Peso Objetivo Kg */
+            peso_objetivo_kg: number | null;
+            /** Cambio Peso Kg */
+            cambio_peso_kg: number | null;
+            /** Cambio Cintura Cm */
+            cambio_cintura_cm: number | null;
+            /** Conclusion */
+            conclusion: string;
+        };
         /** CumplimientoItem */
         CumplimientoItem: {
             /** Tipo Sesion Id */
@@ -1413,6 +1503,15 @@ export interface components {
             hecho: number;
             /** Cumplido */
             cumplido: boolean;
+        };
+        /** CumplimientoRead */
+        CumplimientoRead: {
+            /** Ciclo Numero */
+            ciclo_numero: number | null;
+            /** Semanas */
+            semanas: components["schemas"]["SemanaCumplimiento"][];
+            /** Conclusion */
+            conclusion: string;
         };
         /**
          * Demanda
@@ -1895,6 +1994,33 @@ export interface components {
             cintura_cm: string | null;
             origen: components["schemas"]["OrigenDato"];
         };
+        /** MejorMarca */
+        MejorMarca: {
+            /** Ejercicio Id */
+            ejercicio_id: number;
+            /** Ejercicio */
+            ejercicio: string;
+            /**
+             * Tipo Medicion
+             * @enum {string}
+             */
+            tipo_medicion: "carga" | "distancia" | "tiempo" | "tecnica";
+            /** Peso Max Kg */
+            peso_max_kg?: number | null;
+            /** Rm Estimado Kg */
+            rm_estimado_kg?: number | null;
+            /** Duracion Max S */
+            duracion_max_s?: number | null;
+            /** Distancia Max M */
+            distancia_max_m?: number | null;
+            /** Calidad Max */
+            calidad_max?: number | null;
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+        };
         /**
          * MolestiaCreate
          * @description Sin molestia no hay fila: no existe un Create con intensidad 0.
@@ -2163,6 +2289,41 @@ export interface components {
             /** Sesiones */
             sesiones: components["schemas"]["SesionImport"][];
         };
+        /** PruebaTendencia */
+        PruebaTendencia: {
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Unidad */
+            unidad: string;
+            /** Mejor Es Mayor */
+            mejor_es_mayor: boolean;
+            /** Puntos */
+            puntos: components["schemas"]["PuntoPrueba"][];
+        };
+        /** PuntoPrueba */
+        PuntoPrueba: {
+            /**
+             * Fecha
+             * Format: date
+             */
+            fecha: string;
+            /** Mejor */
+            mejor: number;
+            /** Pct Cambio Vs Base */
+            pct_cambio_vs_base: number | null;
+        };
+        /** RecuperacionRead */
+        RecuperacionRead: {
+            /** Semanas */
+            semanas: components["schemas"]["SemanaRecuperacion"][];
+            bandas: components["schemas"]["BandasAcwr"];
+            /** Sueno Objetivo H */
+            sueno_objetivo_h: number;
+            /** Conclusion */
+            conclusion: string;
+        };
         /**
          * ReemplazarComposicionRequest
          * @description Reemplaza TODA la composición de la semana (no upsert incremental):
@@ -2335,6 +2496,15 @@ export interface components {
             /** Idempotency Key */
             idempotency_key: string | null;
         };
+        /** RendimientoRead */
+        RendimientoRead: {
+            /** Pruebas */
+            pruebas: components["schemas"]["PruebaTendencia"][];
+            /** Marcas */
+            marcas: components["schemas"]["MejorMarca"][];
+            /** Conclusion */
+            conclusion: string;
+        };
         /** ResultadoTestRead */
         ResultadoTestRead: {
             /** Mejor */
@@ -2353,6 +2523,56 @@ export interface components {
             /** Max */
             max: number;
         };
+        /** SemanaComposicion */
+        SemanaComposicion: {
+            /**
+             * Inicio
+             * Format: date
+             */
+            inicio: string;
+            /**
+             * Fecha Medida
+             * Format: date
+             */
+            fecha_medida: string;
+            /** Peso Kg */
+            peso_kg: number;
+            /** Cintura Cm */
+            cintura_cm: number | null;
+        };
+        /** SemanaCumplimiento */
+        SemanaCumplimiento: {
+            /** Numero */
+            numero: number;
+            /**
+             * Inicio
+             * Format: date
+             */
+            inicio: string;
+            /**
+             * Fin
+             * Format: date
+             */
+            fin: string;
+            /** Planeadas */
+            planeadas: number;
+            /** Cumplido */
+            cumplido: number;
+            /** Movido */
+            movido: number;
+            /** Descartado */
+            descartado: number;
+            /** Pendiente */
+            pendiente: number;
+            /** Pct Cumplido */
+            pct_cumplido: number | null;
+            /** Pct Movido */
+            pct_movido: number | null;
+            /** Pct Descartado */
+            pct_descartado: number | null;
+            /** Pct Pendiente */
+            pct_pendiente: number | null;
+        };
         /** SemanaImport */
         SemanaImport: {
             /** Numero */
@@ -2364,6 +2584,31 @@ export interface components {
              * @default 100
              */
             volumen_pct: number;
+        };
+        /** SemanaRecuperacion */
+        SemanaRecuperacion: {
+            /**
+             * Inicio
+             * Format: date
+             */
+            inicio: string;
+            /**
+             * Fin
+             * Format: date
+             */
+            fin: string;
+            /** En Curso */
+            en_curso: boolean;
+            /** Carga Semanal */
+            carga_semanal: number;
+            /** Acwr */
+            acwr: number | null;
+            /** Semaforo */
+            semaforo: ("baja" | "verde" | "amarillo" | "rojo") | null;
+            /** Sueno Prom H */
+            sueno_prom_h: number | null;
+            /** Sueno Dias Con Dato */
+            sueno_dias_con_dato: number;
         };
         /**
          * SesionCreate
@@ -4585,6 +4830,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SesionPlanRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cumplimiento_api_v1_progreso_cumplimiento_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CumplimientoRead"];
+                };
+            };
+        };
+    };
+    rendimiento_api_v1_progreso_rendimiento_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RendimientoRead"];
+                };
+            };
+        };
+    };
+    recuperacion_api_v1_progreso_recuperacion_get: {
+        parameters: {
+            query?: {
+                semanas?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecuperacionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    composicion_api_v1_progreso_composicion_get: {
+        parameters: {
+            query?: {
+                semanas?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComposicionRead"];
                 };
             };
             /** @description Validation Error */

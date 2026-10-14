@@ -209,6 +209,7 @@ export function PerfilScreen() {
                 <input
                   type="number"
                   placeholder="Duración (min)"
+                  aria-label="Duración en minutos"
                   className={INPUT}
                   value={ev.duracion_min ?? ""}
                   onChange={(e) => cambiar({ duracion_min: e.target.value === "" ? null : Number(e.target.value) })}
@@ -268,16 +269,20 @@ export function PerfilScreen() {
             set("ventanas", reemplazar(form.ventanas, i, { ...v, ...parcial }));
           return (
             <div key={i} className="flex flex-col gap-2 rounded-xl border border-border-subtle p-3">
-              <div className="grid grid-cols-3 gap-2">
-                <select className={INPUT} value={v.dia} onChange={(e) => cambiar({ dia: Number(e.target.value) })}>
-                  {DIAS.map((d, k) => (
-                    <option key={d} value={k}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-                <input type="time" className={INPUT} value={v.inicio} onChange={(e) => cambiar({ inicio: e.target.value })} />
-                <input type="time" className={INPUT} value={v.fin} onChange={(e) => cambiar({ fin: e.target.value })} />
+              <select className={INPUT} value={v.dia} onChange={(e) => cambiar({ dia: Number(e.target.value) })}>
+                {DIAS.map((d, k) => (
+                  <option key={d} value={k}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <Campo etiqueta="Inicio">
+                  <input type="time" className={INPUT} value={v.inicio} onChange={(e) => cambiar({ inicio: e.target.value })} />
+                </Campo>
+                <Campo etiqueta="Fin">
+                  <input type="time" className={INPUT} value={v.fin} onChange={(e) => cambiar({ fin: e.target.value })} />
+                </Campo>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {nombresLugares.map((n) => {

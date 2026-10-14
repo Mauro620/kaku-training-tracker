@@ -4,14 +4,17 @@ sin reglas de negocio: devuelven filas en crudo para que el servicio calcule."""
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    Bloque,
     Ciclo,
     CicloSemana,
+    Ejercicio,
     HabitoRegistro,
     MedidaCorporal,
     RegistroHidratacion,
@@ -150,3 +153,45 @@ async def tests_con_tipo_hasta(
         .order_by(TestFisico.fecha, TestFisico.id)
     )
     return [(t, tipo) for t, tipo in filas.all()]
+
+
+async def carga_diaria(
+    session: AsyncSession, usuario_id: uuid.UUID, desde: date, hasta: date
+) -> dict[date, int]:
+    """Suma de `carga_srpe` por fecha (REGLAS_NEGOCIO §2). Los dias sin sesion
+    no aparecen: quien calcula debe tratarlos como 0."""
+    filas = await session.execute(
+        select(Sesion.fecha, func.sum(Sesion.carga_srpe))
+        .where(
+            Sesion.usuario_id == usuario_id,
+            Sesion.fecha >= desde,
+            Sesion.fecha <= hasta,
+        )
+        .group_by(Sesion.fecha)
+    )
+    return {fecha: int(total) for fecha, total in filas.all()}
+
+
+async def primera_fecha_de_sesion(
+    session: AsyncSession, usuario_id: uuid.UUID
+) -> date | None:
+    return cast(
+        "date | None",
+        await session.scalar(
+            select(func.min(Sesion.fecha)).where(Sesion.usuario_id == usuario_id)
+        ),
+    )
+
+
+async def bloques_reales(
+    session: AsyncSession, usuario_id: uuid.UUID
+) -> list[tuple[Bloque, Ejercicio, date]]:
+    """Todos los bloques ejecutados, con su ejercicio y la fecha de la sesion."""
+    filas = await session.execute(
+        select(Bloque, Ejercicio, Sesion.fecha)
+        .join(Sesion, Bloque.sesion_id == Sesion.id)
+        .join(Ejercicio, Bloque.ejercicio_id == Ejercicio.id)
+        .where(Sesion.usuario_id == usuario_id)
+        .order_by(Sesion.fecha)
+    )
+    return [(b, e, f) for b, e, f in filas.all()]

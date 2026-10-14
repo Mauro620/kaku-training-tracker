@@ -22,6 +22,7 @@ from app.api.v1.routers.molestias import router as molestias_router
 from app.api.v1.routers.parametros import router as parametros_router
 from app.api.v1.routers.perfil import router as perfil_router
 from app.api.v1.routers.planes import router as planes_router
+from app.api.v1.routers.progreso import router as progreso_router
 from app.api.v1.routers.sueno import router as sueno_router
 
 __all__ = [
@@ -39,5 +40,6 @@ __all__ = [
     "parametros_router",
     "perfil_router",
     "planes_router",
+    "progreso_router",
     "sueno_router",
 ]

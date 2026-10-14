@@ -19,6 +19,7 @@ from app.api.v1.routers import (
     parametros_router,
     perfil_router,
     planes_router,
+    progreso_router,
     sueno_router,
 )
 from app.core.config import get_settings
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     v1.include_router(catalogos_router)
     v1.include_router(ciclos_router)
     v1.include_router(planes_router)
+    v1.include_router(progreso_router)
     v1.include_router(evaluacion_router)
     v1.include_router(cierre_semana_router)
     app.include_router(v1)
