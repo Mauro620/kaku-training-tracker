@@ -180,6 +180,36 @@ async def resolver_estado_de_plan(session: AsyncSession, sesion_plan_id: int) ->
         await repo.actualizar_estado_sesion_plan(session, plan, nuevo)
 
 
+async def recuperar_plan(
+    session: AsyncSession, usuario_id: uuid.UUID, sesion_plan_id: int
+) -> SesionPlan:
+    """Deshace un descarte: el plan vuelve a `pendiente`.
+
+    Descartar es una decision del usuario y, como cualquiera, se puede
+    equivocar: sin esto un plan descartado por un toque accidental no tenia
+    vuelta atras. Solo aplica a `descartado`; un plan `cumplido` o `movido` lo
+    resuelve el sistema contra la sesion real y no se toca a mano.
+
+    Pasa por `resolver_estado_de_plan` y no escribe `pendiente` a ciegas: si el
+    plan tuviera una sesion real, `ejecutar gana` y queda cumplido/movido.
+    """
+    plan = await repo.obtener_sesion_plan_por_id(session, sesion_plan_id)
+    if plan is None or plan.usuario_id != usuario_id:
+        raise RecursoNoEncontradoError(f"sesion_plan {sesion_plan_id} no encontrado")
+    if plan.estado is not EstadoSesionPlan.descartado:
+        raise InvarianteDeNegocioError(
+            "Solo se puede recuperar un plan descartado "
+            f"(este esta {plan.estado.value})."
+        )
+    # Se saca de `descartado` primero: el resolver respeta ese estado cuando no
+    # hay sesion, y justamente eso es lo que se quiere deshacer.
+    await repo.actualizar_estado_sesion_plan(session, plan, EstadoSesionPlan.pendiente)
+    await resolver_estado_de_plan(session, plan.id)
+    await session.commit()
+    await session.refresh(plan, attribute_names=["bloques_planeados"])
+    return plan
+
+
 async def descartar_plan(
     session: AsyncSession, usuario_id: uuid.UUID, sesion_plan_id: int
 ) -> SesionPlan:

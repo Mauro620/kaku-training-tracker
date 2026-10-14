@@ -1,4 +1,5 @@
-"""Dos sesiones planeadas el mismo dia (ej. activacion + partido).
+"""Dos sesiones planeadas el mismo dia (ej. activacion + partido) y recuperar un
+plan descartado por error (PATCH /planes/{id}/recuperar).
 
 Contexto: la pantalla Entreno asumia una sola sesion por dia y, al registrar
 la primera, no dejaba iniciar la segunda. El backend nunca lo impidio; estos
@@ -134,3 +135,69 @@ async def test_un_plan_ya_ejecutado_no_se_puede_descartar(
 
     r = await cliente.patch(f"/api/v1/planes/{planes[activacion]}/descartar")
     assert r.status_code == 422
+
+
+# ------------------------------------------------ recuperar un descarte --
+
+
+async def test_un_plan_descartado_vuelve_a_pendiente(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    partido = await _tipo(sesion, "partido")
+    planes = await _importar_dos_planes_el_miercoles(cliente)
+    await cliente.patch(f"/api/v1/planes/{planes[partido]}/descartar")
+    assert (await _estados(cliente))[partido] == "descartado"
+
+    r = await cliente.patch(f"/api/v1/planes/{planes[partido]}/recuperar")
+
+    assert r.status_code == 200
+    assert r.json()["estado"] == "pendiente"
+    assert (await _estados(cliente))[partido] == "pendiente"
+
+
+async def test_un_plan_recuperado_se_puede_ejecutar(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    partido = await _tipo(sesion, "partido")
+    planes = await _importar_dos_planes_el_miercoles(cliente)
+    await cliente.patch(f"/api/v1/planes/{planes[partido]}/descartar")
+    await cliente.patch(f"/api/v1/planes/{planes[partido]}/recuperar")
+
+    await _registrar(cliente, planes[partido], partido, 90)
+
+    assert (await _estados(cliente))[partido] == "cumplido"
+
+
+async def test_recuperar_no_toca_los_demas_planes(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    activacion = await _tipo(sesion, "activacion")
+    partido = await _tipo(sesion, "partido")
+    planes = await _importar_dos_planes_el_miercoles(cliente)
+    await cliente.patch(f"/api/v1/planes/{planes[activacion]}/descartar")
+    await cliente.patch(f"/api/v1/planes/{planes[partido]}/descartar")
+
+    await cliente.patch(f"/api/v1/planes/{planes[partido]}/recuperar")
+
+    assert await _estados(cliente) == {activacion: "descartado", partido: "pendiente"}
+
+
+async def test_solo_se_recupera_un_plan_descartado(
+    cliente: AsyncClient, sesion: AsyncSession
+) -> None:
+    activacion = await _tipo(sesion, "activacion")
+    partido = await _tipo(sesion, "partido")
+    planes = await _importar_dos_planes_el_miercoles(cliente)
+    await _registrar(cliente, planes[activacion], activacion, 20)
+
+    # pendiente: nada que recuperar
+    pendiente = await cliente.patch(f"/api/v1/planes/{planes[partido]}/recuperar")
+    assert pendiente.status_code == 422
+    # cumplido: lo resuelve el sistema, no se toca a mano
+    cumplido = await cliente.patch(f"/api/v1/planes/{planes[activacion]}/recuperar")
+    assert cumplido.status_code == 422
+    assert (await _estados(cliente))[activacion] == "cumplido"
+
+
+async def test_recuperar_un_plan_inexistente_es_404(cliente: AsyncClient) -> None:
+    assert (await cliente.patch("/api/v1/planes/999999/recuperar")).status_code == 404

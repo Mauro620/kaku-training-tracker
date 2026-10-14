@@ -28,6 +28,7 @@ from app.services.entrenamiento.plan import (
     descartar_plan,
     listar_planes_de_fecha,
     obtener_plan_detalle,
+    recuperar_plan,
 )
 
 router = APIRouter(prefix="/planes", tags=["ciclos"])
@@ -118,6 +119,24 @@ async def obtener_plan(
     sesion: AsyncSession = Depends(get_session),
 ) -> PlanDetalleRead:
     return await obtener_plan_detalle(sesion, usuario.id, plan_id)
+
+
+@router.patch(
+    "/{plan_id}/recuperar",
+    response_model=SesionPlanRead,
+    summary="Deshace un descarte: el plan descartado vuelve a pendiente.",
+    description=(
+        "Solo aplica a un plan `descartado`; con cualquier otro estado "
+        "responde 422. `cumplido` y `movido` los resuelve el sistema contra "
+        "la sesión real y no se tocan a mano."
+    ),
+)
+async def recuperar(
+    plan_id: int = Path(..., description="id del sesion_plan"),
+    usuario: Usuario = Depends(get_usuario_actual),
+    sesion: AsyncSession = Depends(get_session),
+) -> SesionPlan:
+    return await recuperar_plan(sesion, usuario.id, plan_id)
 
 
 @router.patch(
