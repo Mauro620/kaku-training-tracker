@@ -8,17 +8,17 @@ Elimina las 6 tablas de nutricion (alimento, receta, receta_item,
 comida_log, comida_item, despensa), sus 3 enums y el parametro
 `proteina_g_por_kg`.
 
-DESTRUCTIVA. Si alguna de las tablas tiene filas, la migracion se niega a
-correr hasta que se confirme que existe un respaldo:
+DESTRUCTIVA. Si alguna de las tablas tiene filas, las borra. El usuario
+decidio explicitamente descartar esos datos sin respaldo, asi que la migracion
+ya no se niega a correr: solo deja un aviso en el log con lo que borra. (Antes
+exigia KAKU_RESPALDO_COCINA_CONFIRMADO=1; el script
+`python -m scripts.respaldo_cocina` sigue disponible por si se quiere respaldar.)
 
-    uv run --directory apps/api python -m scripts.respaldo_cocina
-    KAKU_RESPALDO_COCINA_CONFIRMADO=1 make migrate
-
-El downgrade recrea el esquema vacio; los datos se recuperan del JSON de
-respaldo, no de la migracion.
+El downgrade recrea el esquema vacio; los datos no se recuperan de la
+migracion.
 """
 
-import os
+import logging
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -40,7 +40,7 @@ _TABLAS = (
     "alimento",
 )
 _ENUMS = ("momento_comida", "estado_pesaje", "grupo_alimento")
-_VARIABLE_CONFIRMACION = "KAKU_RESPALDO_COCINA_CONFIRMADO"
+logger = logging.getLogger("alembic.runtime.migration")
 
 
 def upgrade() -> None:
@@ -50,12 +50,10 @@ def upgrade() -> None:
         for tabla in _TABLAS
         if (n := bind.execute(sa.text(f"SELECT count(*) FROM {tabla}")).scalar())
     }
-    if con_datos and os.environ.get(_VARIABLE_CONFIRMACION) != "1":
-        raise RuntimeError(
-            "Esta migracion borra datos de Cocina "
-            f"({', '.join(f'{t}: {n}' for t, n in con_datos.items())}). "
-            "Genera el respaldo con `python -m scripts.respaldo_cocina`, "
-            f"verificalo y vuelve a correr con {_VARIABLE_CONFIRMACION}=1."
+    if con_datos:
+        logger.warning(
+            "Eliminando datos de Cocina sin respaldo: %s",
+            ", ".join(f"{t}: {n}" for t, n in con_datos.items()),
         )
 
     op.drop_index(
