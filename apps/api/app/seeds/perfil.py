@@ -8,6 +8,10 @@ borraria sus cambios. Se inserta una sola vez (ON CONFLICT DO NOTHING).
 from decimal import Decimal
 from typing import Any
 
+# Meta de peso corporal. Vive en `usuario.peso_objetivo_kg` (no en el perfil) y,
+# como el perfil, solo se siembra si esta vacia: no pisa lo que el usuario cambie.
+PESO_OBJETIVO_KG = Decimal("75.00")
+
 PERFIL: dict[str, Any] = {
     "posicion": "Extremo izquierdo",
     "pie_dominante": "derecho (trabajando la zurda)",
@@ -25,7 +29,7 @@ PERFIL: dict[str, Any] = {
         "Fuerza y potencia funcional para fútbol",
         "Técnica y toma de decisiones del rol",
         "Repetición de esfuerzos de alta intensidad",
-        "Bajar a ~11 % de grasa",
+        "Bajar a ~12 % de grasa corporal (~75 kg)",
     ],
     "eventos_fijos": [
         {
@@ -67,13 +71,18 @@ PERFIL: dict[str, Any] = {
     ],
     # El domingo no tiene ventana: es descanso.
     "lugares": [
-        {"nombre": "Gimnasio", "equipamiento": []},
+        {"nombre": "Gimnasio", "equipamiento": ["gimnasio completo"]},
         {
             "nombre": "Cancha El Dorado",
-            "equipamiento": ["cancha grande", "pista de atletismo", "conos"],
+            "equipamiento": ["cancha grande", "pista de atletismo"],
         },
-        {"nombre": "Cancha pequeña con muros", "equipamiento": ["muros"]},
+        {
+            "nombre": "Cancha pequeña con muros",
+            "equipamiento": ["muros para simular pases, control y regates"],
+        },
         {"nombre": "Pista de atletismo", "equipamiento": ["pista de atletismo"]},
         {"nombre": "Zona de calistenia", "equipamiento": []},
     ],
+    # Lo lleva consigo: sirve en cualquier ventana.
+    "equipamiento_propio": ["conos", "balón", "bandas de resistencia", "paralelas"],
 }

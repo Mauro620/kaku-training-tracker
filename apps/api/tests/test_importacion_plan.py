@@ -36,12 +36,14 @@ from app.services.entrenamiento.importacion import construir_export
 RUTA_EJEMPLO = (
     Path(__file__).resolve().parents[3]
     / "docs"
+    / "features"
     / "feature-01-plan-import"
     / "plan-ejemplo.json"
 )
 RUTA_DOC_REGLAS = (
     Path(__file__).resolve().parents[3]
     / "docs"
+    / "features"
     / "feature-01-plan-import"
     / "PLAN_IMPORT.md"
 )

@@ -14,6 +14,7 @@ function base(): PerfilAtletaBase {
     eventos_fijos: [{ dia: 0, hora: "21:00", tipo_sesion: "partido", nombre: "Equipo", duracion_min: 90 }],
     ventanas: [{ dia: 0, inicio: "09:00", fin: "10:30", lugares: ["Gimnasio"] }],
     lugares: [{ nombre: "Gimnasio", equipamiento: [] }],
+    equipamiento_propio: ["conos"],
   };
 }
 

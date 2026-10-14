@@ -1579,6 +1579,7 @@ export type PerfilAtletaBase = {
   eventos_fijos: EventoFijo[];
   ventanas: VentanaDisponible[];
   lugares: LugarEntreno[];
+  equipamiento_propio: string[];
 };
 
 export type PerfilAtleta = PerfilAtletaBase & { actualizado_en: string };

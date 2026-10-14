@@ -263,6 +263,16 @@ export function PerfilScreen() {
         </button>
       </Seccion>
 
+      <Seccion titulo="Equipamiento propio (lo llevas contigo a cualquier ventana)">
+        <input
+          placeholder="Conos, balón, bandas de resistencia..."
+          aria-label="Equipamiento propio, separado por comas"
+          className={INPUT}
+          defaultValue={form.equipamiento_propio.join(", ")}
+          onBlur={(e) => set("equipamiento_propio", parsearLista(e.target.value))}
+        />
+      </Seccion>
+
       <Seccion titulo="Ventanas disponibles (los días sin ventana son descanso)">
         {form.ventanas.map((v, i) => {
           const cambiar = (parcial: Partial<VentanaDisponible>) =>

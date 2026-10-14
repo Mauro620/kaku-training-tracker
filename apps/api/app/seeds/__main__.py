@@ -34,7 +34,7 @@ from app.models import (
 from app.seeds.catalogos import HABITOS, TIPOS_SESION, TIPOS_TEST, ZONAS_CORPORALES
 from app.seeds.ejercicios import EJERCICIOS
 from app.seeds.parametros import PARAMETROS
-from app.seeds.perfil import PERFIL
+from app.seeds.perfil import PERFIL, PESO_OBJETIVO_KG
 
 # Los valores semilla rigen "desde siempre". Una fecha fija los hace
 # idempotentes: con CURRENT_DATE, re-sembrar mañana insertaría una segunda
@@ -199,6 +199,12 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
     }
 
     conteo["perfil_atleta"] = await _sembrar_perfil(session, usuario_id)
+    # Solo si esta vacio: el peso objetivo es del usuario, el seed no lo pisa.
+    await session.execute(
+        update(Usuario)
+        .where(Usuario.id == usuario_id, Usuario.peso_objetivo_kg.is_(None))
+        .values(peso_objetivo_kg=PESO_OBJETIVO_KG)
+    )
 
     # El upsert nunca borra: un hábito que salió de HABITOS (ej. "hidratacion",
     # migrado a registro_hidratacion) queda huérfano si no se desactiva acá.

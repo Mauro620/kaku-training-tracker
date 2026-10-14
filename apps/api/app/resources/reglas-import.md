@@ -281,7 +281,8 @@ exports bajo `GET /planes/importar/export/{recurso}`:
   la misma razón.
 - `perfil` — el perfil del atleta como JSON: posición, rol, pie dominante,
   lesiones activas, objetivos en orden de prioridad, eventos fijos,
-  ventanas disponibles por día, lugares con su equipamiento, talla, peso
+  ventanas disponibles por día, lugares con su equipamiento, equipamiento
+  propio, talla, peso
   declarado y la última medida corporal.
 - `resumen_ciclo` — cómo le fue al atleta en el ciclo actual o en el último
   cerrado (REGLAS_NEGOCIO §17). Responde 404 si todavía no hay ninguno; en
@@ -316,7 +317,8 @@ el usuario.
   que se puede entrenar ese día. La `duracion_min` de cada sesión tiene que
   caber entre `inicio` y `fin`, y los ejercicios tienen que poder hacerse
   con el equipamiento de alguno de los `lugares` de esa ventana (mira
-  `lugares[].equipamiento`).
+  `lugares[].equipamiento`) más el `equipamiento_propio`, que el atleta
+  lleva consigo y por tanto está disponible en cualquier ventana.
 - Un día **sin ventana y sin evento fijo es descanso**: no planees sesión
   ese día, salvo una `recuperacion` corta si el usuario la pide.
 - **`lesiones_activas`**: si no está vacía, evita cargar la zona afectada y

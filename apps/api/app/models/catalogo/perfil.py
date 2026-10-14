@@ -45,6 +45,7 @@ class PerfilAtleta(Base):
                 "eventos_fijos",
                 "ventanas",
                 "lugares",
+                "equipamiento_propio",
             )
         ),
     )
@@ -73,6 +74,11 @@ class PerfilAtleta(Base):
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
     lugares: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
+    # Lo que el atleta lleva consigo y por tanto esta en CUALQUIER ventana
+    # (conos, balon, bandas...), a diferencia del equipamiento de un lugar.
+    equipamiento_propio: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
     actualizado_en: Mapped[datetime] = mapped_column(
