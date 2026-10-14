@@ -266,8 +266,10 @@ async def test_composicion_toma_el_ultimo_registro_de_cada_semana(
     assert r.cambio_peso_kg == -0.6
     # Cintura: solo la semana del 5/10 la tiene, no hay con que comparar.
     assert r.cambio_cintura_cm is None
-    assert r.peso_objetivo_kg is None
+    # El seed fija el peso objetivo en 75 kg: 79,0 - 75 = 4.
+    assert r.peso_objetivo_kg == 75.0
     assert r.conclusion.startswith("En 2 semanas con medición bajaste 0,6 kg")
+    assert "te faltan 4 kg para tu objetivo de 75 kg" in r.conclusion
     assert r.conclusion.endswith("El peso solo no mide la grasa.")
 
 

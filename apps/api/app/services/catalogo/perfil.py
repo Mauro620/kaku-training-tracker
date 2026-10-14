@@ -11,7 +11,14 @@ from app.repositories.catalogo import perfil as repo
 from app.repositories.catalogo import tipo_sesion as repo_tipo_sesion
 from app.schemas.catalogo.perfil import PerfilUpdate
 
-_LISTAS = {"lesiones_activas", "objetivos", "eventos_fijos", "ventanas", "lugares"}
+_LISTAS = {
+    "lesiones_activas",
+    "objetivos",
+    "eventos_fijos",
+    "ventanas",
+    "lugares",
+    "equipamiento_propio",
+}
 
 
 async def obtener_perfil(session: AsyncSession, usuario_id: uuid.UUID) -> PerfilAtleta:

@@ -65,9 +65,10 @@ Table perfil_atleta [headercolor: #175e7a] {
 	eventos_fijos jsonb [ not null, default: `'[]'` ]
 	ventanas jsonb [ not null, default: `'[]'` ]
 	lugares jsonb [ not null, default: `'[]'` ]
+	equipamiento_propio jsonb [ not null, default: `'[]'` ]
 	actualizado_en timestamptz [ not null, default: `now()` ]
 
-	Note: 'Un registro por usuario (PK = FK). Las listas son JSONB porque se leen y escriben siempre completas y el export para el LLM es el mismo JSON. Formas: lesiones_activas [texto]; objetivos [texto] en orden de prioridad; eventos_fijos [{dia 0-6, hora HH:MM, tipo_sesion (codigo de tipo_sesion), nombre, duracion_min?}]; ventanas [{dia 0-6, inicio HH:MM, fin HH:MM, lugares [nombre de lugar]}]; lugares [{nombre, equipamiento [texto]}]. peso_kg es el peso DECLARADO, independiente de medida_corporal (peso medido).'
+	Note: 'Un registro por usuario (PK = FK). Las listas son JSONB porque se leen y escriben siempre completas y el export para el LLM es el mismo JSON. Formas: lesiones_activas [texto]; objetivos [texto] en orden de prioridad; eventos_fijos [{dia 0-6, hora HH:MM, tipo_sesion (codigo de tipo_sesion), nombre, duracion_min?}]; ventanas [{dia 0-6, inicio HH:MM, fin HH:MM, lugares [nombre de lugar]}]; lugares [{nombre, equipamiento [texto]}]; equipamiento_propio [texto] (lo que el atleta lleva consigo, disponible en cualquier ventana). peso_kg es el peso DECLARADO, independiente de medida_corporal (peso medido).'
 }
 
 Table tipo_sesion [headercolor: #175e7a] {

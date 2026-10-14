@@ -66,6 +66,7 @@ class PerfilBase(SchemaBase):
     eventos_fijos: list[EventoFijo] = Field(default_factory=list)
     ventanas: list[Ventana] = Field(default_factory=list)
     lugares: list[Lugar] = Field(default_factory=list)
+    equipamiento_propio: list[Texto] = Field(default_factory=list)
 
 
 class PerfilUpdate(PerfilBase):

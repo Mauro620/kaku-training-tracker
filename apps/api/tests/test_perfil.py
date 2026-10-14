@@ -4,6 +4,7 @@
 """
 
 from collections.abc import AsyncGenerator
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -52,6 +53,7 @@ def _perfil_valido() -> dict[str, Any]:
             {"dia": 0, "inicio": "08:00", "fin": "09:00", "lugares": ["Gimnasio"]}
         ],
         "lugares": [{"nombre": "Gimnasio", "equipamiento": ["barra", "mancuernas"]}],
+        "equipamiento_propio": ["balón"],
     }
 
 
@@ -66,6 +68,16 @@ async def test_el_seed_crea_el_perfil_con_los_datos_del_atleta(
     assert float(perfil["talla_cm"]) == 178.0
     assert float(perfil["peso_kg"]) == 80.0
     assert len(perfil["objetivos"]) == 5
+    assert "12 %" in perfil["objetivos"][4]
+    # Lo que lleva consigo, aparte del equipamiento de cada lugar.
+    assert perfil["equipamiento_propio"] == [
+        "conos",
+        "balón",
+        "bandas de resistencia",
+        "paralelas",
+    ]
+    gimnasio = next(x for x in perfil["lugares"] if x["nombre"] == "Gimnasio")
+    assert gimnasio["equipamiento"] == ["gimnasio completo"]
     assert perfil["objetivos"][0].startswith("Retomar regularidad")
     assert [
         (e["dia"], e["hora"], e["tipo_sesion"]) for e in perfil["eventos_fijos"]
@@ -98,6 +110,7 @@ async def test_put_reemplaza_el_perfil_completo(cliente: AsyncClient) -> None:
     assert guardado["objetivos"] == ["Uno", "Dos"]
     assert guardado["lugares"][0]["equipamiento"] == ["barra", "mancuernas"]
     assert guardado["ventanas"][0]["inicio"] == "08:00"
+    assert guardado["equipamiento_propio"] == ["balón"]
     assert len(guardado["eventos_fijos"]) == 1
 
 
@@ -108,6 +121,7 @@ async def test_put_acepta_lesiones_y_listas_vacias(cliente: AsyncClient) -> None
         "eventos_fijos": [],
         "ventanas": [],
         "lugares": [],
+        "equipamiento_propio": [],
     }
     r = await cliente.put("/api/v1/perfil", json=cuerpo)
     assert r.status_code == 200
@@ -175,3 +189,18 @@ async def test_put_rechaza_lugares_repetidos_y_campos_desconocidos(
     assert (
         await cliente.put("/api/v1/perfil", json=_perfil_valido() | {"extra": 1})
     ).status_code == 422
+
+
+async def test_el_seed_fija_el_peso_objetivo_y_no_lo_pisa(
+    sesion: AsyncSession,
+) -> None:
+    usuario = await sesion.scalar(select(Usuario))
+    assert usuario is not None
+    assert usuario.peso_objetivo_kg == Decimal("75.00")
+
+    # Si el usuario lo cambia, volver a sembrar lo respeta.
+    usuario.peso_objetivo_kg = Decimal("76.50")
+    await sesion.flush()
+    await sembrar(sesion, NOMBRE_USUARIO_SEED)
+    await sesion.refresh(usuario)
+    assert usuario.peso_objetivo_kg == Decimal("76.50")

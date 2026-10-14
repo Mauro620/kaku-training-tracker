@@ -2,7 +2,8 @@
 
     uv run --directory apps/api python -m scripts.respaldo_cocina [ruta.json]
 
-Solo lee. Usa SQL directo y no los modelos porque los modelos de nutricion ya
+Opcional: la migracion de Cocina ya no lo exige. Solo lee. Usa SQL directo y
+no los modelos porque los modelos de nutricion ya
 no existen en el codigo. Incluye el parametro `proteina_g_por_kg`, que la
 migracion tambien elimina. Sin argumento escribe en `respaldos/`, que esta
 ignorado por git.
