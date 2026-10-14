@@ -24,7 +24,7 @@ export function DetallePlanScreen({ planId }: Props) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pb-32">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
         <div className="mb-4 h-8 w-32 animate-pulse rounded bg-surface-secondary" />
         <div className="flex flex-col gap-4">
           <div className="h-40 animate-pulse rounded-2xl bg-surface-secondary" />
@@ -37,7 +37,7 @@ export function DetallePlanScreen({ planId }: Props) {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pb-32">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
         <EmptyState
           title="Error al cargar el plan"
           description="No se pudo obtener la informacion de este plan."
@@ -49,7 +49,7 @@ export function DetallePlanScreen({ planId }: Props) {
 
   if (!plan) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pb-32">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
         <EmptyState
           title="Plan no encontrado"
           description="El plan que buscas no existe o fue eliminado."
@@ -82,7 +82,7 @@ function DetallePlanContent({ plan }: { plan: PlanDetalleRead }) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-5 pb-32">
+    <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
       {/* Header */}
       <button
         type="button"
