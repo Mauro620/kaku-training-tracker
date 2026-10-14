@@ -227,35 +227,10 @@ booleano: el valor está en las razones.
 
 ---
 
-## 12. Nutrición
+## 12. (retirada)
 
-Macros de una receta:
-
-```
-macro_receta = Σ (macro_alimento_por_100g × cantidad_g ÷ 100)
-```
-
-Para cada uno de kcal, proteína, carbohidrato, grasa y fibra.
-
-Macros del día: suma de las recetas registradas más los `comida_item` sueltos.
-
-Todos los alimentos se almacenan con `estado_pesaje = 'crudo'`. Si una fuente
-da un valor cocido, se convierte antes de sembrarlo. Mezclar ambos estados
-introduce un error cercano al 30% en carnes.
-
-Indicadores semanales, que son los que ve el usuario:
-
-```
-pct_comidas_con_proteina = comidas con ≥ 20 g de proteína ÷ total × 100
-pct_comidas_con_vegetal  = comidas con ≥ 1 alimento de grupo 'verdura' ÷ total × 100
-```
-
-"Vegetal" significa exactamente `alimento.grupo = 'verdura'`. Fruta,
-tubérculo y leguminosa **no** cuentan para este indicador.
-
-El objetivo diario de proteína se calcula como
-`peso_kg × proteina_g_por_kg`, con el peso del `medida_corporal` más
-reciente. Se muestra como referencia, **no como meta a perseguir**.
+El módulo de Cocina se eliminó. La sección conserva su número para no romper
+las referencias cruzadas; ya no define ninguna fórmula.
 
 ---
 

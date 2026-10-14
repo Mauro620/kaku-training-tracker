@@ -45,14 +45,6 @@ fase 3.
 
 ---
 
-## Valores de `alimento` dependientes de marca
-
-Jamón de cerdo, pan integral y tostada integral varían mucho entre marcas.
-Los valores sembrados son de referencia y hay que reemplazarlos por los de la
-etiqueta real cuando se confirme cuál se compra.
-
----
-
 ## `SPEC.md` §2.1 describe el sueño como dos campos `time`
 
 El DBML usa `inicio` y `fin` en `timestamptz`, que es lo correcto (cruzar
@@ -60,17 +52,6 @@ medianoche con dos campos `time` obliga a lógica condicional en cada
 consulta). La tabla de SPEC §2.1 quedó con la redacción vieja porque describe
 la *interfaz* de captura, no el almacenamiento. Si en algún momento confunde
 a alguien, se reescribe.
-
----
-
-## `estado_pesaje` admite `cocido` pero nada lo usa
-
-REGLAS §12 obliga a sembrar todo en crudo. El valor `cocido` del enum existe
-para que una fuente externa pueda declararse tal cual antes de convertirse,
-pero hoy ninguna fila lo tiene. Si en seis meses sigue vacío, sacarlo.
-
-**Excepción viva:** el atún en lata está sembrado con el valor del producto
-escurrido, listo para comer. Es la única fila que no es crudo literal.
 
 ---
 
@@ -208,28 +189,13 @@ eventos. Mientras tanto, el patron actual es simple y suficiente.
 
 ---
 
-## `ComidasList` muestra `Receta #N` en vez del nombre
+## Migraciones Dexie v2→v3 (eliminar Cocina) sin validar en navegador real
 
-**Estado:** aceptado en Fase 6, gap chico.
+**Estado:** aceptado.
 
-El frontend lista las comidas del dia con `receta_id` crudo cuando la
-comida viene de una receta: falta el join contra `receta` en el
-service (o resolver el nombre client-side con la lista de recetas ya
-cargada por `useRecetas`). No bloquea nada, es cosmetico.
-
-**Cuando dejar de lado:** la proxima vez que se toque `ComidasList` o
-`services/nutricion/comida.py`.
-
----
-
-## Migracion Dexie v1→v2 (Fase 6) sin validar en navegador real
-
-**Estado:** aceptado en Fase 6.
-
-`db/dexie.ts` agrego `version(2)` con la tabla `comida` sin perder la
-`version(1)` de Fase 5. La migracion de Dexie (agregar una tabla nueva
-en una version posterior) esta documentada como no-destructiva, pero
-solo se probo con tests de Node (`outbox.test.ts`), no con IndexedDB
+`db/dexie.ts` agrego `version(3)`, que borra la tabla `comida` (agregada en
+la v2 de Fase 6) y los eventos `comida` que quedaran pendientes en `outbox`.
+Solo se probo con tests de Node (`outbox.test.ts`), no con IndexedDB
 real en un navegador que ya tuviera datos de la version 1.
 
 **Cuando dejar de lado:** antes de confiar en la cola offline con
@@ -238,19 +204,3 @@ usuario en dev, el riesgo es bajo).
 
 ---
 
-## Objetivo diario de proteína (REGLAS_NEGOCIO §12) no expuesto todavía
-
-**Estado:** pendiente, dependencia recien disponible en Fase 7.
-
-REGLAS_NEGOCIO §12 define `objetivo_proteina_g = peso_kg × proteina_g_por_kg`
-usando el peso del `medida_corporal` más reciente. En Fase 6
-(`services/nutricion/`) `medida_corporal` todavía no existía como
-repo/servicio, así que el endpoint de macros del día no lo calcula.
-Fase 7 agregó `evaluacion/medida.py` con
-`obtener_medida_mas_reciente`, así que la dependencia ya está lista.
-
-**Cuándo hacerlo:** la próxima vez que se toque `services/nutricion/comida.py`
-o `MacrosCard` del frontend: sumar `objetivo_proteina_g` a
-`ResultadoMacrosRead` (o a un endpoint separado) usando
-`repo_evaluacion.obtener_medida_mas_reciente` + `parametro.proteina_g_por_kg`.
-Se muestra como referencia, no como meta a perseguir (dice la regla).

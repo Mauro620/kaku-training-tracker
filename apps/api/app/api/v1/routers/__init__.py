@@ -8,14 +8,11 @@ no tenga que cambiar cuando se agrega un router nuevo: solo anadir la
 linea de import aca.
 """
 
-from app.api.v1.routers.alimentos import router as alimentos_router
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.bienestar import router as bienestar_router
 from app.api.v1.routers.catalogos import router as catalogos_router
 from app.api.v1.routers.ciclos import router as ciclos_router
 from app.api.v1.routers.cierre_semana import router as cierre_semana_router
-from app.api.v1.routers.comidas import router as comidas_router
-from app.api.v1.routers.despensa import router as despensa_router
 from app.api.v1.routers.entrenamiento import router as entrenamiento_router
 from app.api.v1.routers.evaluacion import router as evaluacion_router
 from app.api.v1.routers.habitos import router as habitos_router
@@ -24,18 +21,14 @@ from app.api.v1.routers.hidratacion import router as hidratacion_router
 from app.api.v1.routers.molestias import router as molestias_router
 from app.api.v1.routers.parametros import router as parametros_router
 from app.api.v1.routers.planes import router as planes_router
-from app.api.v1.routers.recetas import router as recetas_router
 from app.api.v1.routers.sueno import router as sueno_router
 
 __all__ = [
-    "alimentos_router",
     "auth_router",
     "bienestar_router",
     "catalogos_router",
     "ciclos_router",
     "cierre_semana_router",
-    "comidas_router",
-    "despensa_router",
     "entrenamiento_router",
     "evaluacion_router",
     "habitos_router",
@@ -44,6 +37,5 @@ __all__ = [
     "molestias_router",
     "parametros_router",
     "planes_router",
-    "recetas_router",
     "sueno_router",
 ]

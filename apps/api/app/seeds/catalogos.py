@@ -48,8 +48,12 @@ TIPOS_TEST: tuple[tuple[str, str, str, bool], ...] = (
 # en el mismo formulario del despertar. "Hidratación" tampoco: se registra en
 # litros en registro_hidratacion, no como check booleano. Tenerlos acá sería
 # el mismo hecho en dos filas que van a divergir.
+# Los dos últimos reemplazan al módulo Cocina (eliminado): el seguimiento de
+# alimentación se reduce a un sí/no diario.
 HABITOS: tuple[str, ...] = (
     "creatina",
     "magnesio",
     "estiramiento",
+    "Meta de proteína",
+    "Sin dulce ni comida callejera de noche",
 )

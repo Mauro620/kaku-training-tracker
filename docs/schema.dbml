@@ -23,19 +23,6 @@ enum estado_sesion_plan {
 	descartado
 }
 
-enum momento_comida {
-	desayuno
-	media_manana
-	almuerzo
-	merienda
-	cena
-}
-
-enum estado_pesaje {
-	crudo
-	cocido
-}
-
 enum carga_lumbar {
 	alta
 	media
@@ -55,18 +42,6 @@ enum origen_dato {
 	notion_backfill
 }
 
-enum grupo_alimento {
-	proteina_animal
-	lacteo
-	cereal
-	leguminosa
-	tuberculo
-	verdura
-	fruta
-	grasa
-	procesado
-}
-
 Table usuario [headercolor: #175e7a] {
 	id uuid [ pk ]
 	nombre varchar(80) [ not null ]
@@ -75,7 +50,7 @@ Table usuario [headercolor: #175e7a] {
 	agua_objetivo_ml_max integer
 	creado_en timestamptz [ not null, default: `now()` ]
 
-	Note: 'App de un solo usuario hoy. La FK existe para no migrar 20 tablas si mañana entra un compañero o un preparador. Los umbrales calibrables (objetivo de sueño, proteina_g_por_kg) NO viven aquí: viven en parametro, que es el unico lugar calibrable. agua_objetivo_ml_* SÍ vive acá, no en parametro: es una meta personal directa (como peso_objetivo_kg), no una constante de fórmula compartida.'
+	Note: 'App de un solo usuario hoy. La FK existe para no migrar 20 tablas si mañana entra un compañero o un preparador. Los umbrales calibrables (objetivo de sueño) NO viven aquí: viven en parametro, que es el unico lugar calibrable. agua_objetivo_ml_* SÍ vive acá, no en parametro: es una meta personal directa (como peso_objetivo_kg), no una constante de fórmula compartida.'
 }
 
 Table tipo_sesion [headercolor: #175e7a] {
@@ -113,21 +88,6 @@ Table tipo_test [headercolor: #175e7a] {
 	mejor_es_mayor boolean [ not null ]
 
 	Note: 'mejor_es_mayor evita el bug clásico: en sprint_10m menos es mejor, en cmj más es mejor. Sin este campo, el cálculo de mejora se invierte en la mitad de los tests.'
-}
-
-Table alimento [headercolor: #ed9d3b] {
-	id integer [ pk, increment ]
-	nombre varchar(80) [ not null, unique ]
-	grupo grupo_alimento [ not null ]
-	estado_pesaje estado_pesaje [ not null, default: `crudo` ]
-	kcal_100g numeric(6,2) [ not null ]
-	proteina_100g numeric(5,2) [ not null ]
-	carbo_100g numeric(5,2) [ not null ]
-	grasa_100g numeric(5,2) [ not null ]
-	fibra_100g numeric(5,2)
-	fuente varchar(60)
-
-	Note: 'Todos los macros por 100 g. Universo cerrado (~40 alimentos de la despensa). Fuente: ICBF u Open Food Facts. grupo es lo que permite calcular pct_comidas_con_vegetal: cuenta grupo = verdura, no fruta ni tuberculo ni leguminosa.'
 }
 
 Table habito [headercolor: #34eb7a] {
@@ -380,69 +340,6 @@ Table medida_corporal [headercolor: #53177a] {
 	Note: 'Semanal, en ayunas, misma hora. El ruido diario es agua. origen distingue el dato manual del importado de Health. La unicidad (usuario_id, fecha) es la deduplicacion natural de la cola de sync.'
 }
 
-Table receta [headercolor: #ed9d3b] {
-	id integer [ pk, increment ]
-	usuario_id uuid [ not null ]
-	nombre varchar(80) [ not null ]
-	momento_default momento_comida
-	activa boolean [ not null, default: true ]
-
-	indexes {
-		(usuario_id, nombre) [ unique ]
-	}
-
-	Note: 'Se calibra una vez. Después registrar es un tap. Los macros son derivados, no se almacenan.'
-}
-
-Table receta_item [headercolor: #ed9d3b] {
-	id integer [ pk, increment ]
-	receta_id integer [ not null ]
-	alimento_id integer [ not null ]
-	cantidad_g numeric(7,2) [ not null ]
-
-	indexes {
-		(receta_id, alimento_id) [ unique ]
-	}
-}
-
-Table comida_log [headercolor: #ed9d3b] {
-	id uuid [ pk ]
-	usuario_id uuid [ not null ]
-	fecha date [ not null ]
-	momento momento_comida [ not null ]
-	receta_id integer
-	nota text
-	idempotency_key uuid [ not null, unique ]
-
-	indexes {
-		(usuario_id, fecha, momento)
-	}
-
-	Note: 'receta_id nulo = comida improvisada, sus ingredientes van en comida_item. Si receta_id existe, los ingredientes se resuelven vía receta_item.'
-}
-
-Table comida_item [headercolor: #ed9d3b] {
-	id bigint [ pk, increment ]
-	comida_log_id uuid [ not null ]
-	alimento_id integer [ not null ]
-	cantidad_g numeric(7,2) [ not null ]
-
-	Note: 'Solo para comidas sin receta. Evita duplicar la despensa en cada registro.'
-}
-
-Table despensa [headercolor: #ed9d3b] {
-	usuario_id uuid [ not null ]
-	alimento_id integer [ not null ]
-	imprescindible boolean [ not null, default: false ]
-	en_stock boolean [ not null, default: true ]
-
-	indexes {
-		(usuario_id, alimento_id) [ pk ]
-	}
-
-	Note: 'La lista de mercado es: imprescindible = true AND en_stock = false.'
-}
-
 Table auth_usuario [headercolor: #8b3a3a] {
 	usuario_id uuid [ pk ]
 	email varchar(120) [ not null, unique ]
@@ -579,42 +476,6 @@ Ref fk_molestia_zona_id_zona_corporal {
 
 Ref fk_medida_corporal_usuario_id_usuario {
 	medida_corporal.usuario_id > usuario.id [ delete: no action, update: no action ]
-}
-
-Ref fk_receta_usuario_id_usuario {
-	receta.usuario_id > usuario.id [ delete: no action, update: no action ]
-}
-
-Ref fk_receta_item_receta_id_receta {
-	receta_item.receta_id > receta.id [ delete: no action, update: no action ]
-}
-
-Ref fk_receta_item_alimento_id_alimento {
-	receta_item.alimento_id > alimento.id [ delete: no action, update: no action ]
-}
-
-Ref fk_comida_log_usuario_id_usuario {
-	comida_log.usuario_id > usuario.id [ delete: no action, update: no action ]
-}
-
-Ref fk_comida_log_receta_id_receta {
-	comida_log.receta_id > receta.id [ delete: no action, update: no action ]
-}
-
-Ref fk_comida_item_comida_log_id_comida_log {
-	comida_item.comida_log_id > comida_log.id [ delete: no action, update: no action ]
-}
-
-Ref fk_comida_item_alimento_id_alimento {
-	comida_item.alimento_id > alimento.id [ delete: no action, update: no action ]
-}
-
-Ref fk_despensa_usuario_id_usuario {
-	despensa.usuario_id > usuario.id [ delete: no action, update: no action ]
-}
-
-Ref fk_despensa_alimento_id_alimento {
-	despensa.alimento_id > alimento.id [ delete: no action, update: no action ]
 }
 
 Ref fk_test_fisico_usuario_id_usuario {

@@ -21,7 +21,6 @@ from app.core.seguridad import hashear_password
 from app.db.base import Base
 from app.db.session import get_engine, get_sessionmaker
 from app.models import (
-    Alimento,
     AuthUsuario,
     Ejercicio,
     Habito,
@@ -31,7 +30,6 @@ from app.models import (
     Usuario,
     ZonaCorporal,
 )
-from app.seeds.alimentos import ALIMENTOS, FUENTE
 from app.seeds.catalogos import HABITOS, TIPOS_SESION, TIPOS_TEST, ZONAS_CORPORALES
 from app.seeds.ejercicios import EJERCICIOS
 from app.seeds.parametros import PARAMETROS
@@ -172,25 +170,6 @@ async def sembrar(session: AsyncSession, nombre_usuario: str) -> dict[str, int]:
                     "tipo_medicion": tipo_medicion,
                 }
                 for nombre, patron, carga_lumbar, tipo_codigo, tipo_medicion in EJERCICIOS  # noqa: E501
-            ],
-            ["nombre"],
-        ),
-        "alimento": await _upsert(
-            session,
-            Alimento,
-            [
-                {
-                    "nombre": nombre,
-                    "grupo": grupo,
-                    "kcal_100g": kcal,
-                    "proteina_100g": proteina,
-                    "carbo_100g": carbo,
-                    "grasa_100g": grasa,
-                    "fibra_100g": fibra,
-                    "estado_pesaje": estado_pesaje,
-                    "fuente": FUENTE,
-                }
-                for nombre, grupo, kcal, proteina, carbo, grasa, fibra, estado_pesaje in ALIMENTOS  # noqa: E501
             ],
             ["nombre"],
         ),

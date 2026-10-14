@@ -16,7 +16,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-    Alimento,
     Bloque,
     Ejercicio,
     Habito,
@@ -56,7 +55,6 @@ async def test_el_seed_deja_los_catalogos_completos(sesion: AsyncSession) -> Non
         TipoSesion: len(TIPOS_SESION),
         ZonaCorporal: len(ZONAS_CORPORALES),
         Ejercicio: 29,
-        Alimento: 24,
         Habito: len(HABITOS),
         Usuario: 1,
     }
@@ -343,3 +341,14 @@ async def test_idempotency_key_de_sesion_es_unica(sesion: AsyncSession) -> None:
         )
     with pytest.raises(IntegrityError):
         await sesion.commit()
+
+
+async def test_el_seed_crea_los_habitos_que_reemplazan_a_cocina(
+    sesion: AsyncSession,
+) -> None:
+    nombres = set(
+        (
+            await sesion.scalars(select(Habito.nombre).where(Habito.activo.is_(True)))
+        ).all()
+    )
+    assert {"Meta de proteína", "Sin dulce ni comida callejera de noche"} <= nombres

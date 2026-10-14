@@ -140,13 +140,6 @@ PARAMETROS: tuple[tuple[str, Decimal, str | None, str], ...] = (
         "dias",
         "Días distintos con molestia en la zona que activan la señal",
     ),
-    # ---------- Nutrición ----------
-    (
-        "proteina_g_por_kg",
-        Decimal("1.8"),
-        "g/kg",
-        "Referencia de proteína diaria por kg de peso. No es una meta a perseguir",
-    ),
     # ---------- Semáforo de cerveza (REGLAS_NEGOCIO §11) ----------
     (
         "cerveza_horas_sin_alta_demanda",

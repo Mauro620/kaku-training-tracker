@@ -5,14 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.routers import (
-    alimentos_router,
     auth_router,
     bienestar_router,
     catalogos_router,
     ciclos_router,
     cierre_semana_router,
-    comidas_router,
-    despensa_router,
     entrenamiento_router,
     evaluacion_router,
     habitos_router,
@@ -21,7 +18,6 @@ from app.api.v1.routers import (
     molestias_router,
     parametros_router,
     planes_router,
-    recetas_router,
     sueno_router,
 )
 from app.core.config import get_settings
@@ -78,10 +74,6 @@ def create_app() -> FastAPI:
     v1.include_router(catalogos_router)
     v1.include_router(ciclos_router)
     v1.include_router(planes_router)
-    v1.include_router(alimentos_router)
-    v1.include_router(recetas_router)
-    v1.include_router(comidas_router)
-    v1.include_router(despensa_router)
     v1.include_router(evaluacion_router)
     v1.include_router(cierre_semana_router)
     app.include_router(v1)

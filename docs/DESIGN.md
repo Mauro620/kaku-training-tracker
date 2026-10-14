@@ -145,12 +145,7 @@ El sistema utiliza una estética **Neo-Flat Minimalista en Modo Oscuro Absoluto 
   - Listado de ejercicios estructurado mediante filas `CheckTile` con selectores `PillSelectorGroup` para datos de carga.  
   - Menús interactivos tipo `ActionPopoverMenu` para ajustes rápidos de series.
 
-3. **Pestaña Cocina:**
-
-  - Tarjetas modulares `BentoCard` de registro rápido por tap para recetas preconfiguradas.  
-  - Barras de resumen de balance de composición tipo `BarChartMinimal`.  
-
-4. **Pestaña Progreso:**
+3. **Pestaña Progreso:**
 
   - Grid de métricas `MetricDisplay` de ancho medio (Half Width) para comparación de cargas y tests físicos.  
   - Gráficas avanzadas `BarChartMinimal` para carga semanal y lecturas de fatiga.  
