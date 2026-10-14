@@ -1406,6 +1406,7 @@ export type MedidaCorporal = {
   fecha: string;
   peso_kg: string;
   fc_reposo: number | null;
+  cintura_cm: string | null;
   origen: "manual" | "health_kit" | "notion_backfill";
 };
 
@@ -1489,7 +1490,12 @@ export function useMedidas() {
 export function useRegistrarMedida() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cuerpo: { fecha: string; peso_kg: string; fc_reposo?: number | null }) =>
+    mutationFn: (cuerpo: {
+      fecha: string;
+      peso_kg: string;
+      fc_reposo?: number | null;
+      cintura_cm?: string | null;
+    }) =>
       api.post<MedidaCorporal>("/medidas", cuerpo),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["medidas"] });

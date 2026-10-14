@@ -24,6 +24,7 @@ async def upsert(
     *,
     peso_kg: Decimal,
     fc_reposo: int | None,
+    cintura_cm: Decimal | None,
     origen: OrigenDato,
 ) -> MedidaCorporal:
     stmt = (
@@ -33,11 +34,17 @@ async def upsert(
             fecha=fecha,
             peso_kg=peso_kg,
             fc_reposo=fc_reposo,
+            cintura_cm=cintura_cm,
             origen=origen,
         )
         .on_conflict_do_update(
             index_elements=["usuario_id", "fecha"],
-            set_={"peso_kg": peso_kg, "fc_reposo": fc_reposo, "origen": origen},
+            set_={
+                "peso_kg": peso_kg,
+                "fc_reposo": fc_reposo,
+                "cintura_cm": cintura_cm,
+                "origen": origen,
+            },
         )
         .returning(MedidaCorporal)
     )

@@ -20,10 +20,17 @@ async def registrar_medida(
     fecha: date,
     peso_kg: Decimal,
     fc_reposo: int | None,
+    cintura_cm: Decimal | None = None,
     origen: OrigenDato = OrigenDato.manual,
 ) -> MedidaCorporal:
     medida = await repo.upsert_medida(
-        session, usuario_id, fecha, peso_kg=peso_kg, fc_reposo=fc_reposo, origen=origen
+        session,
+        usuario_id,
+        fecha,
+        peso_kg=peso_kg,
+        fc_reposo=fc_reposo,
+        cintura_cm=cintura_cm,
+        origen=origen,
     )
     await session.commit()
     return medida

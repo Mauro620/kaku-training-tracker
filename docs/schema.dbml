@@ -348,13 +348,14 @@ Table medida_corporal [headercolor: #53177a] {
 	fecha date [ not null ]
 	peso_kg numeric(5,2) [ not null ]
 	fc_reposo smallint
+	cintura_cm numeric(4,1)
 	origen origen_dato [ not null, default: `manual` ]
 
 	indexes {
 		(usuario_id, fecha) [ unique ]
 	}
 
-	Note: 'Semanal, en ayunas, misma hora. El ruido diario es agua. origen distingue el dato manual del importado de Health. La unicidad (usuario_id, fecha) es la deduplicacion natural de la cola de sync.'
+	Note: 'Semanal, en ayunas, misma hora. El ruido diario es agua. cintura_cm es opcional (perimetro de cintura). origen distingue el dato manual del importado de Health. La unicidad (usuario_id, fecha) es la deduplicacion natural de la cola de sync.'
 }
 
 Table auth_usuario [headercolor: #8b3a3a] {

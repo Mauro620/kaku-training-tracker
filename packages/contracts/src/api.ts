@@ -1870,6 +1870,8 @@ export interface components {
             peso_kg: number | string;
             /** Fc Reposo */
             fc_reposo?: number | null;
+            /** Cintura Cm */
+            cintura_cm?: number | string | null;
         };
         /** MedidaCorporalRead */
         MedidaCorporalRead: {
@@ -1889,6 +1891,8 @@ export interface components {
             peso_kg: string;
             /** Fc Reposo */
             fc_reposo: number | null;
+            /** Cintura Cm */
+            cintura_cm: string | null;
             origen: components["schemas"]["OrigenDato"];
         };
         /**
