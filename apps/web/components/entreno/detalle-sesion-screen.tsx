@@ -23,7 +23,7 @@ export function DetalleSesionScreen({ sesionId }: Props) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pb-32">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
         <div className="mb-4 h-8 w-32 animate-pulse rounded bg-surface-secondary" />
         <div className="flex flex-col gap-4">
           <div className="h-40 animate-pulse rounded-2xl bg-surface-secondary" />
@@ -36,7 +36,7 @@ export function DetalleSesionScreen({ sesionId }: Props) {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pb-32">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
         <EmptyState
           title="Error al cargar la sesion"
           description="No se pudo obtener la informacion de esta sesion."
@@ -48,7 +48,7 @@ export function DetalleSesionScreen({ sesionId }: Props) {
 
   if (!sesion) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pb-32">
+      <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
         <EmptyState
           title="Sesion no encontrada"
           description="La sesion que buscas no existe o fue eliminada."
@@ -83,7 +83,7 @@ function DetalleSesionContent({ sesion }: { sesion: SesionDetalleRead }) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-5 pb-32">
+    <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+2rem)] pb-32">
       {/* Header */}
       <button
         type="button"

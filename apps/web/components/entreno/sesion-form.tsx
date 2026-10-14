@@ -82,7 +82,10 @@ export function SesionForm({ fecha, planes, pedido = null }: Props) {
       .map((s) => s.sesion_plan_id)
       .filter((id): id is number => id !== null),
   );
-  const planesPendientes = planes.filter((p) => !idsPlanesCumplidos.has(p.id));
+  // Solo los pendientes: uno descartado no se vuelve a ofrecer como plan de hoy.
+  const planesPendientes = planes.filter(
+    (p) => p.estado === "pendiente" && !idsPlanesCumplidos.has(p.id),
+  );
   // Si el plan vino por `pedido` manda ese, aunque sea de otro dia de la
   // semana: es exactamente el caso de "hacer hoy la sesion del martes". El
   // backend deriva `movido` solo al comparar fecha contra dia_sugerido.
