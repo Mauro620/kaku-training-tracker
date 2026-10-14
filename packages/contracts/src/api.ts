@@ -376,6 +376,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Perfil del atleta. 404 si todavia no se creo. */
+        get: operations["leer_perfil_api_v1_perfil_get"];
+        /** Crea o reemplaza el perfil completo del atleta. */
+        put: operations["guardar_perfil_api_v1_perfil_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sesiones": {
         parameters: {
             query?: never;
@@ -1608,6 +1626,19 @@ export interface components {
          * @enum {string}
          */
         EstadoSesionPlan: "pendiente" | "cumplido" | "movido" | "descartado";
+        /** EventoFijo */
+        EventoFijo: {
+            /** Dia */
+            dia: number;
+            /** Hora */
+            hora: string;
+            /** Tipo Sesion */
+            tipo_sesion: string;
+            /** Nombre */
+            nombre: string;
+            /** Duracion Min */
+            duracion_min?: number | null;
+        };
         /**
          * ExportRead
          * @description Respuesta de `GET /planes/importar/export/{recurso}` (PLAN_IMPORT.md
@@ -1821,6 +1852,13 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** Lugar */
+        Lugar: {
+            /** Nombre */
+            nombre: string;
+            /** Equipamiento */
+            equipamiento?: string[];
+        };
         /** MedidaCorporalCreate */
         MedidaCorporalCreate: {
             /**
@@ -1988,6 +2026,62 @@ export interface components {
             salio_bien: string | null;
             /** A Ajustar */
             a_ajustar: string | null;
+        };
+        /** PerfilRead */
+        PerfilRead: {
+            /** Posicion */
+            posicion: string;
+            /** Rol Tactico */
+            rol_tactico: string;
+            /** Pie Dominante */
+            pie_dominante: string;
+            /** Talla Cm */
+            talla_cm?: string | null;
+            /** Peso Kg */
+            peso_kg?: string | null;
+            /** Lesiones Activas */
+            lesiones_activas?: string[];
+            /** Objetivos */
+            objetivos?: string[];
+            /** Eventos Fijos */
+            eventos_fijos?: components["schemas"]["EventoFijo"][];
+            /** Ventanas */
+            ventanas?: components["schemas"]["Ventana"][];
+            /** Lugares */
+            lugares?: components["schemas"]["Lugar"][];
+            /**
+             * Actualizado En
+             * Format: date-time
+             */
+            actualizado_en: string;
+        };
+        /**
+         * PerfilUpdate
+         * @description PUT: reemplaza el perfil completo. Es un registro unico y siempre se
+         *     edita entero en una pantalla; un PATCH parcial sobre listas anidadas
+         *     seria ambiguo (¿se agrega o se reemplaza?).
+         */
+        PerfilUpdate: {
+            /** Posicion */
+            posicion: string;
+            /** Rol Tactico */
+            rol_tactico: string;
+            /** Pie Dominante */
+            pie_dominante: string;
+            /** Talla Cm */
+            talla_cm?: number | string | null;
+            /** Peso Kg */
+            peso_kg?: number | string | null;
+            /** Lesiones Activas */
+            lesiones_activas?: string[];
+            /** Objetivos */
+            objetivos?: string[];
+            /** Eventos Fijos */
+            eventos_fijos?: components["schemas"]["EventoFijo"][];
+            /** Ventanas */
+            ventanas?: components["schemas"]["Ventana"][];
+            /** Lugares */
+            lugares?: components["schemas"]["Lugar"][];
         };
         /**
          * PlanDetalleEnSesionRead
@@ -2671,6 +2765,17 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** Ventana */
+        Ventana: {
+            /** Dia */
+            dia: number;
+            /** Inicio */
+            inicio: string;
+            /** Fin */
+            fin: string;
+            /** Lugares */
+            lugares: string[];
         };
         /** ZonaCorporalRead */
         ZonaCorporalRead: {
@@ -3397,6 +3502,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ParametroRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leer_perfil_api_v1_perfil_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerfilRead"];
+                };
+            };
+        };
+    };
+    guardar_perfil_api_v1_perfil_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerfilUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerfilRead"];
                 };
             };
             /** @description Validation Error */

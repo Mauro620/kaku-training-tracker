@@ -20,6 +20,7 @@ from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.hidratacion import router as hidratacion_router
 from app.api.v1.routers.molestias import router as molestias_router
 from app.api.v1.routers.parametros import router as parametros_router
+from app.api.v1.routers.perfil import router as perfil_router
 from app.api.v1.routers.planes import router as planes_router
 from app.api.v1.routers.sueno import router as sueno_router
 
@@ -36,6 +37,7 @@ __all__ = [
     "hidratacion_router",
     "molestias_router",
     "parametros_router",
+    "perfil_router",
     "planes_router",
     "sueno_router",
 ]

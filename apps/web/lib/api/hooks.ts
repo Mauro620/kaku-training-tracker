@@ -1531,3 +1531,54 @@ export function useRegistrarPartido() {
     },
   });
 }
+
+// ---------- Perfil del atleta ----------
+
+export type EventoFijo = {
+  dia: number;
+  hora: string;
+  tipo_sesion: string;
+  nombre: string;
+  duracion_min: number | null;
+};
+
+export type VentanaDisponible = {
+  dia: number;
+  inicio: string;
+  fin: string;
+  lugares: string[];
+};
+
+export type LugarEntreno = { nombre: string; equipamiento: string[] };
+
+export type PerfilAtletaBase = {
+  posicion: string;
+  rol_tactico: string;
+  pie_dominante: string;
+  talla_cm: string | null;
+  peso_kg: string | null;
+  lesiones_activas: string[];
+  objetivos: string[];
+  eventos_fijos: EventoFijo[];
+  ventanas: VentanaDisponible[];
+  lugares: LugarEntreno[];
+};
+
+export type PerfilAtleta = PerfilAtletaBase & { actualizado_en: string };
+
+export function usePerfil() {
+  return useQuery({
+    queryKey: ["perfil"],
+    queryFn: () => api.get<PerfilAtleta>("/perfil"),
+  });
+}
+
+export function useGuardarPerfil() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cuerpo: PerfilAtletaBase) => api.put<PerfilAtleta>("/perfil", cuerpo),
+    onSuccess: (perfil) => {
+      qc.setQueryData(["perfil"], perfil);
+    },
+  });
+}
