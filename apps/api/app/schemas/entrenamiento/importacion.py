@@ -29,11 +29,15 @@ from app.schemas.types import (
 
 VERSION_SOPORTADA = 2
 
-# Los tres exports documentados en PLAN_IMPORT.md §9. `str` y no un `Enum`:
+# Los exports documentados en PLAN_IMPORT.md §9. `perfil` y `resumen_ciclo` son
+# insumos del LLM para planear; no son parte del formato de importacion.
+# (Antes eran tres, de ahi el nombre historico del boton.) `str` y no un `Enum`:
 # un enum en el path param hace que FastAPI devuelva 422 ante un valor
 # desconocido, y el spec exige 404 (ver design). El membership check en el
 # router es todo el "registro" que este recurso necesita.
-EXPORT_RECURSOS: frozenset[str] = frozenset({"ejercicios", "reglas", "ejemplo"})
+EXPORT_RECURSOS: frozenset[str] = frozenset(
+    {"ejercicios", "reglas", "ejemplo", "perfil", "resumen_ciclo"}
+)
 
 
 class CicloImport(SchemaBase):

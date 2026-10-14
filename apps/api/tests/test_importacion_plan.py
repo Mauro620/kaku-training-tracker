@@ -760,7 +760,7 @@ async def test_construir_export_reglas_inyecta_los_tipos_de_sesion_vivos(
         assert f"`{codigo}`" in export.contenido
 
 
-@pytest.mark.parametrize("recurso", ["ejercicios", "reglas", "ejemplo"])
+@pytest.mark.parametrize("recurso", ["ejercicios", "reglas", "ejemplo", "perfil"])
 async def test_export_autenticado_devuelve_200_y_contenido_no_vacio(
     cliente: AsyncClient, recurso: str
 ) -> None:

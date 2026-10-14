@@ -8,45 +8,66 @@ import {
   useEliminarEjercicio,
   type ExportRead,
 } from "@/lib/api/hooks";
+import { ApiError } from "@/lib/api/client";
 
-// obtenerExportsLLM es la unica pieza que sabe pegarle a los 3 endpoints de
-// export (ejercicios/reglas/ejemplo). Sin este test, un path mal armado o un
-// orden equivocado de recursos solo se nota manualmente en el boton de
-// copiar. Sigue el patron de outbox.test.ts: se inyecta un `cliente` fake
-// en vez de mockear el modulo `@/lib/api/client`.
+// obtenerExportsLLM es la unica pieza que sabe pegarle a los endpoints de
+// export. Sin este test, un path mal armado o un orden equivocado de recursos
+// solo se nota manualmente en el boton de copiar. Sigue el patron de
+// outbox.test.ts: se inyecta un `cliente` fake en vez de mockear el modulo
+// `@/lib/api/client`.
 
-function mockCliente(respuestas: Record<string, ExportRead>) {
+function exportFalso(recurso: string): ExportRead {
+  return { recurso, formato: "json", contenido: `{"${recurso}":true}` };
+}
+
+const FIJOS = ["ejercicios", "reglas", "ejemplo", "perfil"];
+
+function mockCliente(
+  disponibles: string[],
+  fallos: Record<string, unknown> = {},
+) {
   return {
     get: vi.fn((path: string) => {
       const recurso = path.split("/").pop() as string;
-      const r = respuestas[recurso];
-      if (!r) return Promise.reject(new Error(`sin mock para ${path}`));
-      return Promise.resolve(r);
+      if (recurso in fallos) return Promise.reject(fallos[recurso]);
+      if (!disponibles.includes(recurso)) {
+        return Promise.reject(new Error(`sin mock para ${path}`));
+      }
+      return Promise.resolve(exportFalso(recurso));
     }),
   };
 }
 
 describe("obtenerExportsLLM", () => {
-  it("pega a los 3 recursos y devuelve sus ExportRead en orden ejercicios/reglas/ejemplo", async () => {
-    const cliente = mockCliente({
-      ejercicios: { recurso: "ejercicios", formato: "json", contenido: "[]" },
-      reglas: { recurso: "reglas", formato: "markdown", contenido: "# Reglas" },
-      ejemplo: { recurso: "ejemplo", formato: "json", contenido: "{}" },
-    });
+  it("con historia pega a los 5 recursos y los devuelve en orden, el resumen al final", async () => {
+    const cliente = mockCliente([...FIJOS, "resumen_ciclo"]);
 
     const resultado = await obtenerExportsLLM(cliente);
 
-    expect(cliente.get).toHaveBeenCalledWith("/planes/importar/export/ejercicios");
-    expect(cliente.get).toHaveBeenCalledWith("/planes/importar/export/reglas");
-    expect(cliente.get).toHaveBeenCalledWith("/planes/importar/export/ejemplo");
-    expect(resultado.map((r) => r.recurso)).toEqual(["ejercicios", "reglas", "ejemplo"]);
+    for (const r of [...FIJOS, "resumen_ciclo"]) {
+      expect(cliente.get).toHaveBeenCalledWith(`/planes/importar/export/${r}`);
+    }
+    expect(resultado.map((r) => r.recurso)).toEqual([...FIJOS, "resumen_ciclo"]);
   });
 
-  it("propaga el rechazo si uno de los 3 recursos falla (no hay copia parcial)", async () => {
-    const cliente = mockCliente({
-      ejercicios: { recurso: "ejercicios", formato: "json", contenido: "[]" },
-      // "reglas" ausente a proposito: su get() rechaza.
-      ejemplo: { recurso: "ejemplo", formato: "json", contenido: "{}" },
+  it("sin ciclo (404 en resumen_ciclo) devuelve solo los 4 bloques fijos", async () => {
+    const cliente = mockCliente(FIJOS, { resumen_ciclo: new ApiError(404, "sin ciclo") });
+
+    const resultado = await obtenerExportsLLM(cliente);
+
+    expect(resultado.map((r) => r.recurso)).toEqual(FIJOS);
+  });
+
+  it("un error del resumen que no es 404 NO se traga: no hay copia parcial", async () => {
+    const cliente = mockCliente(FIJOS, { resumen_ciclo: new ApiError(500, "boom") });
+
+    await expect(obtenerExportsLLM(cliente)).rejects.toThrow("boom");
+  });
+
+  it("propaga el rechazo si falta uno de los fijos (no hay copia parcial)", async () => {
+    // "reglas" ausente a proposito: su get() rechaza.
+    const cliente = mockCliente(["ejercicios", "ejemplo", "perfil"], {
+      resumen_ciclo: new ApiError(404, "sin ciclo"),
     });
 
     await expect(obtenerExportsLLM(cliente)).rejects.toThrow("sin mock para");

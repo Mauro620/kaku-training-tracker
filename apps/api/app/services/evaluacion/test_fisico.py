@@ -16,7 +16,7 @@ from app.services.evaluacion.calculo import (
     mejor_intento,
 )
 
-_CODIGO_RSA = "rsa_30m"
+CODIGO_RSA = "rsa_30m"
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,7 @@ async def calcular_resultado(
     media = (sum(valores, Decimal("0")) / len(valores)).quantize(Decimal("0.001"))
 
     pct_decremento = (
-        calcular_pct_decremento(valores) if tipo.codigo == _CODIGO_RSA else None
+        calcular_pct_decremento(valores) if tipo.codigo == CODIGO_RSA else None
     )
 
     # valor_base = mejor resultado del PRIMER test registrado de este tipo

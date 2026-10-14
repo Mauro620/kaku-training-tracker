@@ -59,6 +59,11 @@ const EXPORT_REGLAS: ExportRead = {
   formato: "markdown",
   contenido: "# Reglas de importacion",
 };
+const EXPORT_PERFIL: ExportRead = {
+  recurso: "perfil",
+  formato: "json",
+  contenido: '{"posicion":"Extremo izquierdo"}',
+};
 const EXPORT_EJEMPLO: ExportRead = {
   recurso: "ejemplo",
   formato: "json",
@@ -66,7 +71,7 @@ const EXPORT_EJEMPLO: ExportRead = {
 };
 
 describe("armarBloqueParaCopiar", () => {
-  it("junta los 3 contenidos en un solo bloque con delimitadores que identifican cada recurso", () => {
+  it("junta los contenidos en un solo bloque con delimitadores que identifican cada recurso", () => {
     const bloque = armarBloqueParaCopiar([EXPORT_EJERCICIOS, EXPORT_REGLAS, EXPORT_EJEMPLO]);
 
     expect(bloque).toContain("ejercicios");
@@ -84,6 +89,13 @@ describe("armarBloqueParaCopiar", () => {
     );
   });
 
+  it("incluye el perfil como un bloque mas, con su propio delimitador", () => {
+    const bloque = armarBloqueParaCopiar([EXPORT_REGLAS, EXPORT_PERFIL]);
+
+    expect(bloque).toContain("## perfil");
+    expect(bloque).toContain(EXPORT_PERFIL.contenido);
+  });
+
   it("con un solo recurso, el bloque solo tiene ese delimitador y contenido (triangulacion)", () => {
     const bloque = armarBloqueParaCopiar([EXPORT_REGLAS]);
 
@@ -94,7 +106,7 @@ describe("armarBloqueParaCopiar", () => {
 });
 
 describe("copiarParaLLM", () => {
-  it("copia exitosa: escribe al portapapeles un bloque con los 3 payloads y devuelve 'ok'", async () => {
+  it("copia exitosa: escribe al portapapeles un bloque con todos los payloads y devuelve 'ok'", async () => {
     const clipboard = { writeText: vi.fn().mockResolvedValue(undefined) };
     const obtenerExports = vi
       .fn()

@@ -746,7 +746,7 @@ export interface paths {
         put?: never;
         /**
          * Importa la planificación de una semana completa desde un JSON.
-         * @description Crea o reemplaza los planes de una semana en una sola operación. Es idempotente por `{dia}-{tipo}`: reimportar la misma semana reemplaza en vez de duplicar. Los planes ya ejecutados (`cumplido` o `movido`) nunca se tocan; se omiten y se reportan como advertencia. El formato está en docs/feature_1_session_plan_json/PLAN_IMPORT.md.
+         * @description Crea o reemplaza los planes de una semana en una sola operación. Es idempotente por `{dia}-{tipo}`: reimportar la misma semana reemplaza en vez de duplicar. Los planes ya ejecutados (`cumplido` o `movido`) nunca se tocan; se omiten y se reportan como advertencia. El formato está en docs/features/feature-01-plan-import/PLAN_IMPORT.md.
          */
         post: operations["importar_semana_api_v1_planes_importar_post"];
         delete?: never;
@@ -764,7 +764,7 @@ export interface paths {
         };
         /**
          * Exporta un recurso para armar el prompt del LLM (PLAN_IMPORT.md §9).
-         * @description `recurso` es uno de `ejercicios`, `reglas`, `ejemplo`. Cada uno devuelve un `contenido` listo para pegar. Un `recurso` desconocido responde 404.
+         * @description `recurso` es uno de `ejercicios`, `reglas`, `ejemplo`, `perfil` o `resumen_ciclo`. Cada uno devuelve un `contenido` listo para pegar. Un `recurso` desconocido responde 404, y `resumen_ciclo` tambien si no hay un ciclo activo ni cerrado.
          */
         get: operations["exportar_recurso_api_v1_planes_importar_export__recurso__get"];
         put?: never;

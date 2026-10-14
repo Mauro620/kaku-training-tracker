@@ -15,7 +15,8 @@ import { copiarParaLLM, validarForma, type ErrorLocal } from "@/lib/importar-pla
 // Pantalla de importacion de plan semanal por JSON (Fase 4 R4 +
 // llm-export-endpoints).
 // Pasos en una sola vista:
-//   0. (opcional) Copiar reglas + catalogo + ejemplo para pegarle a un LLM.
+//   0. (opcional) Copiar reglas + catalogo + ejemplo + perfil (+ resumen del ciclo si existe)
+//      para pegarle a un LLM.
 //   1. Pegar el JSON en un textarea
 //   2. Validar la forma en el cliente (lo que se puede saber sin tocar BD)
 //   3. Enviar al server; mostrar el resultado con advertencias y ejercicios
@@ -43,7 +44,7 @@ export function ImportarPlanScreen() {
 
   const { payload, error: errorValidacion } = validarForma(texto);
 
-  async function copiarLosTresParaElLLM() {
+  async function copiarParaElLLM() {
     setCopia("copiando");
     const estado = await copiarParaLLM({
       obtenerExports: obtenerExportsLLM,
@@ -76,7 +77,7 @@ export function ImportarPlanScreen() {
       <BentoCard>
         <button
           type="button"
-          onClick={copiarLosTresParaElLLM}
+          onClick={copiarParaElLLM}
           disabled={copia === "copiando"}
           className="flex w-full items-center justify-center gap-2 rounded-pill bg-surface-secondary py-2.5 text-[13px] font-medium text-text-primary disabled:opacity-50"
         >
@@ -86,7 +87,7 @@ export function ImportarPlanScreen() {
             </>
           ) : (
             <>
-              <Clipboard size={14} /> Copiar los 3 para el LLM
+              <Clipboard size={14} /> Copiar para el LLM
             </>
           )}
         </button>

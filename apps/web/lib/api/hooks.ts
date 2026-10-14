@@ -1300,16 +1300,27 @@ export type ExportRead = {
   contenido: string;
 };
 
-const RECURSOS_EXPORT_LLM = ["ejercicios", "reglas", "ejemplo"] as const;
+// Siempre estan: si uno falla, no se copia nada.
+const RECURSOS_EXPORT_LLM = ["ejercicios", "reglas", "ejemplo", "perfil"] as const;
+// Solo existe cuando hay un ciclo activo o cerrado; un 404 significa "todavia no
+// hay historia" y se omite en vez de romper la copia.
+const RECURSO_EXPORT_OPCIONAL = "resumen_ciclo";
 
 export async function obtenerExportsLLM(
   cliente: { get: (path: string) => Promise<ExportRead> } = api,
 ): Promise<ExportRead[]> {
-  return Promise.all(
-    RECURSOS_EXPORT_LLM.map((recurso) =>
-      cliente.get(`/planes/importar/export/${recurso}`),
+  const [fijos, resumen] = await Promise.all([
+    Promise.all(
+      RECURSOS_EXPORT_LLM.map((recurso) =>
+        cliente.get(`/planes/importar/export/${recurso}`),
+      ),
     ),
-  );
+    cliente.get(`/planes/importar/export/${RECURSO_EXPORT_OPCIONAL}`).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }),
+  ]);
+  return resumen ? [...fijos, resumen] : fijos;
 }
 
 export function useDescartarPlan() {
