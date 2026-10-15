@@ -795,6 +795,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/planes/{plan_id}/recuperar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Deshace un descarte: el plan descartado vuelve a pendiente.
+         * @description Solo aplica a un plan `descartado`; con cualquier otro estado responde 422. `cumplido` y `movido` los resuelve el sistema contra la sesión real y no se tocan a mano.
+         */
+        patch: operations["recuperar_api_v1_planes__plan_id__recuperar_patch"];
+        trace?: never;
+    };
     "/api/v1/planes/{plan_id}/descartar": {
         parameters: {
             query?: never;
@@ -2179,6 +2199,8 @@ export interface components {
             ventanas?: components["schemas"]["Ventana"][];
             /** Lugares */
             lugares?: components["schemas"]["Lugar"][];
+            /** Equipamiento Propio */
+            equipamiento_propio?: string[];
             /**
              * Actualizado En
              * Format: date-time
@@ -2212,6 +2234,8 @@ export interface components {
             ventanas?: components["schemas"]["Ventana"][];
             /** Lugares */
             lugares?: components["schemas"]["Lugar"][];
+            /** Equipamiento Propio */
+            equipamiento_propio?: string[];
         };
         /**
          * PlanDetalleEnSesionRead
@@ -4798,6 +4822,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanDetalleRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recuperar_api_v1_planes__plan_id__recuperar_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description id del sesion_plan */
+                plan_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SesionPlanRead"];
                 };
             };
             /** @description Validation Error */

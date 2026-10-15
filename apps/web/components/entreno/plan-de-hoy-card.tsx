@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { BentoCard } from "@/components/ui/bento-card";
 import { SelectorSesionSemana } from "@/components/entreno/selector-sesion-semana";
 import { DetalleEjercicioSheet } from "@/components/entreno/detalle-ejercicio-sheet";
@@ -125,7 +126,13 @@ export function PlanDeHoyCard({
       {descartados.length > 0 && (
         <ul className="mt-4 flex flex-col gap-1 text-[12px] text-text-secondary">
           {descartados.map((p) => (
-            <li key={p.id}>Descartada: {nombreTipo(p.tipo_sesion_id)}</li>
+            <li key={p.id} className="flex items-center justify-between gap-2">
+              <span>Descartada: {nombreTipo(p.tipo_sesion_id)}</span>
+              {/* El detalle es donde se recupera un descarte accidental. */}
+              <Link href={`/entreno/planes/${p.id}`} className="text-text-primary underline">
+                Ver / recuperar
+              </Link>
+            </li>
           ))}
         </ul>
       )}

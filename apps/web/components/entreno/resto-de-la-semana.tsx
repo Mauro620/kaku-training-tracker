@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronUp, MoreVertical } from "lucide-react";
 import { BentoCard } from "@/components/ui/bento-card";
 import { EstadoPlanPill } from "@/components/entreno/estado-plan-pill";
@@ -102,6 +103,14 @@ export function RestoDeLaSemana({ planes, diaDeHoy }: Props) {
 
               {estaAbierto && (
                 <ul className="flex flex-col gap-1 border-t border-border-subtle px-3 py-2">
+                  <li className="mb-1">
+                    <Link
+                      href={`/entreno/planes/${p.id}`}
+                      className="text-[13px] text-text-primary underline"
+                    >
+                      {p.estado === "descartado" ? "Ver detalle / recuperar" : "Ver detalle"}
+                    </Link>
+                  </li>
                   {p.objetivo && (
                     <li className="mb-1 text-[13px] text-text-secondary">
                       {p.objetivo}

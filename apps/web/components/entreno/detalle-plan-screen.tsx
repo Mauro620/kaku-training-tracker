@@ -10,6 +10,7 @@ import { DetalleEjercicioSheet } from "@/components/entreno/detalle-ejercicio-sh
 import { FusionEjercicioDialog } from "@/components/entreno/fusion-ejercicio-dialog";
 import {
   usePlanDetalle,
+  useRecuperarPlan,
   useTiposSesion,
   type PlanDetalleRead,
   type BloquePlanDetalleRead,
@@ -68,6 +69,7 @@ function DetallePlanContent({ plan }: { plan: PlanDetalleRead }) {
   const tipos = useTiposSesion();
   const tipoNombre = tipos.data?.find((t) => t.id === plan.tipo_sesion_id)?.nombre ?? "Plan";
 
+  const recuperar = useRecuperarPlan();
   const [ejercicioSheetOpen, setEjercicioSheetOpen] = useState<number | null>(null);
   const [fusionOrigenId, setFusionOrigenId] = useState<number | null>(null);
 
@@ -116,6 +118,31 @@ function DetallePlanContent({ plan }: { plan: PlanDetalleRead }) {
           </div>
         )}
       </div>
+
+      {/* Un descarte se puede deshacer: sin esto un toque accidental no tenia
+          vuelta atras. */}
+      {plan.estado === "descartado" && (
+        <BentoCard className="mb-4">
+          <p className="text-[14px] text-text-primary">Descartaste este plan.</p>
+          <p className="mt-1 text-[13px] text-text-secondary">
+            No cuenta para el cumplimiento. Si fue sin querer, puedes recuperarlo y
+            vuelve a quedar pendiente.
+          </p>
+          <button
+            type="button"
+            onClick={() => recuperar.mutate(plan.id)}
+            disabled={recuperar.isPending}
+            className="mt-3 w-full rounded-full bg-accent px-4 py-3 text-[14px] font-semibold text-bg transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+          >
+            {recuperar.isPending ? "Recuperando..." : "Recuperar plan"}
+          </button>
+          {recuperar.isError && (
+            <p className="mt-2 text-[13px] text-state-danger">
+              No se pudo recuperar el plan. Intenta de nuevo.
+            </p>
+          )}
+        </BentoCard>
+      )}
 
       {/* Resumen meta */}
       {(plan.duracion_min_est || plan.rpe_objetivo) && (
@@ -196,17 +223,14 @@ function EstadoChip({ estado }: { estado: PlanDetalleRead["estado"] }) {
     estado === "pendiente"
       ? "text-text-secondary"
       : estado === "cumplido"
-        ? "text-state-success"
+        ? "text-state-positive"
         : estado === "movido"
-          ? "text-warning"
+          ? "text-state-warning"
           : "text-state-danger";
 
   return (
     <span className={`text-[13px] ${colorClass}`}>
       {estado}
-      {estado !== "pendiente" && (
-        <span className="text-[11px] text-text-secondary"> ()</span>
-      )}
     </span>
   );
 }

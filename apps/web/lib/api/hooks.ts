@@ -1323,16 +1323,32 @@ export async function obtenerExportsLLM(
   return resumen ? [...fijos, resumen] : fijos;
 }
 
+// Descartar y recuperar cambian el mismo dato (`estado`), asi que refrescan lo
+// mismo. Incluye ["plan"] (el detalle, con staleTime de 5 min): sin eso la
+// pantalla de detalle seguiria mostrando el estado anterior.
+function invalidarPlanes(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: ["planes"] });
+  void qc.invalidateQueries({ queryKey: ["plan"] });
+  void qc.invalidateQueries({ queryKey: ["semana"] });
+  void qc.invalidateQueries({ queryKey: ["cierre-semana"] });
+}
+
 export function useDescartarPlan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (planId: number) =>
       api.patch<SesionPlan>(`/planes/${planId}/descartar`, {}),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["planes"] });
-      void qc.invalidateQueries({ queryKey: ["semana"] });
-      void qc.invalidateQueries({ queryKey: ["cierre-semana"] });
-    },
+    onSuccess: () => invalidarPlanes(qc),
+  });
+}
+
+/** Deshace un descarte: el plan descartado vuelve a pendiente. */
+export function useRecuperarPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: number) =>
+      api.patch<SesionPlan>(`/planes/${planId}/recuperar`, {}),
+    onSuccess: () => invalidarPlanes(qc),
   });
 }
 
